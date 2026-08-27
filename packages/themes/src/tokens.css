@@ -1,0 +1,47 @@
+.mp-picker {
+  --mp-background: #ffffff;
+  --mp-surface: #f6f7f9;
+  --mp-surface-hover: #edf0f3;
+  --mp-text: #17181a;
+  --mp-text-muted: #656b73;
+  --mp-border: #dfe2e6;
+  --mp-accent: #315efb;
+  --mp-focus-ring: #315efb;
+  --mp-shadow: 0 1rem 3rem rgb(0 0 0 / 16%);
+  --mp-radius-sm: 0.375rem;
+  --mp-radius-md: 0.625rem;
+  --mp-radius-lg: 1rem;
+  --mp-font-family: inherit;
+  --mp-font-size: 0.875rem;
+  --mp-spacing-sm: 0.375rem;
+  --mp-spacing-md: 0.75rem;
+  --mp-spacing-lg: 1rem;
+  --mp-cell-size: 2.75rem;
+  color-scheme: light;
+}
+
+.mp-picker[data-theme="dark"] {
+  --mp-background: #191b1f;
+  --mp-surface: #24272c;
+  --mp-text: #f5f6f7;
+  --mp-text-muted: #adb2ba;
+  --mp-border: #383c43;
+  --mp-surface-hover: #30343a;
+  --mp-accent: #8aa4ff;
+  --mp-focus-ring: #9fb4ff;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mp-picker[data-theme="system"] {
+    --mp-background: #191b1f;
+    --mp-surface: #24272c;
+    --mp-text: #f5f6f7;
+    --mp-text-muted: #adb2ba;
+    --mp-border: #383c43;
+    --mp-surface-hover: #30343a;
+    --mp-accent: #8aa4ff;
+    --mp-focus-ring: #9fb4ff;
+    color-scheme: dark;
+  }
+}

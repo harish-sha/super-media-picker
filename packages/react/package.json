@@ -1,0 +1,56 @@
+{
+  "name": "@company/media-react",
+  "version": "0.1.0",
+  "description": "Accessible React components for the messaging media picker.",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "development": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": {
+      "development": "./src/styles.css",
+      "default": "./dist/index.css"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external react --external react-dom",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "dependencies": {
+    "@company/media-core": "workspace:*",
+    "@company/media-emoji": "workspace:*",
+    "@company/media-themes": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.3 <20",
+    "react-dom": ">=18.3 <20"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "jsdom": "^26.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tsup": "^8.5.0",
+    "vitest": "^3.2.1"
+  }
+}

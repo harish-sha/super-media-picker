@@ -1,0 +1,10 @@
+{
+  "extends": "../../tooling/typescript/base.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "customConditions": ["development"],
+    "declaration": false,
+    "jsx": "react-jsx"
+  },
+  "include": ["src", ".storybook/**/*.ts", "vite.config.ts"]
+}

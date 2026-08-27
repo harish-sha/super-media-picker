@@ -1,0 +1,40 @@
+{
+  "name": "@company/media-themes",
+  "version": "0.1.0",
+  "description": "Theme types and CSS custom-property contract for the media picker.",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "development": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tokens.css": {
+      "development": "./src/tokens.css",
+      "default": "./dist/tokens.css"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean && cp src/tokens.css dist/tokens.css",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "vitest": "^3.2.1"
+  }
+}

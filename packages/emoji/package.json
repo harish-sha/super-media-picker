@@ -1,0 +1,40 @@
+{
+  "name": "@company/media-emoji",
+  "version": "0.1.0",
+  "description": "Compact emoji data, categories, normalization, and search.",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "development": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm generate:data && tsup src/index.ts --format esm --dts --clean --sourcemap",
+    "generate:data": "node scripts/generate-emoji-data.mjs",
+    "test": "pnpm generate:data && vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm generate:data && tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "dependencies": {
+    "@company/media-core": "workspace:*"
+  },
+  "devDependencies": {
+    "emojibase": "^17.0.0",
+    "emojibase-data": "^16.0.3",
+    "tsup": "^8.5.0",
+    "vitest": "^3.2.1"
+  }
+}

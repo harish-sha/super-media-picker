@@ -1,0 +1,26 @@
+import type { SkinTone } from "@company/media-core";
+
+import type { EmojiRecord, ResolvedEmojiVariant } from "./types";
+
+/** Resolves a requested variant without modifying emoji that do not support it. */
+export function resolveEmojiVariant(
+  emoji: EmojiRecord,
+  skinTone: SkinTone = "default",
+): ResolvedEmojiVariant {
+  if (skinTone !== "default") {
+    const variant = emoji.variants.find((candidate) => candidate.skinTone === skinTone);
+    if (variant !== undefined) {
+      return {
+        id: variant.id,
+        value: variant.value,
+        name: variant.name,
+        skinTone,
+      };
+    }
+  }
+  return { id: emoji.id, value: emoji.value, name: emoji.name };
+}
+
+export function supportsSkinTone(emoji: EmojiRecord): boolean {
+  return emoji.variants.some(({ kind }) => kind === "skin-tone");
+}
