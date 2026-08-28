@@ -21,11 +21,13 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external react --external react-dom && cp ../react/dist/index.css dist/styles.css",
+    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external react --external react-dom && cp ../react/dist/index.css dist/styles.css && cp ../react/dist/index.css.map dist/index.css.map",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@super-media-picker/gif": "workspace:*",
     "@super-media-picker/react": "workspace:*",
+    "@super-media-picker/stickers": "workspace:*",
     "@super-media-picker/themes": "workspace:*"
   },
   "peerDependencies": {

@@ -5,4 +5,5 @@ export * from "./collections";
 export * from "./errors";
 export * from "./media";
 export * from "./provider";
+export * from "./request";
 export * from "./storage";

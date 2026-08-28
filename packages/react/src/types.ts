@@ -1,15 +1,25 @@
 import type {
+  AnimatedMediaConfig,
+  AnimatedMediaFormat,
+  AnyEmojiMediaItem,
   CompactReactionSource,
+  CustomMediaItem,
+  EmojiPack,
+  GifMediaItem,
+  MediaCapabilities,
   MediaItem,
+  MediaProvider,
   MediaPickerFeatures,
   MediaPickerMode,
   MediaPickerSize,
   PickerDisplayMode,
   SkinTone,
+  StickerProvider,
   StorageAdapter,
 } from "@super-media-picker/core";
 import type { EmojiPickerCategory } from "@super-media-picker/emoji";
 import type { MediaPickerTheme } from "@super-media-picker/themes";
+import type { ReactNode } from "react";
 
 export type CompactReactionInput = string | MediaItem;
 
@@ -25,6 +35,33 @@ export interface MediaPickerPreviewConfig {
   readonly enabled?: boolean;
 }
 
+export interface MediaPickerProviders {
+  readonly gifs?: MediaProvider<GifMediaItem>;
+  readonly stickers?: StickerProvider;
+  readonly emoji?: readonly MediaProvider<AnyEmojiMediaItem>[];
+}
+
+export interface CustomMediaTab {
+  readonly id: string;
+  readonly label: string;
+  readonly icon?: ReactNode;
+  readonly provider: MediaProvider<CustomMediaItem>;
+}
+
+export interface AnimatedMediaRenderProps {
+  readonly active: boolean;
+  readonly animationUrl: string;
+  readonly format: AnimatedMediaFormat;
+  readonly label: string;
+  readonly previewUrl?: string;
+}
+
+export interface MediaPickerRenderers {
+  /** Lottie requires a host adapter; native WebM/WebP/GIF need no decoder. */
+  readonly lottie?: (props: AnimatedMediaRenderProps) => ReactNode;
+  readonly custom?: (item: CustomMediaItem) => ReactNode;
+}
+
 export interface MediaPickerProps {
   readonly mode?: MediaPickerMode;
   readonly defaultMode?: MediaPickerMode;
@@ -37,12 +74,19 @@ export interface MediaPickerProps {
   readonly height?: number | string;
   readonly preview?: MediaPickerPreviewConfig;
   readonly features?: Partial<MediaPickerFeatures>;
+  readonly capabilities?: Partial<MediaCapabilities>;
+  readonly providers?: MediaPickerProviders;
+  readonly emojiPacks?: readonly EmojiPack[];
+  readonly customTabs?: readonly CustomMediaTab[];
+  readonly renderers?: MediaPickerRenderers;
+  readonly animatedMedia?: AnimatedMediaConfig;
   readonly onSelect: (item: MediaItem) => void;
   readonly onClose?: () => void;
   readonly storage?: StorageAdapter;
   readonly theme?: MediaPickerTheme;
   readonly displayMode?: PickerDisplayMode;
   readonly defaultCategory?: EmojiPickerCategory;
+  readonly defaultMediaType?: "emoji" | "gif" | "stickers" | "custom";
   readonly defaultSearchQuery?: string;
   readonly defaultSkinTone?: SkinTone;
   readonly className?: string;

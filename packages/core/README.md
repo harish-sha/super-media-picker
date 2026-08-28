@@ -1,6 +1,6 @@
 # @super-media-picker/core
 
-Framework-independent media models, configuration, storage, persistence, caching, analytics, and normalized errors for the private media picker SDK. It has no React dependency and is safe to import during server rendering.
+Framework-independent Unicode/animated/custom emoji, GIF, sticker and custom-media models, provider/pack contracts, request coordination, storage, versioned persistence, caching, analytics, and normalized errors. It has no React dependency and is safe to import during server rendering.
 
 ```ts
 import {
@@ -13,4 +13,4 @@ const recents = new RecentItemsManager(storage);
 await recents.record("1f44d");
 ```
 
-`MemoryStorageAdapter`, `FavoritesManager`, and `PersistentPreference` use the same asynchronous `StorageAdapter` contract. Browser storage is accessed lazily and unavailable or corrupt values fail safely.
+`RecentItemsManager.record` and `FavoritesManager.add/toggle` also accept normalized `MediaItem` values. Provider media is persisted as a compact versioned snapshot under a namespaced key; legacy emoji IDs remain readable. `MediaRequestClient` provides timeout, cancellation, TTL caching, and in-flight deduplication for remote providers.

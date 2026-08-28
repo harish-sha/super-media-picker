@@ -7,4 +7,4 @@
 - **Storybook** is the component documentation and visual QA surface.
 - **Testing Library** verifies behavior through accessible roles instead of component internals.
 
-No runtime utility, state-management, CSS-in-JS, or icon dependency is used in Phases 0–2.
+No runtime utility, state-management, CSS-in-JS, animation, virtualization, vendor-media, or icon dependency is used. Native browser media, `IntersectionObserver`, incremental windowing, and small package-local providers keep emoji-only delivery independent from GIF/sticker engines.

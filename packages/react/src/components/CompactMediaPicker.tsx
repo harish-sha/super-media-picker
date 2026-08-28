@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import type {
+  AnimatedMediaConfig,
   CompactReactionSource,
   EmojiMediaItem,
+  FavoriteItemRecord,
   MediaItem,
   RecentItemRecord,
   SkinTone,
 } from "@super-media-picker/core";
+import { isUnicodeEmoji } from "@super-media-picker/core";
 import type { EmojiRecord } from "@super-media-picker/emoji";
 
 import type { CompactReactionInput } from "../types";
+import type { MediaPickerRenderers } from "../types";
+import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 import { CompactReactionBar } from "./CompactReactionBar";
 import { SkinToneSelector } from "./SkinToneSelector";
 import {
@@ -35,16 +40,19 @@ function normalizeEmojiPresentation(value: string): string {
 
 export interface CompactMediaPickerProps {
   readonly allowExpand: boolean;
+  readonly animation: AnimatedMediaConfig;
+  readonly animationManager: AnimationConcurrencyManager;
   readonly ariaLabel: string;
   readonly className: string;
-  readonly favoriteIds: readonly string[];
+  readonly favoriteRecords: readonly FavoriteItemRecord[];
   readonly maxVisibleItems: number;
   readonly onClose?: () => void;
   readonly onExpand: () => void;
-  readonly onRecordRecent: (id: string) => void;
+  readonly onRecordRecent: (item: string | MediaItem) => void;
   readonly onSelect: (item: MediaItem) => void;
   readonly onSkinToneChange: (tone: SkinTone) => void;
   readonly overlay: boolean;
+  readonly renderers?: MediaPickerRenderers;
   readonly reactions?: readonly CompactReactionInput[];
   readonly recentRecords: readonly RecentItemRecord[];
   readonly skinTone: SkinTone;
@@ -108,7 +116,7 @@ function applyTone(
   const compactItem = applyCompactSkinTone(item, skinTone);
   if (
     compactItem !== item ||
-    item.type !== "emoji" ||
+    !isUnicodeEmoji(item) ||
     emojiModule === undefined
   )
     return compactItem;
@@ -122,7 +130,7 @@ function baseEmojiId(
   item: MediaItem,
   emojiModule: EmojiModule | undefined,
 ): string {
-  if (item.type !== "emoji") return item.id;
+  if (!isUnicodeEmoji(item)) return item.id;
   const compactEmoji = findKnownCompactEmoji(item);
   if (compactEmoji !== undefined) return compactEmoji.id;
   return emojiModule === undefined
@@ -133,9 +141,11 @@ function baseEmojiId(
 /** Lightweight reaction presentation; full emoji data is loaded only on demand. */
 export function CompactMediaPicker({
   allowExpand,
+  animation,
+  animationManager,
   ariaLabel,
   className,
-  favoriteIds,
+  favoriteRecords,
   maxVisibleItems,
   onClose,
   onExpand,
@@ -143,6 +153,7 @@ export function CompactMediaPicker({
   onSelect,
   onSkinToneChange,
   overlay,
+  renderers,
   reactions,
   recentRecords,
   skinTone,
@@ -183,13 +194,15 @@ export function CompactMediaPicker({
                 right.count - left.count || right.lastUsedAt - left.lastUsedAt,
             )
           : recentRecords;
-      candidates = records.flatMap(({ id }) => {
+      candidates = records.flatMap(({ id, item }) => {
+        if (item !== undefined) return [item];
         if (emojiModule === undefined) return [];
         const emoji = emojiModule.getEmojiById(id);
         return emoji === undefined ? [] : [emojiModule.toEmojiMediaItem(emoji)];
       });
     } else if (source === "favorites") {
-      candidates = favoriteIds.flatMap((id) => {
+      candidates = favoriteRecords.flatMap(({ id, item }) => {
+        if (item !== undefined) return [item];
         if (emojiModule === undefined) return [];
         const emoji = emojiModule.getEmojiById(id);
         return emoji === undefined ? [] : [emojiModule.toEmojiMediaItem(emoji)];
@@ -208,7 +221,7 @@ export function CompactMediaPicker({
     return [...unique.values()].slice(0, maxVisibleItems);
   }, [
     emojiModule,
-    favoriteIds,
+    favoriteRecords,
     maxVisibleItems,
     reactions,
     recentRecords,
@@ -218,7 +231,8 @@ export function CompactMediaPicker({
 
   function handleSelect(item: MediaItem): void {
     onSelect(item);
-    if (item.type === "emoji") onRecordRecent(baseEmojiId(item, emojiModule));
+    if (isUnicodeEmoji(item)) onRecordRecent(baseEmojiId(item, emojiModule));
+    else onRecordRecent(item);
   }
 
   return (
@@ -232,9 +246,12 @@ export function CompactMediaPicker({
     >
       <CompactReactionBar
         allowExpand={allowExpand}
+        animation={animation}
+        animationManager={animationManager}
         items={items}
         onExpand={onExpand}
         onSelect={handleSelect}
+        {...(renderers === undefined ? {} : { renderers })}
         {...(onClose === undefined ? {} : { onEscape: onClose })}
       />
       <SkinToneSelector onChange={onSkinToneChange} value={skinTone} />

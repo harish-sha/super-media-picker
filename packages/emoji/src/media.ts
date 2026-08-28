@@ -13,6 +13,7 @@ export function toEmojiMediaItem(
   const resolved = resolveEmojiVariant(emoji, skinTone);
   const base = {
     type: "emoji",
+    kind: "unicode",
     id: resolved.id,
     value: resolved.value,
     name: resolved.name,

@@ -1,4 +1,7 @@
 import type {
+  AnimatedEmojiMediaItem,
+  CustomMediaTab,
+  GifProvider,
   CompactReactionSource,
   MediaCapabilities,
   MediaItem,
@@ -10,6 +13,9 @@ import type {
   PickerDisplayMode,
   StorageAdapter,
   MediaPicker,
+  MockGifProvider,
+  MockStickerProvider,
+  StickerProvider,
 } from "../src/index";
 
 /** Compile-time proof of the intentionally supported public consumer surface. */
@@ -25,4 +31,10 @@ export interface PublicApiContract {
   readonly displayMode: PickerDisplayMode;
   readonly capabilities: MediaCapabilities;
   readonly storage: StorageAdapter;
+  readonly animatedEmoji: AnimatedEmojiMediaItem;
+  readonly gifProvider: GifProvider;
+  readonly stickerProvider: StickerProvider;
+  readonly customTab: CustomMediaTab;
+  readonly MockGifProvider: typeof MockGifProvider;
+  readonly MockStickerProvider: typeof MockStickerProvider;
 }

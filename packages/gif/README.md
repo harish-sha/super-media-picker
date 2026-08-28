@@ -1,3 +1,8 @@
-# GIF package boundary
+# @super-media-picker/gif
 
-Reserved for Phase 5. Generic provider, pagination, request-state, cache, normalized GIF item, analytics, and error contracts already live in `@super-media-picker/core`; no fake remote implementation is included in Phases 0–2.
+Tree-shakeable GIF provider adapters for Super Media Picker.
+
+- `MockGifProvider`: abortable delay/error/empty/pagination fixtures.
+- `HttpGifProvider`: host-backend adapter with cached, deduplicated, timed-out requests and validated normalized responses.
+
+No vendor SDK, secret, API key, or proprietary asset is bundled. Typical consumers import these exports from `super-media-picker`.

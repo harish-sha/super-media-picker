@@ -1,11 +1,16 @@
+import { isMediaItem, mediaItemKey, type MediaItem } from "./media";
 import type { StorageAdapter } from "./storage";
 
 const millisecondsPerDay = 86_400_000;
 
 export interface RecentItemRecord {
+  /** Legacy emoji ID or a namespaced `mediaItemKey`. */
   readonly id: string;
   readonly count: number;
   readonly lastUsedAt: number;
+  /** Compact normalized snapshot used to reconstruct provider-backed media. */
+  readonly item?: MediaItem;
+  readonly version?: 1;
 }
 
 export interface RecentItemsManagerOptions {
@@ -18,12 +23,7 @@ export interface RecentItemsManagerOptions {
   readonly recencyWeight?: number;
 }
 
-/**
- * Persists and ranks recently used item identifiers. Ranking blends an
- * exponential recency score with a logarithmic, collection-normalized
- * frequency score. Recency defaults to 70% with a seven-day half-life, so a
- * newly used item rises immediately while repeated use remains meaningful.
- */
+/** Versioned cross-media recency ranking with legacy ID migration support. */
 export class RecentItemsManager {
   readonly #storage: StorageAdapter;
   readonly #storageKey: string;
@@ -48,7 +48,10 @@ export class RecentItemsManager {
     );
   }
 
-  async record(id: string): Promise<readonly RecentItemRecord[]> {
+  async record(
+    input: string | MediaItem,
+  ): Promise<readonly RecentItemRecord[]> {
+    const id = typeof input === "string" ? input : mediaItemKey(input);
     const now = this.#now();
     const records = await this.#read();
     const existing = records.find((record) => record.id === id);
@@ -56,6 +59,9 @@ export class RecentItemsManager {
       id,
       count: (existing?.count ?? 0) + 1,
       lastUsedAt: now,
+      ...(typeof input === "string"
+        ? {}
+        : { item: input, version: 1 as const }),
     };
     const next = [updated, ...records.filter((record) => record.id !== id)];
     const ranked = this.#rank(next).slice(0, this.#limit);
@@ -110,8 +116,15 @@ function isRecentItemRecord(value: unknown): value is RecentItemRecord {
     Number.isInteger(candidate.count) &&
     candidate.count > 0 &&
     typeof candidate.lastUsedAt === "number" &&
-    Number.isFinite(candidate.lastUsedAt)
+    Number.isFinite(candidate.lastUsedAt) &&
+    (candidate.item === undefined || isMediaItem(candidate.item))
   );
+}
+
+export interface FavoriteItemRecord {
+  readonly id: string;
+  readonly item?: MediaItem;
+  readonly version?: 1;
 }
 
 export interface FavoritesManagerOptions {
@@ -119,7 +132,7 @@ export interface FavoritesManagerOptions {
   readonly limit?: number;
 }
 
-/** Persistent ordered favorite identifiers with duplicate protection. */
+/** Versioned cross-media favorites with legacy string-array migration. */
 export class FavoritesManager {
   readonly #storage: StorageAdapter;
   readonly #storageKey: string;
@@ -131,26 +144,39 @@ export class FavoritesManager {
     this.#limit = Math.max(1, options.limit ?? 100);
   }
 
-  async add(id: string): Promise<readonly string[]> {
-    const current = await this.getFavorites();
-    const next = [
-      id,
-      ...current.filter((favoriteId) => favoriteId !== id),
+  async add(input: string | MediaItem): Promise<readonly string[]> {
+    const id = typeof input === "string" ? input : mediaItemKey(input);
+    const current = await this.getFavoriteRecords();
+    const next: readonly FavoriteItemRecord[] = [
+      {
+        id,
+        ...(typeof input === "string"
+          ? {}
+          : { item: input, version: 1 as const }),
+      },
+      ...current.filter((favorite) => favorite.id !== id),
     ].slice(0, this.#limit);
-    await this.#storage.set(this.#storageKey, next);
-    return next;
+    await this.#storage.set(
+      this.#storageKey,
+      next.map((record) => (record.item === undefined ? record.id : record)),
+    );
+    return next.map((favorite) => favorite.id);
   }
 
   async remove(id: string): Promise<readonly string[]> {
-    const next = (await this.getFavorites()).filter(
-      (favoriteId) => favoriteId !== id,
+    const next = (await this.getFavoriteRecords()).filter(
+      (favorite) => favorite.id !== id,
     );
-    await this.#storage.set(this.#storageKey, next);
-    return next;
+    await this.#storage.set(
+      this.#storageKey,
+      next.map((record) => (record.item === undefined ? record.id : record)),
+    );
+    return next.map((favorite) => favorite.id);
   }
 
-  async toggle(id: string): Promise<readonly string[]> {
-    return (await this.isFavorite(id)) ? this.remove(id) : this.add(id);
+  async toggle(input: string | MediaItem): Promise<readonly string[]> {
+    const id = typeof input === "string" ? input : mediaItemKey(input);
+    return (await this.isFavorite(id)) ? this.remove(id) : this.add(input);
   }
 
   async isFavorite(id: string): Promise<boolean> {
@@ -158,12 +184,29 @@ export class FavoritesManager {
   }
 
   async getFavorites(): Promise<readonly string[]> {
+    return (await this.getFavoriteRecords()).map((favorite) => favorite.id);
+  }
+
+  async getFavoriteRecords(): Promise<readonly FavoriteItemRecord[]> {
     const stored = await this.#storage.get<unknown>(this.#storageKey);
     if (!Array.isArray(stored)) return [];
+    const records = stored.flatMap((value): readonly FavoriteItemRecord[] => {
+      if (typeof value === "string") return value === "" ? [] : [{ id: value }];
+      if (typeof value !== "object" || value === null) return [];
+      const candidate = value as Readonly<Record<string, unknown>>;
+      if (typeof candidate.id !== "string" || candidate.id === "") return [];
+      if (candidate.item !== undefined && !isMediaItem(candidate.item))
+        return [];
+      return [
+        {
+          id: candidate.id,
+          ...(candidate.item === undefined ? {} : { item: candidate.item }),
+          ...(candidate.version === 1 ? { version: 1 as const } : {}),
+        },
+      ];
+    });
     return [
-      ...new Set(
-        stored.filter((value): value is string => typeof value === "string"),
-      ),
+      ...new Map(records.map((record) => [record.id, record])).values(),
     ].slice(0, this.#limit);
   }
 

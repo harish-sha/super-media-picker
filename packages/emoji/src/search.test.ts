@@ -76,6 +76,7 @@ describe("toEmojiMediaItem", () => {
     expect(emoji).toBeDefined();
     expect(toEmojiMediaItem(emoji!)).toEqual({
       type: "emoji",
+      kind: "unicode",
       id: emoji!.id,
       value: "🚀",
       name: "rocket",

@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   LocalStorageAdapter,
+  MediaRequestClient,
   MediaProviderError,
   MemoryCache,
   MemoryStorageAdapter,
   createMediaPickerConfig,
+  isSafeMediaUrl,
 } from "./index";
 
 describe("createMediaPickerConfig", () => {
@@ -14,11 +16,63 @@ describe("createMediaPickerConfig", () => {
       createMediaPickerConfig({ features: { favorites: true } }).features,
     ).toEqual({
       emoji: true,
+      animatedEmoji: false,
+      customMedia: false,
       favorites: true,
       gifs: false,
       recents: false,
       stickers: false,
     });
+  });
+});
+
+describe("MediaRequestClient", () => {
+  it("deduplicates in-flight work and caches successful results", async () => {
+    const load = vi.fn(async () => "result");
+    const client = new MediaRequestClient({ cacheTtlMs: 1_000 });
+    const [first, second] = await Promise.all([
+      client.request("same", load),
+      client.request("same", load),
+    ]);
+    expect([first, second]).toEqual(["result", "result"]);
+    await expect(client.request("same", load)).resolves.toBe("result");
+    expect(load).toHaveBeenCalledOnce();
+  });
+
+  it("propagates timeout cancellation to provider work", async () => {
+    const client = new MediaRequestClient({ timeoutMs: 5 });
+    const request = client.request(
+      "slow",
+      (signal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () =>
+              reject(
+                signal.reason instanceof Error
+                  ? signal.reason
+                  : new Error("Request aborted"),
+              ),
+            { once: true },
+          );
+        }),
+    );
+    await expect(request).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+});
+
+describe("isSafeMediaUrl", () => {
+  it("accepts browser media sources and rejects executable schemes", () => {
+    expect(isSafeMediaUrl("https://cdn.test/image.webp")).toBe(true);
+    expect(isSafeMediaUrl("/tenant/sticker.webp")).toBe(true);
+    expect(isSafeMediaUrl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")).toBe(
+      true,
+    );
+    expect(isSafeMediaUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeMediaUrl("data:text/html,<script>alert(1)</script>")).toBe(
+      false,
+    );
+    expect(isSafeMediaUrl("//untrusted.test/image.gif")).toBe(false);
   });
 });
 

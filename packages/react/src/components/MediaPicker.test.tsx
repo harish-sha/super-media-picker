@@ -217,6 +217,7 @@ describe("MediaPicker", () => {
     await user.click(screen.getByRole("button", { name: "rocket" }));
     expect(onSelect.mock.calls[0]?.[0]).toEqual({
       type: "emoji",
+      kind: "unicode",
       id: "1f680",
       value: "🚀",
       name: "rocket",
@@ -263,6 +264,7 @@ describe("MediaPicker", () => {
     await user.click(medium);
     expect(onSelect).toHaveBeenLastCalledWith({
       type: "emoji",
+      kind: "unicode",
       id: "1f44d-1f3fd",
       value: "👍🏽",
       name: "thumbs up: medium skin tone",

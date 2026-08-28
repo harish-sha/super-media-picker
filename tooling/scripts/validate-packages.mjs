@@ -8,6 +8,8 @@ const outputDirectory = mkdtempSync(join(tmpdir(), "media-picker-pack-"));
 const packageDirectories = [
   "core",
   "emoji",
+  "gif",
+  "stickers",
   "themes",
   "react",
   "super-media-picker",
@@ -98,6 +100,25 @@ try {
         if (!archiveFiles.has(dependency)) {
           throw new Error(
             `${packResult.name} internal import ${specifier} from ${javascriptFile} is missing from its tarball`,
+          );
+        }
+      }
+    }
+
+    for (const emittedFile of [...archiveFiles].filter(
+      (path) => path.endsWith(".js") || path.endsWith(".css"),
+    )) {
+      const source = readArchiveFile(packResult.filename, emittedFile);
+      const sourceMapPattern = /sourceMappingURL=([^\s*]+)/gu;
+      for (const match of source.matchAll(sourceMapPattern)) {
+        const specifier = match[1];
+        if (specifier === undefined || specifier.startsWith("data:")) continue;
+        const sourceMap = posix.normalize(
+          posix.join(posix.dirname(emittedFile), specifier),
+        );
+        if (!archiveFiles.has(sourceMap)) {
+          throw new Error(
+            `${packResult.name} source map ${specifier} from ${emittedFile} is missing from its tarball`,
           );
         }
       }

@@ -7,6 +7,12 @@ import {
   mediaPickerStorageKeys,
 } from "super-media-picker";
 
+import { createMockProviders, customTabs, emojiPacks } from "./mockMedia";
+
+const normalProviders = createMockProviders("normal");
+const slowProviders = createMockProviders("delay");
+const errorProviders = createMockProviders("error");
+
 function storageWith(options: {
   readonly recents?: boolean;
   readonly favorites?: boolean;
@@ -238,4 +244,132 @@ export const CompactToFull: Story = {
       canvas.getByRole("button", { name: "Open full media picker" }),
     );
   },
+};
+
+export const AnimatedEmoji: Story = {
+  args: {
+    animatedMedia: { autoplay: "visible", maxActiveAnimations: 2 },
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+  },
+};
+
+export const AnimatedEmojiHover: Story = {
+  args: {
+    animatedMedia: { autoplay: "hover" },
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+  },
+};
+
+export const ReducedMotion: Story = {
+  args: {
+    animatedMedia: { autoplay: "never" },
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+  },
+};
+
+export const GifTrending: Story = {
+  args: {
+    defaultMediaType: "gif",
+    features: { emoji: true, gifs: true },
+    providers: normalProviders,
+  },
+};
+
+export const GifSearch: Story = {
+  args: {
+    defaultMediaType: "gif",
+    defaultSearchQuery: "party",
+    features: { emoji: true, gifs: true },
+    providers: normalProviders,
+  },
+};
+
+export const GifLoading: Story = {
+  args: {
+    defaultMediaType: "gif",
+    features: { emoji: true, gifs: true },
+    providers: slowProviders,
+  },
+};
+
+export const GifError: Story = {
+  args: {
+    defaultMediaType: "gif",
+    features: { emoji: true, gifs: true },
+    providers: errorProviders,
+  },
+};
+
+export const StickerPacks: Story = {
+  args: {
+    defaultMediaType: "stickers",
+    features: { emoji: true, stickers: true },
+    providers: normalProviders,
+  },
+};
+
+export const AnimatedStickers: Story = {
+  args: {
+    animatedMedia: { autoplay: "hover" },
+    defaultMediaType: "stickers",
+    features: { emoji: true, stickers: true },
+    providers: normalProviders,
+  },
+};
+
+export const CustomStickerPack: Story = StickerPacks;
+
+export const CustomEmoji: Story = {
+  args: {
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+  },
+};
+
+export const CustomProvider: Story = {
+  args: {
+    customTabs,
+    defaultMediaType: "custom",
+    features: { emoji: true, customMedia: true },
+  },
+};
+
+export const AllFeatures: Story = {
+  args: {
+    customTabs,
+    emojiPacks,
+    features: {
+      emoji: true,
+      animatedEmoji: true,
+      gifs: true,
+      stickers: true,
+      customMedia: true,
+      recents: true,
+      favorites: true,
+    },
+    providers: normalProviders,
+  },
+};
+
+export const ChannelRestricted: Story = {
+  args: {
+    capabilities: { emoji: true, gif: false, stickers: true },
+    customTabs,
+    emojiPacks,
+    features: {
+      emoji: true,
+      gifs: true,
+      stickers: true,
+      customMedia: true,
+    },
+    providers: normalProviders,
+  },
+};
+
+export const MobileAllFeatures: Story = {
+  args: { ...AllFeatures.args, displayMode: "bottom-sheet" },
+  parameters: { viewport: { defaultViewport: "mobile1" } },
 };

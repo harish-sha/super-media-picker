@@ -1,9 +1,11 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
   MediaPicker,
   type CompactReactionSource,
+  type AnimationAutoplay,
+  type MediaCapabilities,
   type MediaItem,
   type MediaPickerFeatures,
   type MediaPickerMode,
@@ -13,17 +15,50 @@ import {
 } from "super-media-picker";
 import "super-media-picker/styles.css";
 
+import {
+  createMockProviders,
+  customTabs,
+  emojiPacks,
+  type MockScenario,
+} from "./mockMedia";
 import "./playground.css";
 
 type PreviewWidth = "desktop" | "mobile";
 
 const initialFeatures: MediaPickerFeatures = {
   emoji: true,
-  gifs: false,
-  stickers: false,
+  animatedEmoji: true,
+  gifs: true,
+  stickers: true,
+  customMedia: true,
   recents: true,
   favorites: true,
 };
+
+type CapabilityPreset = "all" | "emoji-only" | "no-gif";
+
+const capabilityPresets: Readonly<Record<CapabilityPreset, MediaCapabilities>> =
+  {
+    all: {
+      emoji: true,
+      animatedEmoji: true,
+      gif: true,
+      stickers: true,
+      animatedStickers: true,
+      customMedia: true,
+      customEmoji: true,
+      customStickers: true,
+    },
+    "emoji-only": { emoji: true, gif: false, stickers: false },
+    "no-gif": {
+      emoji: true,
+      animatedEmoji: true,
+      gif: false,
+      stickers: true,
+      animatedStickers: true,
+      customMedia: true,
+    },
+  };
 
 function Playground() {
   const [selection, setSelection] = useState<MediaItem>();
@@ -36,9 +71,14 @@ function Playground() {
     useState<CompactReactionSource>("default");
   const [allowExpand, setAllowExpand] = useState(true);
   const [features, setFeatures] = useState(initialFeatures);
+  const [capabilityPreset, setCapabilityPreset] =
+    useState<CapabilityPreset>("all");
+  const [scenario, setScenario] = useState<MockScenario>("normal");
+  const [autoplay, setAutoplay] = useState<AnimationAutoplay>("hover");
+  const providers = useMemo(() => createMockProviders(scenario), [scenario]);
 
   function setFeature(
-    feature: "recents" | "favorites",
+    feature: keyof MediaPickerFeatures,
     enabled: boolean,
   ): void {
     setFeatures((current) => ({ ...current, [feature]: enabled }));
@@ -144,6 +184,7 @@ function Playground() {
             <option value="popover">Popover</option>
             <option value="modal">Modal</option>
             <option value="bottom-sheet">Bottom sheet</option>
+            <option value="fullscreen">Fullscreen</option>
           </select>
         </label>
         <label>
@@ -172,6 +213,48 @@ function Playground() {
             <option value="recent">Recent</option>
             <option value="frequent">Frequent</option>
             <option value="favorites">Favorites</option>
+            <option value="custom">Animated/custom</option>
+          </select>
+        </label>
+        <label>
+          Capabilities
+          <select
+            onChange={(event) =>
+              setCapabilityPreset(event.currentTarget.value as CapabilityPreset)
+            }
+            value={capabilityPreset}
+          >
+            <option value="all">All media</option>
+            <option value="emoji-only">Emoji only</option>
+            <option value="no-gif">No GIF channel</option>
+          </select>
+        </label>
+        <label>
+          Mock network
+          <select
+            onChange={(event) =>
+              setScenario(event.currentTarget.value as MockScenario)
+            }
+            value={scenario}
+          >
+            <option value="normal">Normal</option>
+            <option value="delay">Slow</option>
+            <option value="error">Error</option>
+            <option value="empty">Empty</option>
+          </select>
+        </label>
+        <label>
+          Animation
+          <select
+            onChange={(event) =>
+              setAutoplay(event.currentTarget.value as AnimationAutoplay)
+            }
+            value={autoplay}
+          >
+            <option value="hover">Hover/focus</option>
+            <option value="visible">Visible</option>
+            <option value="always">Always</option>
+            <option value="never">Never</option>
           </select>
         </label>
         <label className="playground-checkbox">
@@ -202,22 +285,44 @@ function Playground() {
           />
           Favorites
         </label>
+        {(
+          ["emoji", "animatedEmoji", "gifs", "stickers", "customMedia"] as const
+        ).map((feature) => (
+          <label className="playground-checkbox" key={feature}>
+            <input
+              checked={features[feature]}
+              onChange={(event) =>
+                setFeature(feature, event.currentTarget.checked)
+              }
+              type="checkbox"
+            />
+            {feature}
+          </label>
+        ))}
       </section>
 
       <section className="playground-demo" aria-label="Interactive demo">
         <div className="playground-preview" data-preview-width={previewWidth}>
           <MediaPicker
+            animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+            capabilities={capabilityPresets[capabilityPreset]}
             compact={{
               allowCollapse: true,
               allowExpand,
               source: compactSource,
+              ...(compactSource === "custom"
+                ? { reactions: emojiPacks[0]?.items ?? [] }
+                : {}),
             }}
+            customTabs={customTabs}
             displayMode={displayMode}
             features={features}
+            emojiPacks={emojiPacks}
             mode={mode}
             onModeChange={setMode}
             onSelect={setSelection}
             preview={{ enabled: true }}
+            providers={providers}
             size={size}
             theme={theme}
           />
@@ -226,7 +331,7 @@ function Playground() {
           <h2>Normalized selection</h2>
           <pre data-testid="selection-output">
             {selection === undefined
-              ? "Select an emoji to inspect its MediaItem."
+              ? "Select media to inspect its normalized MediaItem."
               : JSON.stringify(selection, null, 2)}
           </pre>
           <p>

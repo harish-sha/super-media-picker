@@ -119,6 +119,19 @@ importers:
         specifier: ^3.2.1
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
 
+  packages/gif:
+    dependencies:
+      '@super-media-picker/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(typescript@5.9.3)
+      vitest:
+        specifier: ^3.2.1
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
+
   packages/react:
     dependencies:
       '@super-media-picker/core':
@@ -159,11 +172,30 @@ importers:
         specifier: ^3.2.1
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
 
+  packages/stickers:
+    dependencies:
+      '@super-media-picker/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(typescript@5.9.3)
+      vitest:
+        specifier: ^3.2.1
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
+
   packages/super-media-picker:
     dependencies:
+      '@super-media-picker/gif':
+        specifier: workspace:*
+        version: link:../gif
       '@super-media-picker/react':
         specifier: workspace:*
         version: link:../react
+      '@super-media-picker/stickers':
+        specifier: workspace:*
+        version: link:../stickers
       '@super-media-picker/themes':
         specifier: workspace:*
         version: link:../themes

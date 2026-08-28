@@ -41,6 +41,7 @@ describe("MediaPicker compact mode", () => {
     );
     expect(onSelect).toHaveBeenCalledWith({
       type: "emoji",
+      kind: "unicode",
       id: "1f600",
       value: "😀",
       name: "grinning face",

@@ -1,4 +1,9 @@
-import type { MediaItem, SkinTone } from "@super-media-picker/core";
+import {
+  isUnicodeEmoji,
+  mediaItemKey,
+  type MediaItem,
+  type SkinTone,
+} from "@super-media-picker/core";
 import {
   getCompactEmoji,
   toEmojiMediaItem,
@@ -23,7 +28,7 @@ export const defaultCompactReactions: readonly MediaItem[] =
 export function findKnownCompactEmoji(
   item: MediaItem,
 ): EmojiRecord | undefined {
-  return item.type === "emoji"
+  return isUnicodeEmoji(item)
     ? (getCompactEmoji(item.id) ?? getCompactEmoji(item.value))
     : undefined;
 }
@@ -40,11 +45,11 @@ export function applyCompactSkinTone(
   item: MediaItem,
   skinTone: SkinTone,
 ): MediaItem {
-  if (item.type !== "emoji") return item;
+  if (!isUnicodeEmoji(item)) return item;
   const emoji = findKnownCompactEmoji(item);
   return emoji === undefined ? item : toEmojiMediaItem(emoji, skinTone);
 }
 
 export function compactItemKey(item: MediaItem): string {
-  return `${item.type}:${item.id}`;
+  return mediaItemKey(item);
 }

@@ -1,7 +1,9 @@
 ---
 "@super-media-picker/core": minor
 "@super-media-picker/emoji": minor
+"@super-media-picker/gif": minor
 "@super-media-picker/react": minor
+"@super-media-picker/stickers": minor
 "super-media-picker": minor
 ---
 

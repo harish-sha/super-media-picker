@@ -1,12 +1,17 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 
-import type { MediaItem } from "@super-media-picker/core";
+import type { AnimatedMediaConfig, MediaItem } from "@super-media-picker/core";
 
+import type { MediaPickerRenderers } from "../types";
+import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 import { compactItemKey } from "./compactReactions";
 import { ReactionItem } from "./ReactionItem";
 
 export interface CompactReactionBarProps {
   readonly items: readonly MediaItem[];
+  readonly animation: AnimatedMediaConfig;
+  readonly animationManager: AnimationConcurrencyManager;
+  readonly renderers?: MediaPickerRenderers;
   readonly allowExpand: boolean;
   readonly onEscape?: () => void;
   readonly onExpand: () => void;
@@ -15,6 +20,9 @@ export interface CompactReactionBarProps {
 
 export function CompactReactionBar({
   items,
+  animation,
+  animationManager,
+  renderers,
   allowExpand,
   onEscape,
   onExpand,
@@ -84,12 +92,15 @@ export function CompactReactionBar({
         {items.map((item, index) => (
           <ReactionItem
             active={index === resolvedActiveIndex}
+            animation={animation}
+            animationManager={animationManager}
             item={item}
             key={compactItemKey(item)}
             onFocus={() => setActiveIndex(index)}
             onKeyDown={(event) => handleControlKeyDown(event, index)}
             onSelect={handleSelect}
             selected={selectedKey === compactItemKey(item)}
+            {...(renderers === undefined ? {} : { renderers })}
           />
         ))}
       </div>

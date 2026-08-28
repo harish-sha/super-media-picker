@@ -21,6 +21,7 @@ import { useMediaPickerPersistence } from "../hooks/useMediaPickerPersistence";
 import { useResolvedDisplayMode } from "../hooks/useResolvedDisplayMode";
 import type { MediaPickerProps } from "../types";
 import { CompactMediaPicker } from "./CompactMediaPicker";
+import { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 
 const LazyFullMediaPicker = lazy(() =>
   import("./FullMediaPicker").then((module) => ({
@@ -75,12 +76,19 @@ export function MediaPicker({
   height,
   preview = {},
   features: featureOverrides,
+  capabilities,
+  providers,
+  emojiPacks = [],
+  customTabs = [],
+  renderers,
+  animatedMedia = {},
   onSelect,
   onClose,
   storage,
   theme = "system",
   displayMode = "auto",
   defaultCategory = "Smileys & Emotion",
+  defaultMediaType = "emoji",
   defaultSearchQuery = "",
   defaultSkinTone = "default",
   className,
@@ -93,8 +101,15 @@ export function MediaPicker({
   const features = { ...defaultFeatures, ...featureOverrides };
   const resolvedDisplayMode = useResolvedDisplayMode(displayMode);
   const overlay =
-    resolvedDisplayMode === "modal" || resolvedDisplayMode === "bottom-sheet";
+    resolvedDisplayMode === "modal" ||
+    resolvedDisplayMode === "bottom-sheet" ||
+    resolvedDisplayMode === "fullscreen";
   const state = useMediaPickerPersistence(storage, defaultSkinTone);
+  const animationManager = useMemo(
+    () =>
+      new AnimationConcurrencyManager(animatedMedia.maxActiveAnimations ?? 3),
+    [animatedMedia.maxActiveAnimations],
+  );
   const style = useMemo(
     () => pickerStyles(theme, width, height),
     [height, theme, width],
@@ -133,9 +148,11 @@ export function MediaPicker({
       {resolvedMode === "compact" ? (
         <CompactMediaPicker
           allowExpand={compactAllowsExpand}
+          animation={animatedMedia}
+          animationManager={animationManager}
           ariaLabel={ariaLabel}
           className={pickerClassName}
-          favoriteIds={state.favoriteIds}
+          favoriteRecords={state.favoriteRecords}
           maxVisibleItems={maxVisibleItems}
           onExpand={() => requestMode("full")}
           onRecordRecent={(id) => {
@@ -149,6 +166,7 @@ export function MediaPicker({
           source={source}
           style={style}
           themeMode={resolvedTheme.mode}
+          {...(renderers === undefined ? {} : { renderers })}
           {...(onClose === undefined ? {} : { onClose })}
           {...(compact.reactions === undefined
             ? {}
@@ -169,19 +187,25 @@ export function MediaPicker({
           }
         >
           <LazyFullMediaPicker
+            animation={animatedMedia}
+            animationManager={animationManager}
             ariaLabel={ariaLabel}
             className={pickerClassName}
             defaultCategory={defaultCategory}
+            defaultMediaType={defaultMediaType}
             defaultSearchQuery={defaultSearchQuery}
             favoriteIds={state.favoriteIds}
+            favoriteRecords={state.favoriteRecords}
             features={features}
-            onRecordRecent={(id) => {
-              void state.recordRecent(id);
+            emojiPacks={emojiPacks}
+            customTabs={customTabs}
+            onRecordRecent={(item) => {
+              void state.recordRecent(item);
             }}
             onSelect={onSelect}
             onSkinToneChange={state.setSkinTone}
-            onToggleFavorite={(id) => {
-              void state.toggleFavorite(id);
+            onToggleFavorite={(item) => {
+              void state.toggleFavorite(item);
             }}
             overlay={overlay}
             previewEnabled={preview.enabled ?? false}
@@ -189,6 +213,9 @@ export function MediaPicker({
             skinTone={state.skinTone}
             style={style}
             themeMode={resolvedTheme.mode}
+            {...(capabilities === undefined ? {} : { capabilities })}
+            {...(providers === undefined ? {} : { providers })}
+            {...(renderers === undefined ? {} : { renderers })}
             {...(onClose === undefined ? {} : { onClose })}
             {...(compactAllowsCollapse
               ? { onCollapse: () => requestMode("compact") }

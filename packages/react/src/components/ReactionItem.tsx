@@ -1,26 +1,21 @@
 import { forwardRef, type KeyboardEvent } from "react";
 
-import type { MediaItem } from "@super-media-picker/core";
+import type { AnimatedMediaConfig, MediaItem } from "@super-media-picker/core";
+
+import type { MediaPickerRenderers } from "../types";
+import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
+import { MediaItemVisual, mediaItemLabel } from "./MediaItemVisual";
 
 export function reactionItemLabel(item: MediaItem): string {
-  if (item.type === "emoji" || item.type === "custom") return item.name;
-  if (item.type === "gif") return item.alt ?? "GIF reaction";
-  return item.alt ?? "Sticker reaction";
-}
-
-function ReactionVisual({ item }: { readonly item: MediaItem }) {
-  if (item.type === "emoji") {
-    return <span aria-hidden="true">{item.value}</span>;
-  }
-  if (item.type === "gif") {
-    return <img alt="" src={item.previewUrl} />;
-  }
-  return <img alt="" src={item.previewUrl ?? item.url} />;
+  return mediaItemLabel(item);
 }
 
 export interface ReactionItemProps {
   readonly active: boolean;
   readonly item: MediaItem;
+  readonly animation: AnimatedMediaConfig;
+  readonly animationManager: AnimationConcurrencyManager;
+  readonly renderers?: MediaPickerRenderers;
   readonly selected: boolean;
   readonly onFocus: () => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
@@ -30,7 +25,17 @@ export interface ReactionItemProps {
 /** Generic compact renderer ready for normalized future media items. */
 export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
   function ReactionItem(
-    { active, item, selected, onFocus, onKeyDown, onSelect },
+    {
+      active,
+      animation,
+      animationManager,
+      item,
+      renderers,
+      selected,
+      onFocus,
+      onKeyDown,
+      onSelect,
+    },
     ref,
   ) {
     const label = reactionItemLabel(item);
@@ -49,7 +54,12 @@ export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
         title={label}
         type="button"
       >
-        <ReactionVisual item={item} />
+        <MediaItemVisual
+          animation={animation}
+          item={item}
+          manager={animationManager}
+          {...(renderers === undefined ? {} : { renderers })}
+        />
       </button>
     );
   },

@@ -22,4 +22,6 @@ function handleSelect(item: MediaItem) {
 
 Inject a `StorageAdapter` through `storage` to replace the default SSR-safe local-storage adapter. The package re-exports the public storage utilities and theme/media types needed by React consumers.
 
-`mode` (`compact`/`full`), `displayMode` (placement), and `size` (`sm`/`md`/`lg`) are independent. `width` and `height` accept numbers or CSS strings. Compact reactions accept Unicode strings or normalized `MediaItem` values and emit the same `onSelect` payload as full mode.
+`mode` (`compact`/`full`), `displayMode` (including bottom sheet and fullscreen), and `size` (`sm`/`md`/`lg`) are independent. `width` and `height` accept numbers or CSS strings. Compact reactions accept Unicode strings or normalized `MediaItem` values and emit the same `onSelect` payload as full mode.
+
+Primary full-picker tabs are capability/configuration filtered. GIF, sticker, and custom panels load dynamically; animated emoji/stickers share one visibility-aware, reduced-motion-safe renderer and concurrency manager. Provider failures remain inside their active panel.

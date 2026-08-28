@@ -1,23 +1,30 @@
 export interface MediaCapabilities {
   readonly emoji: boolean;
+  readonly animatedEmoji?: boolean;
   readonly gif: boolean;
   readonly stickers: boolean;
+  readonly animatedStickers?: boolean;
+  readonly customMedia?: boolean;
   readonly customEmoji?: boolean;
   readonly customStickers?: boolean;
 }
 
 export interface MediaPickerFeatures {
   readonly emoji: boolean;
+  readonly animatedEmoji: boolean;
   readonly gifs: boolean;
   readonly stickers: boolean;
+  readonly customMedia: boolean;
   readonly recents: boolean;
   readonly favorites: boolean;
 }
 
 export const defaultFeatures: Readonly<MediaPickerFeatures> = Object.freeze({
   emoji: true,
+  animatedEmoji: false,
   gifs: false,
   stickers: false,
+  customMedia: false,
   recents: false,
   favorites: false,
 });
@@ -28,7 +35,7 @@ export interface MediaPickerConfig {
 }
 
 export type PickerDisplayMode =
-  "auto" | "popover" | "inline" | "modal" | "bottom-sheet";
+  "auto" | "popover" | "inline" | "modal" | "bottom-sheet" | "fullscreen";
 
 /** Presentation density, independent from responsive display placement. */
 export type MediaPickerMode = "compact" | "full";

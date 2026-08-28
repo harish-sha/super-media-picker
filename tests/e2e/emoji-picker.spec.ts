@@ -105,3 +105,52 @@ test("retains toned recents and favorites across compact/full reloads", async ({
     }),
   ).toBeVisible();
 });
+
+test("navigates GIF, sticker, custom, capability, and provider-error flows", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.getByRole("button", { name: "Full picker" }).click();
+
+  await page.getByRole("tab", { name: "GIF" }).click();
+  const party = page
+    .getByRole("button", { name: "Colorful party animation" })
+    .first();
+  await expect(party).toBeVisible();
+  await party.click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "gif"',
+  );
+
+  await page.getByRole("tab", { name: "Stickers" }).click();
+  await expect(
+    page.getByRole("button", { name: "Bear sticker 1", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cats" }).click();
+  await page
+    .getByRole("button", { name: "Cat sticker 1", exact: true })
+    .click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "sticker"',
+  );
+
+  await page.getByRole("tab", { name: "Custom" }).click();
+  await page.getByRole("button", { name: "Launch card", exact: true }).click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "custom"',
+  );
+
+  await page.getByLabel("Capabilities").selectOption("emoji-only");
+  await expect(page.getByRole("tab", { name: "Emoji" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "GIF" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Stickers" })).toHaveCount(0);
+
+  await page.getByLabel("Capabilities").selectOption("all");
+  await page.getByLabel("Mock network").selectOption("error");
+  await page.getByRole("tab", { name: "GIF" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Mock GIF request failed",
+  );
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+});

@@ -78,6 +78,43 @@ describe("FavoritesManager", () => {
     await manager.clear();
     expect(await manager.getFavorites()).toEqual([]);
   });
+
+  it("persists reconstructable provider-backed media and reads legacy IDs", async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.set("emoji.favorites", ["legacy-emoji"]);
+    const manager = new FavoritesManager(storage);
+    const gif = {
+      type: "gif",
+      id: "party",
+      provider: "mock",
+      url: "https://cdn.test/party.gif",
+      previewUrl: "https://cdn.test/party.webp",
+    } as const;
+    await manager.add(gif);
+    expect(await manager.getFavoriteRecords()).toEqual([
+      expect.objectContaining({ item: gif, version: 1 }),
+      { id: "legacy-emoji" },
+    ]);
+  });
+});
+
+describe("cross-media recents", () => {
+  it("stores a compact versioned snapshot for reconstruction", async () => {
+    const storage = new MemoryStorageAdapter();
+    const manager = new RecentItemsManager(storage);
+    const sticker = {
+      type: "sticker",
+      id: "wave",
+      provider: "tenant",
+      packId: "hello",
+      url: "https://cdn.test/wave.webp",
+      animated: false,
+    } as const;
+    await manager.record(sticker);
+    expect(await manager.getRecents()).toEqual([
+      expect.objectContaining({ item: sticker, version: 1 }),
+    ]);
+  });
 });
 
 describe("PersistentPreference", () => {

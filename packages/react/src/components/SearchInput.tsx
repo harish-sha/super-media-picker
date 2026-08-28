@@ -2,12 +2,14 @@ import { useId, useRef } from "react";
 
 export interface SearchInputProps {
   readonly autoFocus?: boolean;
+  readonly label?: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
 }
 
 export function SearchInput({
   autoFocus = false,
+  label = "Search emoji",
   value,
   onChange,
 }: SearchInputProps) {
@@ -22,7 +24,7 @@ export function SearchInput({
   return (
     <div className="mp-search">
       <label className="mp-visually-hidden" htmlFor={inputId}>
-        Search emoji
+        {label}
       </label>
       <span aria-hidden="true" className="mp-search__icon">
         ⌕
@@ -32,14 +34,14 @@ export function SearchInput({
         className="mp-search__input"
         id={inputId}
         onChange={(event) => onChange(event.currentTarget.value)}
-        placeholder="Search emoji…"
+        placeholder={`${label}…`}
         ref={inputRef}
         type="search"
         value={value}
       />
       {value === "" ? null : (
         <button
-          aria-label="Clear emoji search"
+          aria-label={`Clear ${label.replace(/^Search /u, "").toLocaleLowerCase()} search`}
           className="mp-search__clear"
           onClick={clear}
           title="Clear search"

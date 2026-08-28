@@ -50,6 +50,21 @@
       "limit": "20 kB"
     },
     {
+      "name": "@super-media-picker/emoji compact data",
+      "path": "packages/emoji/dist/compact.js",
+      "limit": "10 kB"
+    },
+    {
+      "name": "@super-media-picker/gif",
+      "path": "packages/gif/dist/index.js",
+      "limit": "8 kB"
+    },
+    {
+      "name": "@super-media-picker/stickers",
+      "path": "packages/stickers/dist/index.js",
+      "limit": "8 kB"
+    },
+    {
       "name": "super-media-picker public entry",
       "path": "packages/super-media-picker/dist/index.js",
       "limit": "1 kB"
