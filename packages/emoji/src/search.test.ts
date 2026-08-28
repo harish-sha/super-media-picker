@@ -111,4 +111,41 @@ describe("emoji variants", () => {
     });
     expect(toEmojiMediaItem(rocket!, "dark")).not.toHaveProperty("skinTone");
   });
+
+  it.each([
+    ["medium", "👍🏽", "1f44d-1f3fd"],
+    ["dark", "👍🏿", "1f44d-1f3ff"],
+  ] as const)("resolves thumbs up with %s tone", (tone, value, id) => {
+    const thumbsUp = searchEmoji("thumbs up")[0]!;
+    expect(resolveEmojiVariant(thumbsUp, tone)).toEqual({
+      id,
+      value,
+      name: `thumbs up: ${tone} skin tone`,
+      skinTone: tone,
+    });
+  });
+
+  it.each([
+    ["red heart", "medium", "❤️"],
+    ["face with tears of joy", "dark", "😂"],
+    ["rocket", "medium", "🚀"],
+  ] as const)("does not modify unsupported %s", (query, tone, value) => {
+    const emoji = searchEmoji(query)[0]!;
+    expect(resolveEmojiVariant(emoji, tone)).toEqual({
+      id: emoji.id,
+      value,
+      name: emoji.name,
+    });
+  });
+
+  it("uses exact dataset sequences for hands and ZWJ person emoji", () => {
+    const hand = searchEmoji("waving hand")[0]!;
+    const technologist = searchEmoji("woman technologist")[0]!;
+    expect(resolveEmojiVariant(hand, "medium").value).toBe("👋🏽");
+    expect(resolveEmojiVariant(technologist, "dark")).toMatchObject({
+      id: "1f469-1f3ff-200d-1f4bb",
+      value: "👩🏿‍💻",
+      skinTone: "dark",
+    });
+  });
 });

@@ -11,6 +11,7 @@ export interface EmojiGridProps {
   readonly favoriteIds: ReadonlySet<string>;
   readonly favoritesEnabled: boolean;
   readonly onFavoriteToggle: (emoji: EmojiRecord) => void;
+  readonly onPreview?: (emoji: EmojiRecord) => void;
   readonly onSelect: (emoji: EmojiRecord) => void;
   readonly resetKey: string;
 }
@@ -25,6 +26,7 @@ export function EmojiGrid({
   favoriteIds,
   favoritesEnabled,
   onFavoriteToggle,
+  onPreview,
   onSelect,
   resetKey,
 }: EmojiGridProps) {
@@ -33,7 +35,11 @@ export function EmojiGrid({
   const requestedIndex = navigation.key === resetKey ? navigation.index : 0;
   const activeIndex = Math.min(requestedIndex, Math.max(0, items.length - 1));
   const resolvedItems = useMemo(
-    () => items.map((emoji) => ({ emoji, resolved: resolveEmojiVariant(emoji, skinTone) })),
+    () =>
+      items.map((emoji) => ({
+        emoji,
+        resolved: resolveEmojiVariant(emoji, skinTone),
+      })),
     [items, skinTone],
   );
 
@@ -47,10 +53,15 @@ export function EmojiGrid({
       .focus();
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ): void {
     const columns = Math.max(
       1,
-      Math.floor((gridRef.current?.clientWidth ?? minimumCellSize) / minimumCellSize),
+      Math.floor(
+        (gridRef.current?.clientWidth ?? minimumCellSize) / minimumCellSize,
+      ),
     );
     const destinations: Partial<Record<string, number>> = {
       ArrowDown: index + columns,
@@ -79,14 +90,18 @@ export function EmojiGrid({
       {resolvedItems.map(({ emoji, resolved }, index) => {
         const favorite = favoriteIds.has(emoji.id);
         return (
-          <div className="mp-emoji-cell" key={emoji.id} role="gridcell">
+          <div className="mp-emoji-cell" key={resolved.id} role="gridcell">
             <button
               aria-label={resolved.name}
               className="mp-emoji"
               data-emoji-select=""
               onClick={() => onSelect(emoji)}
-              onFocus={() => setNavigation({ key: resetKey, index })}
+              onFocus={() => {
+                setNavigation({ key: resetKey, index });
+                onPreview?.(emoji);
+              }}
               onKeyDown={(event) => handleKeyDown(event, index)}
+              onMouseEnter={() => onPreview?.(emoji)}
               tabIndex={index === activeIndex ? 0 : -1}
               title={resolved.name}
               type="button"

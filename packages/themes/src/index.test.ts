@@ -4,7 +4,10 @@ import { resolveMediaPickerTheme, themeTokensToCssVariables } from "./index";
 
 describe("theme utilities", () => {
   it("resolves named and custom themes", () => {
-    expect(resolveMediaPickerTheme("dark")).toEqual({ mode: "dark", tokens: {} });
+    expect(resolveMediaPickerTheme("dark")).toEqual({
+      mode: "dark",
+      tokens: {},
+    });
     expect(
       resolveMediaPickerTheme({ mode: "light", tokens: { accent: "purple" } }),
     ).toEqual({ mode: "light", tokens: { accent: "purple" } });

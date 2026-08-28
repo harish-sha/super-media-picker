@@ -12,7 +12,6 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@company/media-core": "workspace:*",
     "@company/media-react": "workspace:*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

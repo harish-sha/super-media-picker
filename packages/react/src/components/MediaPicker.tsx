@@ -1,99 +1,79 @@
 import {
-  useEffect,
+  lazy,
+  Suspense,
   useMemo,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type MouseEvent,
 } from "react";
 
 import {
-  FavoritesManager,
-  LocalStorageAdapter,
-  PersistentPreference,
-  RecentItemsManager,
   defaultFeatures,
-  type MediaItem,
-  type MediaPickerFeatures,
-  type PickerDisplayMode,
-  type RecentItemRecord,
-  type SkinTone,
-  type StorageAdapter,
+  type CompactReactionSource,
+  type MediaPickerMode,
 } from "@company/media-core";
-import {
-  emojiCategories,
-  getEmojiByCategory,
-  getEmojiById,
-  searchEmoji,
-  toEmojiMediaItem,
-  type EmojiPickerCategory,
-  type EmojiRecord,
-} from "@company/media-emoji";
 import {
   resolveMediaPickerTheme,
   themeTokensToCssVariables,
-  type MediaPickerTheme,
 } from "@company/media-themes";
 
+import { useMediaPickerPersistence } from "../hooks/useMediaPickerPersistence";
 import { useResolvedDisplayMode } from "../hooks/useResolvedDisplayMode";
-import { CategoryNavigation } from "./CategoryNavigation";
-import { EmojiGrid } from "./EmojiGrid";
-import { SearchInput } from "./SearchInput";
-import { SkinToneSelector } from "./SkinToneSelector";
+import type { MediaPickerProps } from "../types";
+import { CompactMediaPicker } from "./CompactMediaPicker";
 
-export const mediaPickerStorageKeys = Object.freeze({
-  favorites: "emoji.favorites",
-  recents: "emoji.recents",
-  skinTone: "emoji.skin-tone",
-});
+const LazyFullMediaPicker = lazy(() =>
+  import("./FullMediaPicker").then((module) => ({
+    default: module.FullMediaPicker,
+  })),
+);
 
-const validSkinTones = new Set<SkinTone>([
-  "default",
-  "light",
-  "medium-light",
-  "medium",
-  "medium-dark",
-  "dark",
-]);
+export { mediaPickerStorageKeys } from "../hooks/useMediaPickerPersistence";
+export type { MediaPickerProps } from "../types";
 
-function isSkinTone(value: unknown): value is SkinTone {
-  return typeof value === "string" && validSkinTones.has(value as SkinTone);
+function dimension(value: number | string | undefined): string | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? `${value}px` : undefined;
+  }
+  if (typeof value === "string" && value.trim() !== "") return value;
+  return undefined;
 }
 
-export interface MediaPickerProps {
-  readonly features?: Partial<MediaPickerFeatures>;
-  readonly onSelect: (item: MediaItem) => void;
-  readonly onClose?: () => void;
-  readonly storage?: StorageAdapter;
-  readonly theme?: MediaPickerTheme;
-  readonly displayMode?: PickerDisplayMode;
-  readonly defaultCategory?: EmojiPickerCategory;
-  readonly defaultSearchQuery?: string;
-  readonly defaultSkinTone?: SkinTone;
-  readonly className?: string;
-  readonly ariaLabel?: string;
+function pickerStyles(
+  theme: NonNullable<MediaPickerProps["theme"]>,
+  width: MediaPickerProps["width"],
+  height: MediaPickerProps["height"],
+): CSSProperties {
+  const resolvedWidth = dimension(width);
+  const resolvedHeight = dimension(height);
+  const dimensions: Readonly<Record<string, string>> = {
+    ...(resolvedWidth === undefined
+      ? {}
+      : { "--mp-picker-width": resolvedWidth }),
+    ...(resolvedHeight === undefined
+      ? {}
+      : { "--mp-picker-height": resolvedHeight }),
+  };
+  return {
+    ...themeTokensToCssVariables(resolveMediaPickerTheme(theme).tokens),
+    ...dimensions,
+  };
 }
 
-function tokenStyles(theme: MediaPickerTheme): CSSProperties {
-  return themeTokensToCssVariables(resolveMediaPickerTheme(theme).tokens) as CSSProperties;
-}
-
-function resolveStoredItems(ids: readonly string[]): readonly EmojiRecord[] {
-  return ids.flatMap((id) => {
-    const emoji = getEmojiById(id);
-    return emoji === undefined ? [] : [emoji];
-  });
-}
-
-function emptyMessage(category: EmojiPickerCategory, query: string): string {
-  if (query.trim() !== "") return `No emoji found for “${query}”.`;
-  if (category === "Recent") return "No recent emoji yet.";
-  if (category === "Favorites") return "No favorite emoji yet.";
-  return "No emoji found.";
-}
-
-/** Accessible emoji picker with persistent recents, favorites, and skin tone. */
+/**
+ * Media picker with independent presentation, placement, and size controls.
+ * The complete picker module is requested only when full mode is rendered.
+ */
 export function MediaPicker({
+  mode,
+  defaultMode = "full",
+  onModeChange,
+  allowExpand,
+  compact = {},
+  size = "md",
+  width,
+  height,
+  preview = {},
   features: featureOverrides,
   onSelect,
   onClose,
@@ -106,192 +86,116 @@ export function MediaPicker({
   className,
   ariaLabel = "Media picker",
 }: MediaPickerProps) {
-  const features = { ...defaultFeatures, ...featureOverrides };
-  const persistence = useMemo(
-    () => storage ?? new LocalStorageAdapter("media-picker"),
-    [storage],
-  );
-  const recentsManager = useMemo(
-    () =>
-      new RecentItemsManager(persistence, {
-        storageKey: mediaPickerStorageKeys.recents,
-      }),
-    [persistence],
-  );
-  const favoritesManager = useMemo(
-    () =>
-      new FavoritesManager(persistence, {
-        storageKey: mediaPickerStorageKeys.favorites,
-      }),
-    [persistence],
-  );
-  const tonePreference = useMemo(
-    () =>
-      new PersistentPreference<SkinTone>(persistence, {
-        storageKey: mediaPickerStorageKeys.skinTone,
-        defaultValue: defaultSkinTone,
-        validate: isSkinTone,
-      }),
-    [defaultSkinTone, persistence],
-  );
-  const [query, setQuery] = useState(defaultSearchQuery);
-  const [selectedCategory, setSelectedCategory] =
-    useState<EmojiPickerCategory>(defaultCategory);
-  const [recentRecords, setRecentRecords] = useState<readonly RecentItemRecord[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<readonly string[]>([]);
-  const [skinTone, setSkinTone] = useState<SkinTone>(defaultSkinTone);
-  const resolvedDisplayMode = useResolvedDisplayMode(displayMode);
+  const [internalMode, setInternalMode] =
+    useState<MediaPickerMode>(defaultMode);
+  const resolvedMode = mode ?? internalMode;
   const resolvedTheme = resolveMediaPickerTheme(theme);
-
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      recentsManager.getRecents(),
-      favoritesManager.getFavorites(),
-      tonePreference.get(),
-    ]).then(([recents, favorites, tone]) => {
-      if (!active) return;
-      setRecentRecords(recents);
-      setFavoriteIds(favorites);
-      setSkinTone(tone);
-    });
-    return () => {
-      active = false;
-    };
-  }, [favoritesManager, recentsManager, tonePreference]);
-
-  const categories = useMemo<readonly EmojiPickerCategory[]>(
-    () => [
-      ...(features.recents ? (["Recent"] as const) : []),
-      ...emojiCategories,
-      ...(features.favorites ? (["Favorites"] as const) : []),
-    ],
-    [features.favorites, features.recents],
+  const features = { ...defaultFeatures, ...featureOverrides };
+  const resolvedDisplayMode = useResolvedDisplayMode(displayMode);
+  const overlay =
+    resolvedDisplayMode === "modal" || resolvedDisplayMode === "bottom-sheet";
+  const state = useMediaPickerPersistence(storage, defaultSkinTone);
+  const style = useMemo(
+    () => pickerStyles(theme, width, height),
+    [height, theme, width],
   );
-  const category = categories.includes(selectedCategory)
-    ? selectedCategory
-    : "Smileys & Emotion";
-  const items = useMemo(() => {
-    if (query.trim() !== "") return searchEmoji(query);
-    if (category === "Recent") {
-      return resolveStoredItems(recentRecords.map(({ id }) => id));
-    }
-    if (category === "Favorites") return resolveStoredItems(favoriteIds);
-    return getEmojiByCategory(category);
-  }, [category, favoriteIds, query, recentRecords]);
-  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const pickerClassName = ["mp-picker", className].filter(Boolean).join(" ");
+  const source: CompactReactionSource =
+    compact.source ?? (compact.reactions === undefined ? "default" : "custom");
+  const compactAllowsExpand = compact.allowExpand ?? allowExpand ?? false;
+  const compactAllowsCollapse = compact.allowCollapse ?? false;
+  const requestedItemCount = compact.maxVisibleItems ?? 7;
+  const maxVisibleItems =
+    Number.isFinite(requestedItemCount) && requestedItemCount > 0
+      ? Math.floor(requestedItemCount)
+      : 7;
+  const trackCompactRecents =
+    features.recents || source === "recent" || source === "frequent";
 
-  function handleCategoryChange(nextCategory: EmojiPickerCategory): void {
-    setSelectedCategory(nextCategory);
-    setQuery("");
-  }
-
-  function handleSelection(emoji: EmojiRecord): void {
-    onSelect(toEmojiMediaItem(emoji, skinTone));
-    if (features.recents) {
-      void recentsManager.record(emoji.id).then(setRecentRecords);
-    }
-  }
-
-  function handleFavoriteToggle(emoji: EmojiRecord): void {
-    void favoritesManager.toggle(emoji.id).then(setFavoriteIds);
-  }
-
-  function handleToneChange(tone: SkinTone): void {
-    setSkinTone(tone);
-    void tonePreference.set(tone);
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (event.key !== "Escape" || onClose === undefined) return;
-    event.stopPropagation();
-    onClose();
+  function requestMode(nextMode: MediaPickerMode): void {
+    if (mode === undefined) setInternalMode(nextMode);
+    onModeChange?.(nextMode);
   }
 
   function handleBackdropClick(event: MouseEvent<HTMLDivElement>): void {
     if (event.target === event.currentTarget) onClose?.();
   }
 
-  const overlay = resolvedDisplayMode === "modal" || resolvedDisplayMode === "bottom-sheet";
-  const pickerClassName = ["mp-picker", className].filter(Boolean).join(" ");
-
-  if (!features.emoji) {
-    return (
-      <div
-        className="mp-positioner"
-        data-display-mode={displayMode}
-        data-resolved-display-mode={resolvedDisplayMode}
-      >
-        <section
-          aria-label={ariaLabel}
-          className={pickerClassName}
-          data-theme={resolvedTheme.mode}
-          role="region"
-          style={tokenStyles(theme)}
-        >
-          <div className="mp-empty" role="status">
-            No media features are enabled.
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  const gridLabel =
-    query.trim() === "" ? `${category} emoji` : `Emoji search results for ${query}`;
-  const activeTabId = `mp-category-${category.toLowerCase().replaceAll(/[^a-z]+/g, "-")}`;
-
   return (
     <div
       className="mp-positioner"
       data-display-mode={displayMode}
+      data-mode={resolvedMode}
       data-resolved-display-mode={resolvedDisplayMode}
+      data-size={size}
       onMouseDown={handleBackdropClick}
     >
-      <section
-        aria-label={ariaLabel}
-        aria-modal={overlay ? true : undefined}
-        className={pickerClassName}
-        data-theme={resolvedTheme.mode}
-        onKeyDown={handleKeyDown}
-        role={overlay ? "dialog" : "region"}
-        style={tokenStyles(theme)}
-      >
-        <header className="mp-header">
-          <SearchInput onChange={setQuery} value={query} />
-          <SkinToneSelector onChange={handleToneChange} value={skinTone} />
-        </header>
-        <div className="mp-section-title" id="mp-current-category">
-          {query.trim() === "" ? category : "Search results"}
-          <span aria-live="polite" className="mp-result-count">
-            {items.length} emoji
-          </span>
-        </div>
-        <div
-          aria-labelledby={activeTabId}
-          className="mp-content"
-          id="mp-emoji-panel"
-          role="tabpanel"
-          tabIndex={-1}
-        >
-          <EmojiGrid
-            emptyMessage={emptyMessage(category, query)}
-            favoriteIds={favoriteIdSet}
-            favoritesEnabled={features.favorites}
-            items={items}
-            label={gridLabel}
-            onFavoriteToggle={handleFavoriteToggle}
-            onSelect={handleSelection}
-            resetKey={`${category}:${query}:${skinTone}`}
-            skinTone={skinTone}
-          />
-        </div>
-        <CategoryNavigation
-          activeCategory={category}
-          categories={categories}
-          onChange={handleCategoryChange}
+      {resolvedMode === "compact" ? (
+        <CompactMediaPicker
+          allowExpand={compactAllowsExpand}
+          ariaLabel={ariaLabel}
+          className={pickerClassName}
+          favoriteIds={state.favoriteIds}
+          maxVisibleItems={maxVisibleItems}
+          onExpand={() => requestMode("full")}
+          onRecordRecent={(id) => {
+            if (trackCompactRecents) void state.recordRecent(id);
+          }}
+          onSelect={onSelect}
+          onSkinToneChange={state.setSkinTone}
+          overlay={overlay}
+          recentRecords={state.recentRecords}
+          skinTone={state.skinTone}
+          source={source}
+          style={style}
+          themeMode={resolvedTheme.mode}
+          {...(onClose === undefined ? {} : { onClose })}
+          {...(compact.reactions === undefined
+            ? {}
+            : { reactions: compact.reactions })}
         />
-      </section>
+      ) : (
+        <Suspense
+          fallback={
+            <section
+              aria-label={ariaLabel}
+              className={`${pickerClassName} mp-picker--full mp-picker--loading`}
+              data-theme={resolvedTheme.mode}
+              role="status"
+              style={style}
+            >
+              Opening full media picker…
+            </section>
+          }
+        >
+          <LazyFullMediaPicker
+            ariaLabel={ariaLabel}
+            className={pickerClassName}
+            defaultCategory={defaultCategory}
+            defaultSearchQuery={defaultSearchQuery}
+            favoriteIds={state.favoriteIds}
+            features={features}
+            onRecordRecent={(id) => {
+              void state.recordRecent(id);
+            }}
+            onSelect={onSelect}
+            onSkinToneChange={state.setSkinTone}
+            onToggleFavorite={(id) => {
+              void state.toggleFavorite(id);
+            }}
+            overlay={overlay}
+            previewEnabled={preview.enabled ?? false}
+            recentRecords={state.recentRecords}
+            skinTone={state.skinTone}
+            style={style}
+            themeMode={resolvedTheme.mode}
+            {...(onClose === undefined ? {} : { onClose })}
+            {...(compactAllowsCollapse
+              ? { onCollapse: () => requestMode("compact") }
+              : {})}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

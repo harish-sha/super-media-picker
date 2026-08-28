@@ -10,6 +10,7 @@ export default tseslint.config(
       "**/storybook-static/**",
       "**/coverage/**",
       "packages/emoji/src/data/emoji-data.generated.ts",
+      "packages/emoji/src/data/compact-emoji-data.generated.ts",
     ],
   },
   eslint.configs.recommended,

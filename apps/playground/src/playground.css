@@ -49,22 +49,62 @@ select {
   letter-spacing: -0.04em;
 }
 
-.playground-intro label {
+.playground-presets {
   display: flex;
-  width: max-content;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.playground-presets button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.875rem;
+  color: #263451;
+  background: #fff;
+  border: 1px solid #ccd5e4;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.playground-presets button:hover,
+.playground-presets button:focus-visible {
+  color: #234bd2;
+  border-color: #315efb;
+}
+
+.playground-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: rgb(255 255 255 / 75%);
+  border: 1px solid #d8dfeb;
+  border-radius: 1rem;
+}
+
+.playground-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   font-weight: 700;
 }
 
-.playground-intro select {
+.playground-controls select {
+  min-height: 2.5rem;
   padding: 0.4rem 2rem 0.4rem 0.6rem;
+}
+
+.playground-controls .playground-checkbox {
+  min-height: 2.5rem;
+  flex-direction: row;
+  align-items: center;
 }
 
 .playground-demo {
   display: grid;
-  grid-template-columns: minmax(18rem, 26.25rem) minmax(18rem, 1fr);
+  grid-template-columns: minmax(18rem, 32rem) minmax(18rem, 1fr);
   align-items: start;
   gap: 2rem;
 }
@@ -85,6 +125,22 @@ select {
 .playground-output pre {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.playground-output p {
+  color: #bfc9dc;
+  font-size: 0.75rem;
+}
+
+.playground-preview {
+  width: 100%;
+  max-width: 32rem;
+  min-height: 4rem;
+  transition: max-width 160ms ease;
+}
+
+.playground-preview[data-preview-width="mobile"] {
+  max-width: 20rem;
 }
 
 @media (max-width: 48rem) {

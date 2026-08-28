@@ -1,28 +1,32 @@
 # Implementation status
 
-Audited against the original Phase 0–2 milestones on 2026-08-27. “Complete” means the implementation and tests were inspected, not merely that a file exists.
+Audited through 2026-08-28 after recovering the interrupted Phase 3–4 task and completing the compact/full presentation pass. “Complete” means the implementation and its relevant automated checks were inspected; command-level results are recorded in the final task handoff.
 
-| Requirement | Status | Relevant files | Notes |
-| --- | --- | --- | --- |
-| pnpm monorepo and workspace packages | Complete | `package.json`, `pnpm-workspace.yaml`, `packages/*`, `apps/*` | Package dependency direction is application → React → emoji/core/themes. GIF and sticker directories are intentionally documentation-only placeholders until their later phases. |
-| Strict shared TypeScript configuration | Complete | `tooling/typescript/base.json`, package `tsconfig.json` files | Strict, exact optional properties, and unchecked indexed access are enabled. |
-| ESLint and Prettier | Complete | `eslint.config.js`, `prettier.config.js` | Root scripts cover all authored source. Generated emoji data is intentionally excluded. |
-| ESM package builds and declarations | Complete | package manifests, `tsup` scripts | Core, emoji, React, and themes emit ESM and declarations. |
-| Vite playground | Partial | `apps/playground` | Functional production build exists, but source aliases bypass package exports; this audit will replace them with real workspace package resolution. |
-| Storybook and accessibility addon | Partial | `apps/playground/.storybook`, stories | Builds and a11y addon exist; stories cover only the Phase 2 surface and also use source aliases. |
-| Vitest and React Testing Library | Complete | package test files | Core, emoji search/data, selection, categories, keyboard foundation, themes, and failures are covered. |
-| Playwright smoke test | Complete | `playwright.config.ts`, `tests/e2e` | Searches and selects a normalized emoji through the production playground. |
-| Changesets and CI skeleton | Complete | `.changeset`, `.github/workflows/ci.yml` | CI runs install, lint, typecheck, tests, build, size, and Storybook. |
-| Framework-independent media contracts | Complete | `packages/core/src` | Media union, providers, capabilities, features, storage, cache, analytics, request state, and errors contain no React dependency. |
-| SSR-safe storage adapters | Complete | `packages/core/src/storage.ts` | Memory and defensive namespaced local-storage adapters use lazy browser access and tolerate corruption/unavailability. |
-| Maintainable Unicode/CLDR emoji data | Complete | `packages/emoji/scripts`, generated data | 1,906 compact records are generated from Emojibase metadata; the source dataset is development-only. |
-| Emoji categories and navigation | Complete | emoji types/search, `CategoryNavigation.tsx` | Nine Unicode categories are available. Recent belongs to Phase 3. |
-| Emoji search | Complete | `packages/emoji/src/search.ts` | Canonical labels, tags/aliases, category metadata, normalization, and ranking are tested. Phase 3 expands the query matrix. |
-| Emoji grid and normalized selection | Complete | `EmojiGrid.tsx`, emoji media converter | Selection emits a standardized `EmojiMediaItem`. |
-| Responsive base layout and theme tokens | Complete | React/theme CSS | Phase 2 has constrained desktop/mobile sizing and light/dark/system base tokens. Phase 4 will complete the token and display-mode contracts. |
-| Keyboard and accessible labels | Complete | React components/tests | Roving grid focus supports arrows/Home/End; native Enter/Space selection and Escape callback are present. Phase 4 will harden semantics across the new controls. |
-| Package dry-run and consumer export verification | Missing | package manifests | Not previously exercised; this audit will add repeatable package checks and remove consumer source aliases. |
+## Recovered checkpoint
 
-## Audit conclusion
+The committed checkpoint already contained the Phase 0–2 foundation, framework-independent collection managers, generated tone variants, expanded search, theme contracts, and a substantial React integration draft. It was not internally complete: category navigation contained malformed code, tests and stories still used an obsolete theme prop, the public stylesheet was missing from consumers, package development exports pointed at source files excluded from tarballs, and final E2E/package/performance/documentation work had not been finished.
 
-Phases 0–2 are functionally complete. Before Phase 3, package consumption must be corrected and verified. Phase 3 features—recents, favorites, skin tones, preferences, and variants—are correctly absent rather than represented by placeholders.
+Those partial changes were repaired in place; correct work was preserved.
+
+## Requirement status
+
+| Area                          | Status   | Implementation                                                                                                                                                                                                       |
+| ----------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0–2 foundation          | Complete | pnpm workspace, strict TypeScript, lint/format, ESM/declarations, Vite, Storybook, Vitest, Playwright, Changesets, CI, generated CLDR-derived emoji data, categories/search/grid/selection                           |
+| Package consumer verification | Complete | Playground and Storybook consume public package exports and CSS; production builds resolve emitted ESM/declarations; temporary tarball validation rejects missing exports, workspace ranges, and leaked source/tests |
+| Recents and ranking           | Complete | `RecentItemsManager` persists count/time data and blends documented exponential recency with normalized logarithmic frequency                                                                                        |
+| Storage                       | Complete | Injected asynchronous adapter contract, memory implementation, defensive SSR-safe namespaced local-storage implementation, corruption/failure coverage                                                               |
+| Favorites                     | Complete | Framework-independent add/remove/toggle/list/check plus persistent accessible React controls and Favorites category                                                                                                  |
+| Skin tones and variants       | Complete | Persistent global six-value preference, generated Unicode variants in full and compact paths, race-safe hydration, compatible-only resolution, accessible custom listbox, normalized toned output                    |
+| Improved search               | Complete | Precomputed normalized index across canonical names, aliases/keywords/shortcodes, and category metadata with ranking/query-matrix tests                                                                              |
+| Category navigation           | Complete | Recent, nine Unicode categories, and Favorites with click and automatic keyboard tab activation                                                                                                                      |
+| Themes                        | Complete | Light, dark, live CSS system mode, typed custom tokens, public CSS-variable contract, and no runtime CSS-in-JS                                                                                                       |
+| Responsive display modes      | Complete | Auto, popover, inline, modal, and bottom-sheet modes with compact width/height media handling, orientation response, safe area, and touch-sized controls                                                             |
+| Keyboard and accessibility    | Complete | Named region/dialog, search, tabs/panel, grid/cells, labels, roving focus, tone listbox arrows/Home/End/Enter/Escape, logical Tab order, visible focus, live result/empty states                                     |
+| Playground and Storybook      | Complete | Mode/size/display/theme/source/feature controls, normalized output, transition presets, and 33 stories including open tone-menu bottom-sheet regressions                                                             |
+| Tests                         | Complete | 77 core/emoji/theme/React tests, full tone display matrix, persistence/race coverage, and realistic Playwright bottom-sheet regression coverage                                                                      |
+| Performance review            | Complete | Actual raw/compressed/package measurements, search timing, dataset/variant counts, DOM structure review, size budgets, and documented deferrals                                                                      |
+| Documentation and CI          | Complete | Root/package usage, theme/ranking ADRs, performance report, status/plan, full CI quality and package/E2E gates                                                                                                       |
+| Compact/full presentations    | Complete | Generic compact toolbar, default/custom/dynamic sources, controlled/uncontrolled expansion, independent placement/sizing, lazy full UI/data, polished full controls, and dedicated tests/demos                       |
+
+GIF and sticker implementations remain intentionally deferred; only their existing placeholders remain.

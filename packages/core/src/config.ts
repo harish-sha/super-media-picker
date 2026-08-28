@@ -28,11 +28,17 @@ export interface MediaPickerConfig {
 }
 
 export type PickerDisplayMode =
-  | "auto"
-  | "popover"
-  | "inline"
-  | "modal"
-  | "bottom-sheet";
+  "auto" | "popover" | "inline" | "modal" | "bottom-sheet";
+
+/** Presentation density, independent from responsive display placement. */
+export type MediaPickerMode = "compact" | "full";
+
+/** Theme-token-backed picker size presets. */
+export type MediaPickerSize = "sm" | "md" | "lg";
+
+/** Strategy used to populate the compact reaction bar. */
+export type CompactReactionSource =
+  "default" | "recent" | "frequent" | "favorites" | "custom";
 
 /** Merges partial consumer configuration with stable, emoji-first defaults. */
 export function createMediaPickerConfig(

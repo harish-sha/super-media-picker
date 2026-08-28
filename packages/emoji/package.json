@@ -10,16 +10,16 @@
   ],
   "exports": {
     ".": {
-      "development": {
-        "types": "./src/index.ts",
-        "import": "./src/index.ts"
-      },
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./compact": {
+      "types": "./dist/compact.d.ts",
+      "import": "./dist/compact.js"
     }
   },
   "scripts": {
-    "build": "pnpm generate:data && tsup src/index.ts --format esm --dts --clean --sourcemap",
+    "build": "pnpm generate:data && tsup src/index.ts src/compact.ts --format esm --dts --splitting --clean --sourcemap",
     "generate:data": "node scripts/generate-emoji-data.mjs",
     "test": "pnpm generate:data && vitest run",
     "test:watch": "vitest",

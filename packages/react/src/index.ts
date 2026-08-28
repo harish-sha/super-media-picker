@@ -1,7 +1,12 @@
 import "./styles.css";
 
 export { MediaPicker, mediaPickerStorageKeys } from "./components/MediaPicker";
-export type { MediaPickerProps } from "./components/MediaPicker";
+export type {
+  CompactMediaPickerConfig,
+  CompactReactionInput,
+  MediaPickerPreviewConfig,
+  MediaPickerProps,
+} from "./types";
 
 export {
   FavoritesManager,
@@ -16,7 +21,10 @@ export type {
   MediaCapabilities,
   MediaItem,
   MediaPickerFeatures,
+  MediaPickerMode,
+  MediaPickerSize,
   PickerDisplayMode,
+  CompactReactionSource,
   RecentItemRecord,
   SkinTone,
   StorageAdapter,

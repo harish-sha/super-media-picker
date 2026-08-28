@@ -4,6 +4,7 @@
     "baseUrl": ".",
     "paths": {
       "@company/media-core": ["packages/core/src/index.ts"],
+      "@company/media-emoji/compact": ["packages/emoji/src/compact.ts"],
       "@company/media-emoji": ["packages/emoji/src/index.ts"],
       "@company/media-react": ["packages/react/src/index.ts"],
       "@company/media-themes": ["packages/themes/src/index.ts"]

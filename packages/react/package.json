@@ -12,20 +12,15 @@
   ],
   "exports": {
     ".": {
-      "development": {
-        "types": "./src/index.ts",
-        "import": "./src/index.ts"
-      },
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./styles.css": {
-      "development": "./src/styles.css",
       "default": "./dist/index.css"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external react --external react-dom",
+    "build": "tsup src/index.ts --format esm --dts --splitting --clean --sourcemap --external react --external react-dom",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json"

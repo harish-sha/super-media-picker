@@ -1,23 +1,53 @@
+import { useId, useRef } from "react";
+
 export interface SearchInputProps {
+  readonly autoFocus?: boolean;
   readonly value: string;
   readonly onChange: (value: string) => void;
 }
 
-export function SearchInput({ value, onChange }: SearchInputProps) {
+export function SearchInput({
+  autoFocus = false,
+  value,
+  onChange,
+}: SearchInputProps) {
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function clear(): void {
+    onChange("");
+    inputRef.current?.focus();
+  }
+
   return (
-    <label className="mp-search">
-      <span className="mp-visually-hidden">Search emoji</span>
+    <div className="mp-search">
+      <label className="mp-visually-hidden" htmlFor={inputId}>
+        Search emoji
+      </label>
       <span aria-hidden="true" className="mp-search__icon">
         ⌕
       </span>
       <input
-        aria-label="Search emoji"
+        autoFocus={autoFocus}
         className="mp-search__input"
+        id={inputId}
         onChange={(event) => onChange(event.currentTarget.value)}
         placeholder="Search emoji…"
+        ref={inputRef}
         type="search"
         value={value}
       />
-    </label>
+      {value === "" ? null : (
+        <button
+          aria-label="Clear emoji search"
+          className="mp-search__clear"
+          onClick={clear}
+          title="Clear search"
+          type="button"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      )}
+    </div>
   );
 }

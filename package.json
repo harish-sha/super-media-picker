@@ -10,17 +10,19 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
-    "build-storybook": "pnpm --filter playground build-storybook",
-    "dev": "pnpm --filter playground dev",
+    "build:packages": "pnpm --filter './packages/**' -r --if-present build",
+    "build-storybook": "pnpm build:packages && pnpm --filter playground build-storybook",
+    "dev": "pnpm build:packages && pnpm --filter playground dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
+    "package:check": "node tooling/scripts/validate-packages.mjs",
     "size": "size-limit",
-    "storybook": "pnpm --filter playground storybook",
-    "test": "pnpm -r --if-present test",
+    "storybook": "pnpm build:packages && pnpm --filter playground storybook",
+    "test": "pnpm build:packages && pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "test:watch": "pnpm -r --parallel --if-present test:watch",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm build:packages && pnpm -r --if-present typecheck"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",

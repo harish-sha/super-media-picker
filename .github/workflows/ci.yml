@@ -16,9 +16,13 @@ jobs:
           cache: pnpm
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
       - run: pnpm lint
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
       - run: pnpm size
       - run: pnpm build-storybook
+      - run: pnpm package:check
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

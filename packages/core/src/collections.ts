@@ -32,14 +32,20 @@ export class RecentItemsManager {
   readonly #halfLifeMs: number;
   readonly #recencyWeight: number;
 
-  constructor(storage: StorageAdapter, options: RecentItemsManagerOptions = {}) {
+  constructor(
+    storage: StorageAdapter,
+    options: RecentItemsManagerOptions = {},
+  ) {
     this.#storage = storage;
     this.#storageKey = options.storageKey ?? "emoji.recents";
     this.#limit = Math.max(1, options.limit ?? 40);
     this.#now = options.now ?? Date.now;
     this.#halfLifeMs =
       Math.max(0.001, options.recencyHalfLifeDays ?? 7) * millisecondsPerDay;
-    this.#recencyWeight = Math.min(1, Math.max(0, options.recencyWeight ?? 0.7));
+    this.#recencyWeight = Math.min(
+      1,
+      Math.max(0, options.recencyWeight ?? 0.7),
+    );
   }
 
   async record(id: string): Promise<readonly RecentItemRecord[]> {
@@ -67,7 +73,10 @@ export class RecentItemsManager {
 
   #rank(records: readonly RecentItemRecord[]): readonly RecentItemRecord[] {
     const now = this.#now();
-    const maxFrequency = Math.max(1, ...records.map(({ count }) => Math.log2(count + 1)));
+    const maxFrequency = Math.max(
+      1,
+      ...records.map(({ count }) => Math.log2(count + 1)),
+    );
     const frequencyWeight = 1 - this.#recencyWeight;
     const score = (record: RecentItemRecord): number => {
       const age = Math.max(0, now - record.lastUsedAt);
@@ -124,16 +133,18 @@ export class FavoritesManager {
 
   async add(id: string): Promise<readonly string[]> {
     const current = await this.getFavorites();
-    const next = [id, ...current.filter((favoriteId) => favoriteId !== id)].slice(
-      0,
-      this.#limit,
-    );
+    const next = [
+      id,
+      ...current.filter((favoriteId) => favoriteId !== id),
+    ].slice(0, this.#limit);
     await this.#storage.set(this.#storageKey, next);
     return next;
   }
 
   async remove(id: string): Promise<readonly string[]> {
-    const next = (await this.getFavorites()).filter((favoriteId) => favoriteId !== id);
+    const next = (await this.getFavorites()).filter(
+      (favoriteId) => favoriteId !== id,
+    );
     await this.#storage.set(this.#storageKey, next);
     return next;
   }
@@ -149,10 +160,11 @@ export class FavoritesManager {
   async getFavorites(): Promise<readonly string[]> {
     const stored = await this.#storage.get<unknown>(this.#storageKey);
     if (!Array.isArray(stored)) return [];
-    return [...new Set(stored.filter((value): value is string => typeof value === "string"))].slice(
-      0,
-      this.#limit,
-    );
+    return [
+      ...new Set(
+        stored.filter((value): value is string => typeof value === "string"),
+      ),
+    ].slice(0, this.#limit);
   }
 
   async clear(): Promise<void> {
@@ -171,7 +183,10 @@ export class PersistentPreference<T> {
   readonly #storage: StorageAdapter;
   readonly #options: PersistentPreferenceOptions<T>;
 
-  constructor(storage: StorageAdapter, options: PersistentPreferenceOptions<T>) {
+  constructor(
+    storage: StorageAdapter,
+    options: PersistentPreferenceOptions<T>,
+  ) {
     this.#storage = storage;
     this.#options = options;
   }

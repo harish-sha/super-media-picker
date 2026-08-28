@@ -59,6 +59,16 @@ describe("storage adapters", () => {
     await expect(storage.set("x", true)).resolves.toBeUndefined();
     await expect(storage.remove("x")).resolves.toBeUndefined();
   });
+
+  it("treats corrupt JSON and absent browser storage as empty", async () => {
+    const corrupt = new LocalStorageAdapter("test", {
+      getItem: () => "{not-json",
+      removeItem: () => undefined,
+      setItem: () => undefined,
+    });
+    await expect(corrupt.get("x")).resolves.toBeNull();
+    await expect(new LocalStorageAdapter().get("x")).resolves.toBeNull();
+  });
 });
 
 describe("MemoryCache", () => {

@@ -47,9 +47,6 @@ importers:
 
   apps/playground:
     dependencies:
-      '@company/media-core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@company/media-react':
         specifier: workspace:*
         version: link:../../packages/react

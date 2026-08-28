@@ -26,7 +26,13 @@ const emojiSearchIndex: readonly EmojiSearchEntry[] = emojiData.map((emoji) => {
   const name = normalizeEmojiSearch(emoji.name);
   const aliases = emoji.aliases.map(normalizeEmojiSearch);
   const category = normalizeEmojiSearch(emoji.category);
-  return { emoji, name, aliases, category, searchable: [name, ...aliases, category] };
+  return {
+    emoji,
+    name,
+    aliases,
+    category,
+    searchable: [name, ...aliases, category],
+  };
 });
 
 const emojiById = new Map(emojiData.map((emoji) => [emoji.id, emoji]));
@@ -71,7 +77,9 @@ export function searchEmoji(
   const source =
     options.category === undefined
       ? emojiSearchIndex
-      : emojiSearchIndex.filter(({ emoji }) => emoji.category === options.category);
+      : emojiSearchIndex.filter(
+          ({ emoji }) => emoji.category === options.category,
+        );
 
   const results =
     normalizedQuery === ""

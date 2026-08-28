@@ -52,7 +52,10 @@ describe("RecentItemsManager", () => {
 
   it("ignores malformed persisted records and supports clearing", async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.set("emoji.recents", [{ id: "bad", count: 0, lastUsedAt: 1 }, null]);
+    await storage.set("emoji.recents", [
+      { id: "bad", count: 0, lastUsedAt: 1 },
+      null,
+    ]);
     const manager = new RecentItemsManager(storage);
     expect(await manager.getRecents()).toEqual([]);
     await manager.record("valid");

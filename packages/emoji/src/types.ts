@@ -1,3 +1,5 @@
+import type { SkinTone } from "@company/media-core";
+
 export const emojiCategories = [
   "Smileys & Emotion",
   "People & Body",
@@ -24,7 +26,7 @@ export interface EmojiRecord {
 export interface EmojiVariant {
   readonly id: string;
   readonly value: string;
-  readonly name: string;
+  readonly name?: string;
   readonly kind: "skin-tone" | "presentation" | "related";
   readonly skinTone?: Exclude<SkinTone, "default">;
 }
@@ -37,4 +39,3 @@ export interface ResolvedEmojiVariant {
 }
 
 export type EmojiPickerCategory = "Recent" | "Favorites" | EmojiCategory;
-import type { SkinTone } from "@company/media-core";

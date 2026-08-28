@@ -5,4 +5,5 @@ coverage
 playwright-report
 test-results
 packages/emoji/src/data/emoji-data.generated.ts
+packages/emoji/src/data/compact-emoji-data.generated.ts
 pnpm-lock.yaml
