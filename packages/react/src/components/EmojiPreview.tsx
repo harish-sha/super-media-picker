@@ -1,5 +1,8 @@
-import type { SkinTone } from "@company/media-core";
-import { resolveEmojiVariant, type EmojiRecord } from "@company/media-emoji";
+import type { SkinTone } from "@super-media-picker/core";
+import {
+  resolveEmojiVariant,
+  type EmojiRecord,
+} from "@super-media-picker/emoji";
 
 export interface EmojiPreviewProps {
   readonly emoji: EmojiRecord | undefined;

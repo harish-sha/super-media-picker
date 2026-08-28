@@ -1,4 +1,4 @@
-import type { SkinTone } from "@company/media-core";
+import type { SkinTone } from "@super-media-picker/core";
 
 export const emojiCategories = [
   "Smileys & Emotion",

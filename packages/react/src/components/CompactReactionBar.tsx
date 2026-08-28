@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 
-import type { MediaItem } from "@company/media-core";
+import type { MediaItem } from "@super-media-picker/core";
 
 import { compactItemKey } from "./compactReactions";
 import { ReactionItem } from "./ReactionItem";

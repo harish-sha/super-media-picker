@@ -6,7 +6,7 @@ import {
   MemoryStorageAdapter,
   type MediaItem,
   type MediaPickerMode,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 
 import { MediaPicker, mediaPickerStorageKeys } from "./MediaPicker";
 

@@ -5,7 +5,7 @@ import {
   MediaPicker,
   MemoryStorageAdapter,
   mediaPickerStorageKeys,
-} from "@company/media-react";
+} from "super-media-picker";
 
 function storageWith(options: {
   readonly recents?: boolean;

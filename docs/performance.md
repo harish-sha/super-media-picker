@@ -2,20 +2,22 @@
 
 Measured on 2026-08-28 from production ESM builds using Node 23 on macOS ARM. Raw byte counts use the emitted files, gzip uses `gzip -c`, package values come from the actual `pnpm pack` archives, and Brotli values come from `size-limit`.
 
-| Artifact                         | Raw       | Compressed     |
-| -------------------------------- | --------- | -------------- |
-| `@company/media-core` JavaScript | 7,321 B   | 1.81 kB Brotli |
-| React compact/base entry         | 20,413 B  | 4.61 kB Brotli |
-| React shared tone-menu chunk     | 5,393 B   | 1,566 B gzip   |
-| React lazy full-picker chunk     | 13,784 B  | 3,690 B gzip   |
-| React picker CSS                 | 12,747 B  | 2,619 B gzip   |
-| Emoji JavaScript/data            | 577,548 B | 76,813 B gzip  |
-| Playground initial JavaScript    | 220,890 B | 69,337 B gzip  |
-| Playground lazy full UI          | 6,574 B   | 2,657 B gzip   |
-| Playground lazy emoji data       | 440,821 B | 71,902 B gzip  |
-| Playground CSS                   | 13,713 B  | 3,225 B gzip   |
+| Artifact                              | Raw       | Compressed     |
+| ------------------------------------- | --------- | -------------- |
+| `@super-media-picker/core` JavaScript | 7,321 B   | 1.81 kB Brotli |
+| React compact/base entry              | 20,443 B  | 4.62 kB Brotli |
+| React shared tone-menu chunk          | 5,398 B   | 1,569 B gzip   |
+| React lazy full-picker chunk          | 13,803 B  | 3,694 B gzip   |
+| React picker CSS                      | 12,752 B  | 2,624 B gzip   |
+| Public JavaScript entry               | 92 B      | 88 B Brotli    |
+| Public stylesheet export              | 12,752 B  | 2,624 B gzip   |
+| Emoji JavaScript/data                 | 577,548 B | 76,819 B gzip  |
+| Playground initial JavaScript         | 220,888 B | 69,346 B gzip  |
+| Playground lazy full UI               | 6,574 B   | 2,661 B gzip   |
+| Playground lazy emoji data            | 440,821 B | 71,903 B gzip  |
+| Playground CSS                        | 13,713 B  | 3,225 B gzip   |
 
-Actual package archives are 8,818 B for core, 177,856 B for emoji, 1,989 B for themes, and 36,403 B for React. The React archive includes the compact entry, shared tone-menu chunk, lazy full-picker chunk, declarations, CSS, and source maps. `pnpm package:check` re-measures every archive and validates internal lazy-chunk references as well as public exports.
+Actual package archives are 8,819 B for core, 177,877 B for emoji, 1,987 B for themes, 36,319 B for React, and 3,727 B for the public `super-media-picker` aggregator. The React archive includes the compact entry, shared tone-menu chunk, lazy full-picker chunk, declarations, CSS, and source maps. `pnpm package:check` re-measures every archive and validates internal lazy-chunk references as well as public exports.
 
 ## Runtime observations
 

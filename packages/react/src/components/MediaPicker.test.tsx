@@ -7,7 +7,7 @@ import {
   type MediaItem,
   type SkinTone,
   type StorageAdapter,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 
 import { MediaPicker, mediaPickerStorageKeys } from "./MediaPicker";
 

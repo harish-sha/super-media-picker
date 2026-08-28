@@ -11,7 +11,7 @@ import type {
   MediaPickerFeatures,
   RecentItemRecord,
   SkinTone,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 import {
   emojiCategories,
   getEmojiByCategory,
@@ -20,7 +20,7 @@ import {
   toEmojiMediaItem,
   type EmojiPickerCategory,
   type EmojiRecord,
-} from "@company/media-emoji";
+} from "@super-media-picker/emoji";
 
 import { categoryTabId, CategoryNavigation } from "./CategoryNavigation";
 import { EmojiGrid } from "./EmojiGrid";

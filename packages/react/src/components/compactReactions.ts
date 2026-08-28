@@ -1,9 +1,9 @@
-import type { MediaItem, SkinTone } from "@company/media-core";
+import type { MediaItem, SkinTone } from "@super-media-picker/core";
 import {
   getCompactEmoji,
   toEmojiMediaItem,
   type EmojiRecord,
-} from "@company/media-emoji/compact";
+} from "@super-media-picker/emoji/compact";
 
 const defaultReactionIds = [
   "1f44d",

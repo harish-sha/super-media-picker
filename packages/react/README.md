@@ -1,10 +1,10 @@
-# @company/media-react
+# @super-media-picker/react
 
-Accessible React UI for the private messaging media picker. It provides a lightweight compact reaction mode and a lazily loaded full mode with Unicode emoji search and categories, persistent recents and favorites, skin tones, themes, responsive display modes, and keyboard navigation.
+Internal accessible React implementation for Super Media Picker. Consumers should use the public package:
 
 ```tsx
-import { MediaPicker, type MediaItem } from "@company/media-react";
-import "@company/media-react/styles.css";
+import { MediaPicker, type MediaItem } from "super-media-picker";
+import "super-media-picker/styles.css";
 
 function handleSelect(item: MediaItem) {
   console.log(item);

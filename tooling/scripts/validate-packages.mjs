@@ -5,7 +5,13 @@ import { spawnSync } from "node:child_process";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 const outputDirectory = mkdtempSync(join(tmpdir(), "media-picker-pack-"));
-const packageDirectories = ["core", "emoji", "themes", "react"];
+const packageDirectories = [
+  "core",
+  "emoji",
+  "themes",
+  "react",
+  "super-media-picker",
+];
 
 function collectExportTargets(value, targets = []) {
   if (typeof value === "string" && value.startsWith("./")) {

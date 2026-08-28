@@ -8,7 +8,7 @@ import {
   type RecentItemRecord,
   type SkinTone,
   type StorageAdapter,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 
 export const mediaPickerStorageKeys = Object.freeze({
   favorites: "emoji.favorites",

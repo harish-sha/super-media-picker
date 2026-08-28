@@ -15,7 +15,7 @@ export {
   PersistentPreference,
   RecentItemsManager,
   createMediaPickerConfig,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 export type {
   EmojiMediaItem,
   MediaCapabilities,
@@ -28,10 +28,10 @@ export type {
   RecentItemRecord,
   SkinTone,
   StorageAdapter,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 export type {
   MediaPickerCustomTheme,
   MediaPickerTheme,
   MediaPickerThemeMode,
   MediaPickerThemeTokens,
-} from "@company/media-themes";
+} from "@super-media-picker/themes";

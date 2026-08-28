@@ -10,8 +10,8 @@ import {
   type MediaPickerSize,
   type MediaPickerThemeMode,
   type PickerDisplayMode,
-} from "@company/media-react";
-import "@company/media-react/styles.css";
+} from "super-media-picker";
+import "super-media-picker/styles.css";
 
 import "./playground.css";
 
@@ -68,7 +68,7 @@ function Playground() {
   return (
     <main className="playground-shell">
       <header className="playground-intro">
-        <p className="playground-eyebrow">@company/media-react</p>
+        <p className="playground-eyebrow">SUPER MEDIA PICKER</p>
         <h1>Compact reactions and full media</h1>
         <p>
           Start with a focused reaction bar, expand into the complete picker,

@@ -1,5 +1,5 @@
 {
-  "name": "@company/media-emoji",
+  "name": "@super-media-picker/emoji",
   "version": "0.1.0",
   "description": "Compact emoji data, categories, normalization, and search.",
   "type": "module",
@@ -29,7 +29,7 @@
     "access": "restricted"
   },
   "dependencies": {
-    "@company/media-core": "workspace:*"
+    "@super-media-picker/core": "workspace:*"
   },
   "devDependencies": {
     "emojibase": "^17.0.0",

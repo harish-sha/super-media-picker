@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
-import type { SkinTone } from "@company/media-core";
+import type { SkinTone } from "@super-media-picker/core";
 import {
   getCompactEmoji,
   resolveEmojiVariant,
-} from "@company/media-emoji/compact";
+} from "@super-media-picker/emoji/compact";
 
 const toneOptions: readonly {
   readonly value: SkinTone;

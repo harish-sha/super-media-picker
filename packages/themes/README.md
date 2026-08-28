@@ -1,4 +1,4 @@
-# @company/media-themes
+# @super-media-picker/themes
 
 Framework-neutral light, dark, system, and custom theme contracts for the media picker. The token API maps intentional theme properties to the public `--mp-*` CSS custom-property namespace.
 
@@ -6,7 +6,7 @@ Framework-neutral light, dark, system, and custom theme contracts for the media 
 import {
   resolveMediaPickerTheme,
   themeTokensToCssVariables,
-} from "@company/media-themes";
+} from "@super-media-picker/themes";
 
 const theme = resolveMediaPickerTheme({
   mode: "dark",
@@ -16,4 +16,4 @@ const theme = resolveMediaPickerTheme({
 themeTokensToCssVariables(theme.tokens);
 ```
 
-Import `@company/media-themes/tokens.css` when consuming the token defaults without the React package.
+Import `@super-media-picker/themes/tokens.css` when consuming the token defaults without the public package.

@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent } from "react";
 
-import type { EmojiPickerCategory } from "@company/media-emoji";
+import type { EmojiPickerCategory } from "@super-media-picker/emoji";
 
 const categorySymbols: Readonly<Record<EmojiPickerCategory, string>> = {
   Recent: "🕘",

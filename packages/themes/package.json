@@ -1,5 +1,5 @@
 {
-  "name": "@company/media-themes",
+  "name": "@super-media-picker/themes",
   "version": "0.1.0",
   "description": "Theme types and CSS custom-property contract for the media picker.",
   "type": "module",

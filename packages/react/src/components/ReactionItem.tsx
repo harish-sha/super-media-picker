@@ -1,6 +1,6 @@
 import { forwardRef, type KeyboardEvent } from "react";
 
-import type { MediaItem } from "@company/media-core";
+import type { MediaItem } from "@super-media-picker/core";
 
 export function reactionItemLabel(item: MediaItem): string {
   if (item.type === "emoji" || item.type === "custom") return item.name;

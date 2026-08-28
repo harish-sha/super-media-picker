@@ -6,8 +6,8 @@ import type {
   MediaItem,
   RecentItemRecord,
   SkinTone,
-} from "@company/media-core";
-import type { EmojiRecord } from "@company/media-emoji";
+} from "@super-media-picker/core";
+import type { EmojiRecord } from "@super-media-picker/emoji";
 
 import type { CompactReactionInput } from "../types";
 import { CompactReactionBar } from "./CompactReactionBar";
@@ -156,7 +156,7 @@ export function CompactMediaPicker({
   useEffect(() => {
     if (!loadEmojiData || emojiModule !== undefined) return;
     let active = true;
-    void import("@company/media-emoji").then((module) => {
+    void import("@super-media-picker/emoji").then((module) => {
       if (active) setEmojiModule(module);
     });
     return () => {

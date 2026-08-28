@@ -7,10 +7,12 @@ const fromRoot = (path: string) =>
 export default defineConfig({
   resolve: {
     alias: {
-      "@company/media-core": fromRoot("packages/core/src/index.ts"),
-      "@company/media-emoji/compact": fromRoot("packages/emoji/src/compact.ts"),
-      "@company/media-emoji": fromRoot("packages/emoji/src/index.ts"),
-      "@company/media-themes": fromRoot("packages/themes/src/index.ts"),
+      "@super-media-picker/core": fromRoot("packages/core/src/index.ts"),
+      "@super-media-picker/emoji/compact": fromRoot(
+        "packages/emoji/src/compact.ts",
+      ),
+      "@super-media-picker/emoji": fromRoot("packages/emoji/src/index.ts"),
+      "@super-media-picker/themes": fromRoot("packages/themes/src/index.ts"),
     },
   },
   test: {

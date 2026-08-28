@@ -11,11 +11,11 @@ import {
   defaultFeatures,
   type CompactReactionSource,
   type MediaPickerMode,
-} from "@company/media-core";
+} from "@super-media-picker/core";
 import {
   resolveMediaPickerTheme,
   themeTokensToCssVariables,
-} from "@company/media-themes";
+} from "@super-media-picker/themes";
 
 import { useMediaPickerPersistence } from "../hooks/useMediaPickerPersistence";
 import { useResolvedDisplayMode } from "../hooks/useResolvedDisplayMode";

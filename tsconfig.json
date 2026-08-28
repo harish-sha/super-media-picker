@@ -3,11 +3,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@company/media-core": ["packages/core/src/index.ts"],
-      "@company/media-emoji/compact": ["packages/emoji/src/compact.ts"],
-      "@company/media-emoji": ["packages/emoji/src/index.ts"],
-      "@company/media-react": ["packages/react/src/index.ts"],
-      "@company/media-themes": ["packages/themes/src/index.ts"]
+      "@super-media-picker/core": ["packages/core/src/index.ts"],
+      "@super-media-picker/emoji/compact": ["packages/emoji/src/compact.ts"],
+      "@super-media-picker/emoji": ["packages/emoji/src/index.ts"],
+      "@super-media-picker/react": ["packages/react/src/index.ts"],
+      "@super-media-picker/themes": ["packages/themes/src/index.ts"],
+      "super-media-picker": ["packages/super-media-picker/src/index.ts"]
     }
   },
   "include": ["apps", "packages", "tests", "tooling", "*.ts"]

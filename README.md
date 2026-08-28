@@ -1,4 +1,4 @@
-# Private Messaging Media Picker SDK
+# Super Media Picker
 
 A modular, performance-conscious TypeScript SDK for normalized messaging media. Phases 0–4 provide a production-ready Unicode emoji picker with search, categories, persistent recents and favorites, skin tones, themes, responsive display modes, and accessible keyboard interaction.
 
@@ -9,27 +9,27 @@ GIF and sticker integrations are intentionally not implemented yet.
 ## Architecture
 
 ```text
-application → @company/media-react → @company/media-emoji → @company/media-core
-                              └─────→ @company/media-themes
+application → super-media-picker → @super-media-picker/react
+                                      ├─→ @super-media-picker/emoji
+                                      ├─→ @super-media-picker/core
+                                      └─→ @super-media-picker/themes
 ```
 
 Core has no framework dependency or module-time browser access. Compact emoji metadata is generated from CLDR-derived Emojibase data, so the development dataset is absent from published runtime dependencies.
 
 ## Installation
 
-Replace `@company` with the configured internal npm organization scope:
-
 ```sh
-pnpm add @company/media-react react react-dom
+pnpm add super-media-picker react react-dom
 ```
 
-The packages are configured for restricted private publishing. Nothing in this repository publishes automatically.
+The public aggregator remains private while the package is under development. Nothing in this repository publishes automatically.
 
 ## Quick start
 
 ```tsx
-import { MediaPicker, type MediaItem } from "@company/media-react";
-import "@company/media-react/styles.css";
+import { MediaPicker, type MediaItem } from "super-media-picker";
+import "super-media-picker/styles.css";
 
 export function ComposerPicker() {
   function handleSelect(item: MediaItem) {
@@ -163,7 +163,7 @@ import {
   MediaPicker,
   MemoryStorageAdapter,
   type StorageAdapter,
-} from "@company/media-react";
+} from "super-media-picker";
 
 const storage: StorageAdapter = new MemoryStorageAdapter();
 
@@ -260,10 +260,10 @@ pnpm test:e2e
 pnpm package:check
 ```
 
-The playground imports the built package through `@company/media-react` exports and imports its public stylesheet explicitly. Storybook provides visual/a11y cases, while Playwright verifies toned selection plus persisted recents and favorites.
+The playground imports through the built `super-media-picker` package and its public stylesheet export, making it a real consumer check for JavaScript, declarations, workspace linking, and CSS. Storybook provides visual/a11y cases, while Playwright verifies toned selection plus persisted recents and favorites.
 
 ## Versioning and publishing
 
-Packages use Semantic Versioning, Changesets, explicit `files` lists, and restricted `publishConfig`. Use `pnpm changeset` for a public change. `pnpm package:check` creates temporary tarballs, verifies their export targets and rewritten workspace dependency ranges, and rejects leaked source/test files. It never publishes anything.
+Packages use Semantic Versioning, Changesets, and explicit `files` lists. Internal packages use restricted `publishConfig`; the public aggregator remains private until publishing is intentionally enabled. Use `pnpm changeset` for a public change. `pnpm package:check` creates temporary tarballs, verifies their export targets and rewritten workspace dependency ranges, and rejects leaked source/test files. It never publishes anything.
 
 See [implementation status](docs/implementation-status.md), [performance measurements](docs/performance.md), and [architecture decisions](docs/architecture/).

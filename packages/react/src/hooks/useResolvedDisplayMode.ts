@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import type { PickerDisplayMode } from "@company/media-core";
+import type { PickerDisplayMode } from "@super-media-picker/core";
 
 type ResolvedDisplayMode = Exclude<PickerDisplayMode, "auto">;
 

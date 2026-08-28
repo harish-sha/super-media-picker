@@ -2,7 +2,9 @@
   "extends": "../../tooling/typescript/base.json",
   "compilerOptions": {
     "baseUrl": "../..",
-    "paths": { "@company/media-core": ["packages/core/src/index.ts"] }
+    "paths": {
+      "@super-media-picker/core": ["packages/core/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

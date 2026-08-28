@@ -7,9 +7,9 @@ import type {
   PickerDisplayMode,
   SkinTone,
   StorageAdapter,
-} from "@company/media-core";
-import type { EmojiPickerCategory } from "@company/media-emoji";
-import type { MediaPickerTheme } from "@company/media-themes";
+} from "@super-media-picker/core";
+import type { EmojiPickerCategory } from "@super-media-picker/emoji";
+import type { MediaPickerTheme } from "@super-media-picker/themes";
 
 export type CompactReactionInput = string | MediaItem;
 

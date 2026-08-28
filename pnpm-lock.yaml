@@ -47,15 +47,15 @@ importers:
 
   apps/playground:
     dependencies:
-      '@company/media-react':
-        specifier: workspace:*
-        version: link:../../packages/react
       react:
         specifier: ^19.1.0
         version: 19.2.8
       react-dom:
         specifier: ^19.1.0
         version: 19.2.8(react@19.2.8)
+      super-media-picker:
+        specifier: workspace:*
+        version: link:../../packages/super-media-picker
     devDependencies:
       '@storybook/addon-a11y':
         specifier: ^8.6.14
@@ -102,7 +102,7 @@ importers:
 
   packages/emoji:
     dependencies:
-      '@company/media-core':
+      '@super-media-picker/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -121,13 +121,13 @@ importers:
 
   packages/react:
     dependencies:
-      '@company/media-core':
+      '@super-media-picker/core':
         specifier: workspace:*
         version: link:../core
-      '@company/media-emoji':
+      '@super-media-picker/emoji':
         specifier: workspace:*
         version: link:../emoji
-      '@company/media-themes':
+      '@super-media-picker/themes':
         specifier: workspace:*
         version: link:../themes
     devDependencies:
@@ -158,6 +158,31 @@ importers:
       vitest:
         specifier: ^3.2.1
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
+
+  packages/super-media-picker:
+    dependencies:
+      '@super-media-picker/react':
+        specifier: workspace:*
+        version: link:../react
+      '@super-media-picker/themes':
+        specifier: workspace:*
+        version: link:../themes
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.6
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.1.5
+        version: 19.2.5(@types/react@19.2.18)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.2.8(react@19.2.8)
+      tsup:
+        specifier: ^8.5.0
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(typescript@5.9.3)
 
   packages/themes:
     devDependencies:

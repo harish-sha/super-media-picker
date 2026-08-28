@@ -6,7 +6,7 @@ Host applications need brand overrides, light/dark/system modes, SSR safety, and
 
 ## Decision
 
-`@company/media-themes` owns every visual design token and its `--mp-*` CSS variable mapping. React accepts either a named mode or `{ mode, tokens }`, converts only supplied tokens to inline custom properties, and otherwise consumes the shared stylesheet. System mode uses a live `prefers-color-scheme` media query, so no JavaScript state or reload is required.
+`@super-media-picker/themes` owns every visual design token and its `--mp-*` CSS variable mapping. React accepts either a named mode or `{ mode, tokens }`, converts only supplied tokens to inline custom properties, and otherwise consumes the shared stylesheet. System mode uses a live `prefers-color-scheme` media query, so no JavaScript state or reload is required.
 
 ## Alternatives
 

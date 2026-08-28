@@ -1,7 +1,7 @@
 {
-  "name": "@company/media-core",
+  "name": "@super-media-picker/core",
   "version": "0.1.0",
-  "description": "Framework-independent contracts and utilities for the messaging media picker.",
+  "description": "Framework-independent contracts and utilities for Super Media Picker.",
   "type": "module",
   "sideEffects": false,
   "files": [

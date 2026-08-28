@@ -1,9 +1,9 @@
 {
-  "name": "messaging-media-picker",
+  "name": "super-media-picker-monorepo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "A modular private messaging media picker SDK.",
+  "description": "The private monorepo for Super Media Picker.",
   "packageManager": "pnpm@10.15.0",
   "engines": {
     "node": ">=20.19"
@@ -15,7 +15,7 @@
     "dev": "pnpm build:packages && pnpm --filter playground dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "pnpm build:packages && eslint . --max-warnings 0",
     "package:check": "node tooling/scripts/validate-packages.mjs",
     "size": "size-limit",
     "storybook": "pnpm build:packages && pnpm --filter playground storybook",
@@ -40,14 +40,19 @@
   },
   "size-limit": [
     {
-      "name": "@company/media-core",
+      "name": "@super-media-picker/core",
       "path": "packages/core/dist/index.js",
       "limit": "12 kB"
     },
     {
-      "name": "@company/media-react base UI",
+      "name": "@super-media-picker/react base UI",
       "path": "packages/react/dist/index.js",
       "limit": "20 kB"
+    },
+    {
+      "name": "super-media-picker public entry",
+      "path": "packages/super-media-picker/dist/index.js",
+      "limit": "1 kB"
     }
   ]
 }

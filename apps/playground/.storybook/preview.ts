@@ -1,6 +1,6 @@
 import type { Preview } from "@storybook/react";
 
-import "@company/media-react/styles.css";
+import "super-media-picker/styles.css";
 
 const preview: Preview = {
   parameters: {
