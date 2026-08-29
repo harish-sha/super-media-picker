@@ -1,6 +1,7 @@
 {
   "name": "@super-media-picker/stickers",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Tree-shakeable sticker providers for Super Media Picker.",
   "type": "module",
   "sideEffects": false,

@@ -1,6 +1,7 @@
 {
   "name": "@super-media-picker/gif",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Tree-shakeable GIF providers for Super Media Picker.",
   "type": "module",
   "sideEffects": false,

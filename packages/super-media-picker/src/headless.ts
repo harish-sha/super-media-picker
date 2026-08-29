@@ -1,5 +1,5 @@
 /** Public headless entry without picker styles or visual components. */
-export * from "@super-media-picker/react/headless";
+export * from "../../react/src/headless";
 export type {
   MediaCapabilities,
   MediaItem,
@@ -7,4 +7,4 @@ export type {
   RequestState,
   SkinTone,
   StorageAdapter,
-} from "@super-media-picker/core";
+} from "../../core/src/index";

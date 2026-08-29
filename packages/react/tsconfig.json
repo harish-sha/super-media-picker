@@ -1,13 +1,12 @@
 {
   "extends": "../../tooling/typescript/base.json",
   "compilerOptions": {
-    "baseUrl": "../..",
     "jsx": "react-jsx",
     "paths": {
-      "@super-media-picker/core": ["packages/core/src/index.ts"],
-      "@super-media-picker/emoji/compact": ["packages/emoji/src/compact.ts"],
-      "@super-media-picker/emoji": ["packages/emoji/src/index.ts"],
-      "@super-media-picker/themes": ["packages/themes/src/index.ts"]
+      "@super-media-picker/core": ["../core/src/index.ts"],
+      "@super-media-picker/emoji/compact": ["../emoji/src/compact.ts"],
+      "@super-media-picker/emoji": ["../emoji/src/index.ts"],
+      "@super-media-picker/themes": ["../themes/src/index.ts"]
     }
   },
   "include": ["src", "vitest.config.ts"]

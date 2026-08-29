@@ -1,0 +1,83 @@
+/** Public React surface without a module-level CSS import. */
+export {
+  MediaPicker,
+  mediaPickerStorageKeys,
+} from "../../react/src/components/MediaPicker";
+export * from "../../react/src/standalone";
+export {
+  AnimatedMediaRenderer,
+  AnimationConcurrencyManager,
+} from "../../react/src/components/AnimatedMediaRenderer";
+export type {
+  AnimatedMediaRenderProps,
+  CompactMediaPickerConfig,
+  CompactReactionInput,
+  CustomMediaTab,
+  MediaPickerProviders,
+  MediaPickerPreviewConfig,
+  MediaPickerProps,
+  MediaPickerRenderers,
+} from "../../react/src/types";
+
+export {
+  FavoritesManager,
+  LocalStorageAdapter,
+  MemoryCache,
+  MemoryStorageAdapter,
+  MediaRequestClient,
+  PersistentPreference,
+  RecentItemsManager,
+  createMediaPickerConfig,
+  isAnimatedMedia,
+  isMediaItem,
+  isSafeMediaUrl,
+  isUnicodeEmoji,
+  mediaItemKey,
+  noOpAnalytics,
+} from "../../core/src/index";
+export type {
+  AnimatedEmojiMediaItem,
+  AnimatedMediaConfig,
+  AnimatedMediaFormat,
+  AnimationAutoplay,
+  AnyEmojiMediaItem,
+  CacheAdapter,
+  CompactReactionSource,
+  CustomEmojiMediaItem,
+  CustomMediaItem,
+  EmojiMediaItem,
+  EmojiPack,
+  EmojiProvider,
+  FavoriteItemRecord,
+  GifMediaItem,
+  MediaCapabilities,
+  MediaItem,
+  MediaPickerAnalytics,
+  MediaPickerAnalyticsEvent,
+  MediaPickerFeatures,
+  MediaPickerMode,
+  MediaPickerSize,
+  MediaProvider,
+  MediaRequestClientOptions,
+  MediaRequestOptions,
+  MediaUrlPolicy,
+  PickerDisplayMode,
+  ProviderAttribution,
+  ProviderOptions,
+  RecentItemRecord,
+  RequestState,
+  SearchOptions,
+  SearchResult,
+  SkinTone,
+  StickerMediaItem,
+  StickerPack,
+  StickerProvider,
+  StorageAdapter,
+  UnicodeEmojiMediaItem,
+} from "../../core/src/index";
+export type {
+  MediaPickerCustomTheme,
+  MediaPickerTheme,
+  MediaPickerThemeMode,
+  MediaPickerThemeTokens,
+} from "../../themes/src/index";

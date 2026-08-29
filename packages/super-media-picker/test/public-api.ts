@@ -5,15 +5,16 @@ import {
   ReactionPicker,
   StickerPicker,
   isUnicodeEmoji,
+  type MediaItem,
+} from "../src/index";
+import {
   useEmojiSearch,
   useFavorites,
   useGifSearch,
   useMediaPicker,
   useRecents,
   useStickerSearch,
-  type MediaItem,
-} from "../src/index";
-import * as headless from "../src/headless";
+} from "../src/headless";
 import * as providers from "../src/providers";
 
 declare const item: MediaItem;
@@ -29,7 +30,6 @@ void useGifSearch;
 void useStickerSearch;
 void useRecents;
 void useFavorites;
-void headless.useMediaPicker;
 void providers.HttpGifProvider;
 void providers.HttpStickerProvider;
 if (isUnicodeEmoji(item)) {

@@ -7,12 +7,11 @@ The picker has two intentional presentations: a lightweight compact reaction bar
 ## Architecture
 
 ```text
-application → super-media-picker → @super-media-picker/react
-                                      ├─→ @super-media-picker/emoji
-                                      ├─→ @super-media-picker/core
-                                      ├─→ @super-media-picker/gif
-                                      ├─→ @super-media-picker/stickers
-                                      └─→ @super-media-picker/themes
+application → super-media-picker (self-contained public ESM package)
+                                      ├─→ React peer dependency
+                                      ├─→ UI + headless state
+                                      ├─→ normalized media/provider contracts
+                                      └─→ generated Unicode emoji metadata
 ```
 
 Core has no framework dependency or module-time browser access. Compact emoji metadata is generated from CLDR-derived Emojibase data, so the development dataset is absent from published runtime dependencies.
@@ -25,11 +24,18 @@ integration](docs/providers.md), and [security/CSP](docs/security.md).
 ## Installation
 
 ```sh
-pnpm add super-media-picker react react-dom
+npm install super-media-picker@beta react react-dom
+# or: pnpm add super-media-picker@beta react react-dom
+# or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public aggregator contains publication-ready metadata, but publishing is a
-manual release action. Nothing in this repository publishes automatically.
+The public beta version is `0.1.0-beta.1`. React and React DOM
+`>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
+bundled TypeScript declarations.
+
+The public tarball bundles the monorepo's internal implementation modules and
+does not depend on unpublished `@super-media-picker/*` packages. Publishing is
+a manual release action; nothing in this repository publishes automatically.
 
 ## Quick start
 
@@ -77,7 +83,7 @@ skin tone, recents, and favorites synchronized across mounted surfaces.
 
 ## Headless custom UI
 
-Use the root export or the CSS-free `super-media-picker/headless` subpath:
+Use the CSS-free `super-media-picker/headless` subpath:
 
 ```tsx
 import { useMediaPicker } from "super-media-picker/headless";
@@ -513,12 +519,24 @@ pnpm size
 pnpm build-storybook
 pnpm test:e2e
 pnpm package:check
+pnpm package:install-test
 ```
 
 The playground imports through the built `super-media-picker` package and its public stylesheet export, making it a real consumer check for JavaScript, declarations, workspace linking, and CSS. Storybook provides visual/a11y cases, while Playwright verifies toned selection plus persisted recents and favorites.
 
 ## Versioning and publishing
 
-Packages use Semantic Versioning, Changesets, and explicit `files` lists. Internal packages use restricted `publishConfig`; the public aggregator is configured for a future explicit public release. Use `pnpm changeset` for a public change. `pnpm package:check` creates temporary tarballs, verifies their export targets and rewritten workspace dependency ranges, and rejects leaked source/test files. It never publishes anything.
+Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
+`0.1.0-beta.1` public package is self-contained; scoped workspace modules remain
+internal release inputs. Use `pnpm changeset` for a future public change.
+`pnpm package:check` validates tarball exports, dependencies, chunks, and
+contents. `pnpm package:install-test` installs the tarball into a clean external
+sample and validates runtime imports, styles, and strict TypeScript. Neither
+command publishes anything.
 
-See [implementation status](docs/implementation-status.md), [performance measurements](docs/performance.md), and [architecture decisions](docs/architecture/).
+Super Media Picker is available under the [MIT License](LICENSE). See the
+[release checklist](docs/releasing.md) before publishing a beta.
+
+See [implementation status](docs/implementation-status.md), [performance
+measurements](docs/performance.md), [security policy](SECURITY.md),
+[contributing guide](CONTRIBUTING.md), and [architecture decisions](docs/architecture/).

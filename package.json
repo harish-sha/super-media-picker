@@ -2,6 +2,7 @@
   "name": "super-media-picker-monorepo",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "The private monorepo for Super Media Picker.",
   "packageManager": "pnpm@10.15.0",
@@ -18,6 +19,7 @@
     "lint": "pnpm build:packages && eslint . --max-warnings 0",
     "media:fixtures": "node tooling/scripts/build-demo-media.mjs",
     "package:check": "node tooling/scripts/validate-packages.mjs",
+    "package:install-test": "node tooling/scripts/validate-public-install.mjs",
     "size": "size-limit",
     "storybook": "pnpm build:packages && pnpm --filter playground storybook",
     "test": "pnpm build:packages && pnpm -r --if-present test",
@@ -80,12 +82,12 @@
     {
       "name": "super-media-picker public entry",
       "path": "packages/super-media-picker/dist/index.js",
-      "limit": "1 kB"
+      "limit": "7 kB"
     },
     {
       "name": "super-media-picker headless entry",
       "path": "packages/super-media-picker/dist/headless.js",
-      "limit": "1 kB"
+      "limit": "3 kB"
     },
     {
       "name": "super-media-picker providers entry",

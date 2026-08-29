@@ -17,16 +17,18 @@ import type {
   GifPicker,
   StickerPicker,
   ReactionPicker,
+  MockGifProvider,
+  MockStickerProvider,
+  StickerProvider,
+} from "../src/index";
+import type {
   useMediaPicker,
   useEmojiSearch,
   useGifSearch,
   useStickerSearch,
   useRecents,
   useFavorites,
-  MockGifProvider,
-  MockStickerProvider,
-  StickerProvider,
-} from "../src/index";
+} from "../src/headless";
 
 /** Compile-time proof of the intentionally supported public consumer surface. */
 export interface PublicApiContract {

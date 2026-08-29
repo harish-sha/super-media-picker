@@ -6,8 +6,9 @@ provider contracts from the package root and import the stylesheet once.
 
 ## Stable API
 
-The following APIs follow semantic versioning from `0.1.0` onward. Breaking
-changes are announced in release notes and require a major version after 1.0.
+The following APIs follow the documented beta versioning policy from
+`0.1.0-beta.1` onward. Breaking changes are announced in release notes and
+require a major version after 1.0.
 
 - Components: `MediaPicker`, `EmojiPicker`, `GifPicker`, `StickerPicker`, and
   `ReactionPicker`.
@@ -33,9 +34,9 @@ provider types.
 Custom renderers, animation policies, raw provider/cache classes, storage
 adapters, analytics sinks, custom tabs, and emoji packs are supported advanced
 APIs. They are public and typed, but require the host to preserve the documented
-media and security contracts. The scoped `@super-media-picker/*` packages are
-also available to library authors that deliberately need a lower-level layer.
-Typical applications do not need them.
+media and security contracts. Scoped `@super-media-picker/*` workspace modules
+are internal release inputs during the beta and are not supported npm consumer
+entry points.
 
 ## Internal implementation
 

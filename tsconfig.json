@@ -1,16 +1,17 @@
 {
   "extends": "./tooling/typescript/base.json",
   "compilerOptions": {
-    "baseUrl": ".",
+    "declaration": false,
+    "jsx": "react-jsx",
     "paths": {
-      "@super-media-picker/core": ["packages/core/src/index.ts"],
-      "@super-media-picker/emoji/compact": ["packages/emoji/src/compact.ts"],
-      "@super-media-picker/emoji": ["packages/emoji/src/index.ts"],
-      "@super-media-picker/gif": ["packages/gif/src/index.ts"],
-      "@super-media-picker/react": ["packages/react/src/index.ts"],
-      "@super-media-picker/stickers": ["packages/stickers/src/index.ts"],
-      "@super-media-picker/themes": ["packages/themes/src/index.ts"],
-      "super-media-picker": ["packages/super-media-picker/src/index.ts"]
+      "@super-media-picker/core": ["./packages/core/src/index.ts"],
+      "@super-media-picker/emoji/compact": ["./packages/emoji/src/compact.ts"],
+      "@super-media-picker/emoji": ["./packages/emoji/src/index.ts"],
+      "@super-media-picker/gif": ["./packages/gif/src/index.ts"],
+      "@super-media-picker/react": ["./packages/react/src/index.ts"],
+      "@super-media-picker/stickers": ["./packages/stickers/src/index.ts"],
+      "@super-media-picker/themes": ["./packages/themes/src/index.ts"],
+      "super-media-picker": ["./packages/super-media-picker/src/index.ts"]
     }
   },
   "include": ["apps", "packages", "tests", "tooling", "*.ts"]

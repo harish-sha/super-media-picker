@@ -1,4 +1,17 @@
 {
   "extends": "../../tooling/typescript/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@super-media-picker/core": ["../core/src/index.ts"],
+      "@super-media-picker/emoji/compact": ["../emoji/src/compact.ts"],
+      "@super-media-picker/emoji": ["../emoji/src/index.ts"],
+      "@super-media-picker/gif": ["../gif/src/index.ts"],
+      "@super-media-picker/react/headless": ["../react/src/headless.ts"],
+      "@super-media-picker/react": ["../react/src/index.ts"],
+      "@super-media-picker/stickers": ["../stickers/src/index.ts"],
+      "@super-media-picker/themes": ["../themes/src/index.ts"]
+    }
+  },
   "include": ["src", "test"]
 }

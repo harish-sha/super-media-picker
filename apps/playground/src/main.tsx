@@ -7,7 +7,6 @@ import {
   MediaPicker,
   ReactionPicker,
   StickerPicker,
-  useGifSearch,
   type CompactReactionSource,
   type AnimationAutoplay,
   type MediaCapabilities,
@@ -18,6 +17,7 @@ import {
   type MediaPickerThemeMode,
   type PickerDisplayMode,
 } from "super-media-picker";
+import { useGifSearch } from "super-media-picker/headless";
 import "super-media-picker/styles.css";
 
 import {

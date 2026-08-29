@@ -88,6 +88,72 @@ try {
       );
     }
 
+    if (packResult.name === "super-media-picker") {
+      if (packedManifest.version !== "0.1.0-beta.1") {
+        throw new Error(
+          `Public package has unexpected beta version ${packedManifest.version}`,
+        );
+      }
+      if (packedManifest.license !== "MIT") {
+        throw new Error(
+          `Public package has unexpected license ${packedManifest.license}`,
+        );
+      }
+      const packedLicense = readArchiveFile(packResult.filename, "LICENSE");
+      if (
+        !packedLicense.startsWith("MIT License\n") ||
+        !packedLicense.includes("Copyright (c) 2026 Harish Sharma")
+      ) {
+        throw new Error(
+          "Public package does not contain the expected MIT LICENSE",
+        );
+      }
+      const internalDependencies = Object.keys({
+        ...(packedManifest.dependencies ?? {}),
+        ...(packedManifest.devDependencies ?? {}),
+        ...(packedManifest.optionalDependencies ?? {}),
+        ...(packedManifest.peerDependencies ?? {}),
+      }).filter((name) => name.startsWith("@super-media-picker/"));
+      if (internalDependencies.length > 0) {
+        throw new Error(
+          `Public package depends on unpublished internal packages: ${internalDependencies.join(", ")}`,
+        );
+      }
+      const unexpectedFiles = [...archiveFiles].filter(
+        (path) =>
+          path !== "LICENSE" &&
+          path !== "README.md" &&
+          path !== "package.json" &&
+          !path.startsWith("dist/"),
+      );
+      if (unexpectedFiles.length > 0) {
+        throw new Error(
+          `Public package contains non-release files: ${unexpectedFiles.join(", ")}`,
+        );
+      }
+      const leakedMaps = [...archiveFiles].filter((path) =>
+        path.endsWith(".map"),
+      );
+      if (leakedMaps.length > 0) {
+        throw new Error(
+          `Public package contains source maps: ${leakedMaps.join(", ")}`,
+        );
+      }
+      for (const emittedFile of [...archiveFiles].filter(
+        (path) =>
+          path.endsWith(".js") ||
+          path.endsWith(".d.ts") ||
+          path.endsWith(".css"),
+      )) {
+        const source = readArchiveFile(packResult.filename, emittedFile);
+        if (source.includes("@super-media-picker/")) {
+          throw new Error(
+            `Public ${emittedFile} references an unpublished internal package`,
+          );
+        }
+      }
+    }
+
     for (const target of collectExportTargets(packedManifest.exports)) {
       if (!archiveFiles.has(target)) {
         throw new Error(

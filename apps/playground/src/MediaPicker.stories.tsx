@@ -9,8 +9,8 @@ import {
   ReactionPicker,
   StickerPicker,
   mediaPickerStorageKeys,
-  useGifSearch,
 } from "super-media-picker";
+import { useGifSearch } from "super-media-picker/headless";
 
 import { createMockProviders, customTabs, emojiPacks } from "./mockMedia";
 

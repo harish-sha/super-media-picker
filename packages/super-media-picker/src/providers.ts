@@ -1,12 +1,12 @@
 /** Public provider entry for host-backend and mock adapters. */
-export * from "@super-media-picker/gif";
-export * from "@super-media-picker/stickers";
+export * from "../../gif/src/index";
+export * from "../../stickers/src/index";
 export {
   MediaProviderError,
   MediaRequestClient,
   MemoryCache,
   isSafeMediaUrl,
-} from "@super-media-picker/core";
+} from "../../core/src/index";
 export type {
   AnyEmojiMediaItem,
   EmojiPack,
@@ -22,4 +22,4 @@ export type {
   StickerMediaItem,
   StickerPack,
   StickerProvider,
-} from "@super-media-picker/core";
+} from "../../core/src/index";

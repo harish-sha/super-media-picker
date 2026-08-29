@@ -33,7 +33,11 @@ outside npm and outside the picker's initial component payload.
 
 ## Feature loading
 
-`@super-media-picker/gif` and `@super-media-picker/stickers` are independent ESM packages. The public aggregator re-exports them for installation convenience, but the React package does not import them. Provider panels are dynamically imported only after a GIF, sticker, or custom tab is activated. The Unicode compact path continues to use the small generated emoji subpath.
+GIF and sticker providers remain independent modules in the monorepo. The
+public beta bundles their public exports into `super-media-picker` so consumers
+never depend on unpublished workspace packages. Code splitting is preserved:
+provider panels load only after a GIF, sticker, or custom tab is activated, and
+the Unicode compact path continues to use the small generated emoji data.
 
 ## Attribution
 

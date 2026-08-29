@@ -1,6 +1,7 @@
 {
   "name": "@super-media-picker/emoji",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Compact emoji data, categories, normalization, and search.",
   "type": "module",
   "sideEffects": false,

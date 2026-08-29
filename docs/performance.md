@@ -20,10 +20,10 @@ Measured on 2026-08-29 from fresh production ESM builds using Node 23 on macOS A
 | `@super-media-picker/gif`                   | 5,870 B   | 1.62 kB Brotli |
 | `@super-media-picker/stickers`              | 6,847 B   | 1.75 kB Brotli |
 | Compact emoji data entry                    | 5,744 B   | 1.21 kB Brotli |
-| Public root entry                           | 179 B     | 102 B Brotli   |
-| Public headless entry                       | 107 B     | 94 B Brotli    |
-| Public providers entry                      | 352 B     | 160 B Brotli   |
-| Public stylesheet export                    | 16,421 B  | 3,137 B gzip   |
+| Self-contained public root entry            | 24,732 B  | 5.28 kB Brotli |
+| Public headless entry                       | 10,275 B  | 2.27 kB Brotli |
+| Public providers entry                      | 439 B     | 161 B Brotli   |
+| Public stylesheet with theme tokens         | 17,543 B  | 3,348 B gzip   |
 | Full emoji JavaScript/data                  | 570,574 B | 74,932 B gzip  |
 | Playground initial JavaScript               | 242,816 B | 75,451 B gzip  |
 | Playground lazy full UI                     | 14,301 B  | 4,934 B gzip   |
@@ -31,14 +31,15 @@ Measured on 2026-08-29 from fresh production ESM builds using Node 23 on macOS A
 | Playground lazy emoji data                  | 440,821 B | 71,920 B gzip  |
 | Playground CSS                              | 17,391 B  | 3,797 B gzip   |
 
-Actual package archives are 14,878 B for core, 177,900 B for emoji, 5,728 B
-for GIF, 6,098 B for stickers, 1,987 B for themes, 78,101 B for React, and
-9,974 B for the public `super-media-picker` aggregator. The public archive
-includes its CSS source map; the React archive includes compact/animated
-support plus separate lazy full-picker and provider-panel chunks. `pnpm
-package:check` re-measures every archive and validates internal lazy-chunk
-references, source maps, public exports, and the absence of playground media,
-Storybook output, test results, and environment files.
+Actual package archives are 14,883 B for core, 177,903 B for emoji, 5,729 B
+for GIF, 6,101 B for stickers, 1,989 B for themes, 78,105 B for React, and
+116,879 B for the self-contained public `super-media-picker` package. The
+public archive bundles the workspace implementation and generated declarations,
+but retains the full picker, provider panels, and full emoji data as separate
+lazy chunks. It contains no source maps or internal package imports. `pnpm
+package:check` re-measures every archive and validates lazy-chunk references,
+public exports, production dependencies, and the absence of playground media,
+Storybook output, tests, environment files, and internal source.
 
 ## Runtime observations
 
@@ -58,16 +59,20 @@ Storybook output, test results, and environment files.
   panel chunk, and a focused provider picker activates only its configured
   provider. The focused entry contains no GIF/sticker provider implementation;
   providers remain host-supplied and independently tree-shakeable.
-- `super-media-picker/headless` contains no CSS or visual component entry. The
-  emitted hook and provider-state chunks are shared by the specialized hooks;
-  normal application bundlers can remove unused hook exports.
+- `super-media-picker/headless` contains no CSS or visual component entry. Its
+  self-contained stable hook facade costs 2.27 kB Brotli; emitted hook and
+  provider-state chunks are shared, and normal application bundlers can remove
+  unused exports.
 - The compact entry retains the generic renderer contract because compact
   custom/recent reactions may themselves be animated. For ordinary Unicode
   reactions no renderer component mounts, no `IntersectionObserver`, image,
   video, or Lottie host renderer starts, and no media URL is requested. The
   shared concurrency manager is only inert in-memory bookkeeping until an
   animated item asks for a slot.
-- GIF/sticker engines remain independent ESM packages. Re-exporting them from the public aggregator does not make the React package import them, and production tree shaking removes unused provider classes.
+- GIF/sticker engines remain independent modules inside the monorepo. The
+  public beta bundles their exports so npm consumers do not depend on
+  unpublished workspace packages; production tree shaking can still remove
+  unused provider classes.
 - Remote results arrive in bounded pages. An `IntersectionObserver` sentinel advances cursor pagination near the viewport, while its accessible Load more button remains the keyboard/no-observer fallback. The shared grid incrementally windows inline collections to 60 items and uses native `content-visibility` containment for offscreen cells, avoiding a runtime virtualization dependency. Provider pagination remains the primary large-collection boundary.
 - The playground's initial JavaScript is 242,816 B and the full emoji data remains a separate 440,821 B chunk. The comparison includes six SDK surface demos, provider mocks, and React runtime, so it demonstrates delivery behavior rather than a standalone library-size claim.
 - The complete served demo fixture set is 569,378 B across 11 media

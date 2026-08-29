@@ -22,10 +22,7 @@ for (const name of [
   "useRecents",
   "useFavorites",
 ]) {
-  if (
-    typeof root[name] !== "function" ||
-    typeof headless[name] !== "function"
-  ) {
+  if (typeof headless[name] !== "function") {
     throw new TypeError(`Missing public headless export: ${name}`);
   }
 }

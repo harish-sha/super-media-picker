@@ -1,6 +1,6 @@
 {
   "name": "super-media-picker",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Accessible, provider-first React picker for emoji, GIFs, stickers, and custom media.",
   "keywords": [
     "emoji-picker",
@@ -8,21 +8,27 @@
     "sticker-picker",
     "media-picker",
     "react",
-    "typescript"
+    "typescript",
+    "headless",
+    "reactions",
+    "animated-emoji"
   ],
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/harish-sha/super-media-picker.git"
+    "url": "git+https://github.com/harish-sha/super-media-picker.git",
+    "directory": "packages/super-media-picker"
   },
   "homepage": "https://github.com/harish-sha/super-media-picker#readme",
   "bugs": {
     "url": "https://github.com/harish-sha/super-media-picker/issues"
   },
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": [
-    "*.css"
+    "./dist/styles.css"
   ],
   "files": [
     "dist",
@@ -35,38 +41,35 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./headless": {
       "types": "./dist/headless.d.ts",
-      "import": "./dist/headless.js"
+      "import": "./dist/headless.js",
+      "default": "./dist/headless.js"
     },
     "./providers": {
       "types": "./dist/providers.d.ts",
-      "import": "./dist/providers.js"
+      "import": "./dist/providers.js",
+      "default": "./dist/providers.js"
     },
     "./styles.css": {
       "default": "./dist/styles.css"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts src/headless.ts src/providers.ts --format esm --dts --splitting --clean --sourcemap --external react --external react-dom && cp ../react/dist/index.css dist/styles.css && cp ../react/dist/index.css.map dist/index.css.map",
+    "build": "tsup --config tsup.config.ts && node scripts/copy-styles.mjs",
     "test": "node test/ssr-import.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": {
-    "@super-media-picker/core": "workspace:*",
-    "@super-media-picker/gif": "workspace:*",
-    "@super-media-picker/react": "workspace:*",
-    "@super-media-picker/stickers": "workspace:*",
-    "@super-media-picker/themes": "workspace:*"
-  },
   "peerDependencies": {
-    "react": ">=18.3 <20",
-    "react-dom": ">=18.3 <20"
+    "react": ">=18.3.0 <20.0.0",
+    "react-dom": ">=18.3.0 <20.0.0"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "beta"
   },
   "devDependencies": {
     "@types/react": "^19.1.6",

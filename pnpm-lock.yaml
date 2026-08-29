@@ -192,22 +192,6 @@ importers:
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)
 
   packages/super-media-picker:
-    dependencies:
-      '@super-media-picker/core':
-        specifier: workspace:*
-        version: link:../core
-      '@super-media-picker/gif':
-        specifier: workspace:*
-        version: link:../gif
-      '@super-media-picker/react':
-        specifier: workspace:*
-        version: link:../react
-      '@super-media-picker/stickers':
-        specifier: workspace:*
-        version: link:../stickers
-      '@super-media-picker/themes':
-        specifier: workspace:*
-        version: link:../themes
     devDependencies:
       '@types/react':
         specifier: ^19.1.6
