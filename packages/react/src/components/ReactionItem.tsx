@@ -1,6 +1,10 @@
 import { forwardRef, type KeyboardEvent } from "react";
 
-import type { AnimatedMediaConfig, MediaItem } from "@super-media-picker/core";
+import type {
+  AnimatedMediaConfig,
+  MediaItem,
+  MediaUrlPolicy,
+} from "@super-media-picker/core";
 
 import type { MediaPickerRenderers } from "../types";
 import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
@@ -15,6 +19,7 @@ export interface ReactionItemProps {
   readonly item: MediaItem;
   readonly animation: AnimatedMediaConfig;
   readonly animationManager: AnimationConcurrencyManager;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
   readonly selected: boolean;
   readonly onFocus: () => void;
@@ -30,6 +35,7 @@ export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
       animation,
       animationManager,
       item,
+      mediaSecurity,
       renderers,
       selected,
       onFocus,
@@ -58,6 +64,7 @@ export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
           animation={animation}
           item={item}
           manager={animationManager}
+          {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
           {...(renderers === undefined ? {} : { renderers })}
         />
       </button>

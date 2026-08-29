@@ -12,13 +12,7 @@ import {
 
 export type MockScenario = "normal" | "delay" | "error" | "empty";
 
-const animatedPixel =
-  "data:image/gif;base64,R0lGODlhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
-
-function fixture(label: string, color: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="0 0 160 120"><rect width="160" height="120" rx="18" fill="${color}"/><text x="80" y="68" text-anchor="middle" font-size="22" font-family="sans-serif" fill="white">${label}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
+const media = "/media";
 
 export const emojiPacks: readonly EmojiPack[] = [
   {
@@ -33,8 +27,8 @@ export const emojiPacks: readonly EmojiPack[] = [
         id: "animated-party",
         name: "Animated party",
         provider: "local-demo",
-        previewUrl: fixture("Party", "#8b5cf6"),
-        animationUrl: animatedPixel,
+        previewUrl: `${media}/animated-emoji/party.webp`,
+        animationUrl: `${media}/animated-emoji/party.gif`,
         format: "gif",
         fallbackEmoji: "🥳",
       },
@@ -44,7 +38,7 @@ export const emojiPacks: readonly EmojiPack[] = [
         id: "company-mark",
         name: "Company mark",
         provider: "tenant-demo",
-        url: fixture("ACME", "#2563eb"),
+        url: `${media}/stickers/cat.webp`,
         fallbackText: ":company:",
       },
     ],
@@ -52,7 +46,7 @@ export const emojiPacks: readonly EmojiPack[] = [
 ];
 
 const gifItems: readonly GifMediaItem[] = Array.from(
-  { length: 42 },
+  { length: 12 },
   (_, index) => ({
     type: "gif",
     id: `demo-gif-${index + 1}`,
@@ -60,13 +54,20 @@ const gifItems: readonly GifMediaItem[] = Array.from(
     alt:
       index % 2 === 0 ? "Colorful party animation" : "Friendly hello animation",
     provider: "mock-gif",
-    previewUrl: fixture(
-      `GIF ${index + 1}`,
-      index % 2 === 0 ? "#db2777" : "#0891b2",
-    ),
-    url: animatedPixel,
-    width: 160,
-    height: 120,
+    thumbnailUrl:
+      index % 2 === 0
+        ? `${media}/gifs/celebration-poster.webp`
+        : `${media}/gifs/hello-poster.webp`,
+    previewUrl:
+      index % 2 === 0
+        ? `${media}/gifs/celebration.gif`
+        : `${media}/gifs/hello.gif`,
+    url:
+      index % 2 === 0
+        ? `${media}/gifs/celebration.gif`
+        : `${media}/gifs/hello.gif`,
+    width: 240,
+    height: 180,
   }),
 );
 
@@ -76,24 +77,27 @@ const stickerPacks: readonly StickerPack[] = [
 ];
 
 const stickerItems: Readonly<Record<string, readonly StickerMediaItem[]>> = {
-  bears: Array.from({ length: 20 }, (_, index) => ({
+  bears: Array.from({ length: 5 }, (_, index) => ({
     type: "sticker",
     id: `bear-${index + 1}`,
     name: `Bear sticker ${index + 1}`,
     provider: "mock-stickers",
     packId: "bears",
-    previewUrl: fixture(`Bear ${index + 1}`, "#b45309"),
-    url: index === 0 ? animatedPixel : fixture(`Bear ${index + 1}`, "#b45309"),
+    previewUrl: `${media}/stickers/bear.webp`,
+    url:
+      index === 0
+        ? `${media}/stickers/bear-wave.gif`
+        : `${media}/stickers/bear.webp`,
     animated: index === 0,
     format: index === 0 ? "gif" : "webp",
   })),
-  cats: Array.from({ length: 16 }, (_, index) => ({
+  cats: Array.from({ length: 5 }, (_, index) => ({
     type: "sticker",
     id: `cat-${index + 1}`,
     name: `Cat sticker ${index + 1}`,
     provider: "mock-stickers",
     packId: "cats",
-    url: fixture(`Cat ${index + 1}`, "#7c3aed"),
+    url: `${media}/stickers/cat.webp`,
     animated: false,
     format: "webp",
   })),
@@ -106,7 +110,7 @@ const customItems: readonly CustomMediaItem[] = [
     id: "launch-card",
     name: "Launch card",
     provider: "company-assets",
-    url: fixture("Launch", "#059669"),
+    url: `${media}/custom/launch.webp`,
   },
   {
     type: "custom",
@@ -114,7 +118,7 @@ const customItems: readonly CustomMediaItem[] = [
     id: "support-card",
     name: "Support card",
     provider: "company-assets",
-    url: fixture("Support", "#ea580c"),
+    url: `${media}/custom/support.webp`,
   },
 ];
 
@@ -150,14 +154,14 @@ export function createMockProviders(scenario: MockScenario) {
       items: empty ? [] : gifItems,
       delayMs,
       error: scenario === "error",
-      attribution: { label: "Mock GIF provider" },
+      attribution: { label: "Original local demo media" },
     }),
     stickers: new MockStickerProvider({
       packs: empty ? [] : stickerPacks,
       items: empty ? {} : stickerItems,
       delayMs,
       error: scenario === "error",
-      attribution: { label: "Mock sticker provider" },
+      attribution: { label: "Original local demo media" },
     }),
   };
 }

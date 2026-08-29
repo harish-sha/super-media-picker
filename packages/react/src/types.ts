@@ -1,13 +1,15 @@
 import type {
   AnimatedMediaConfig,
   AnimatedMediaFormat,
-  AnyEmojiMediaItem,
   CompactReactionSource,
   CustomMediaItem,
   EmojiPack,
   GifMediaItem,
+  EmojiProvider,
   MediaCapabilities,
   MediaItem,
+  MediaPickerAnalytics,
+  MediaUrlPolicy,
   MediaProvider,
   MediaPickerFeatures,
   MediaPickerMode,
@@ -38,7 +40,7 @@ export interface MediaPickerPreviewConfig {
 export interface MediaPickerProviders {
   readonly gifs?: MediaProvider<GifMediaItem>;
   readonly stickers?: StickerProvider;
-  readonly emoji?: readonly MediaProvider<AnyEmojiMediaItem>[];
+  readonly emoji?: readonly EmojiProvider[];
 }
 
 export interface CustomMediaTab {
@@ -80,6 +82,10 @@ export interface MediaPickerProps {
   readonly customTabs?: readonly CustomMediaTab[];
   readonly renderers?: MediaPickerRenderers;
   readonly animatedMedia?: AnimatedMediaConfig;
+  /** Optional host-owned analytics sink. The SDK never sends events itself. */
+  readonly analytics?: MediaPickerAnalytics;
+  /** Optional allowlist/policy applied before media URLs are rendered. */
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly onSelect: (item: MediaItem) => void;
   readonly onClose?: () => void;
   readonly storage?: StorageAdapter;

@@ -4,6 +4,8 @@ import {
   isMediaItem,
   isSafeMediaUrl,
   type ProviderAttribution,
+  type ProviderOptions,
+  type MediaUrlPolicy,
   type SearchOptions,
   type SearchResult,
   type StickerMediaItem,
@@ -39,8 +41,8 @@ export class MockStickerProvider implements StickerProvider {
       this.attribution = options.attribution;
   }
 
-  async packs(): Promise<readonly StickerPack[]> {
-    await wait(this.#delayMs);
+  async packs(options: ProviderOptions = {}): Promise<readonly StickerPack[]> {
+    await wait(this.#delayMs, options.signal);
     if (this.#error)
       throw new MediaProviderError("Mock sticker request failed", this.id);
     return this.#packs;
@@ -87,6 +89,9 @@ export interface HttpStickerProviderOptions {
   readonly fetch?: typeof globalThis.fetch;
   readonly headers?: Readonly<Record<string, string>>;
   readonly attribution?: ProviderAttribution;
+  readonly cacheTtlMs?: number;
+  readonly timeoutMs?: number;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly requestClient?: MediaRequestClient;
 }
 
@@ -98,21 +103,38 @@ export class HttpStickerProvider implements StickerProvider {
   readonly #fetch: typeof globalThis.fetch;
   readonly #headers: Readonly<Record<string, string>>;
   readonly #requests: MediaRequestClient;
+  readonly #mediaSecurity: MediaUrlPolicy;
 
   constructor(options: HttpStickerProviderOptions) {
-    if (!isSafeMediaUrl(options.endpoint))
-      throw new TypeError("Sticker endpoint must use a safe URL scheme");
+    if (
+      !isSafeMediaUrl(options.endpoint, {
+        allowBlob: false,
+        allowDataImages: false,
+        allowHttp: true,
+      })
+    )
+      throw new TypeError("Sticker endpoint must be relative, HTTP, or HTTPS");
     this.id = options.id ?? "http-stickers";
     this.#endpoint = options.endpoint;
     this.#fetch = options.fetch ?? globalThis.fetch;
     this.#headers = options.headers ?? {};
-    this.#requests = options.requestClient ?? new MediaRequestClient();
+    this.#requests =
+      options.requestClient ??
+      new MediaRequestClient({
+        ...(options.cacheTtlMs === undefined
+          ? {}
+          : { cacheTtlMs: options.cacheTtlMs }),
+        ...(options.timeoutMs === undefined
+          ? {}
+          : { timeoutMs: options.timeoutMs }),
+      });
+    this.#mediaSecurity = options.mediaSecurity ?? {};
     if (options.attribution !== undefined)
       this.attribution = options.attribution;
   }
 
-  packs(): Promise<readonly StickerPack[]> {
-    return this.#request("packs", {}, isStickerPacks);
+  packs(options: ProviderOptions = {}): Promise<readonly StickerPack[]> {
+    return this.#request("packs", options, isStickerPacks);
   }
 
   packItems(
@@ -122,7 +144,8 @@ export class HttpStickerProvider implements StickerProvider {
     return this.#request(
       "pack",
       { ...options, query: packId },
-      isStickerResult,
+      (value): value is SearchResult<StickerMediaItem> =>
+        isStickerResult(value, this.#mediaSecurity),
     );
   }
 
@@ -130,13 +153,23 @@ export class HttpStickerProvider implements StickerProvider {
     query: string,
     options: SearchOptions = {},
   ): Promise<SearchResult<StickerMediaItem>> {
-    return this.#request("search", { ...options, query }, isStickerResult);
+    return this.#request(
+      "search",
+      { ...options, query },
+      (value): value is SearchResult<StickerMediaItem> =>
+        isStickerResult(value, this.#mediaSecurity),
+    );
   }
 
   trending(
     options: SearchOptions = {},
   ): Promise<SearchResult<StickerMediaItem>> {
-    return this.#request("trending", options, isStickerResult);
+    return this.#request(
+      "trending",
+      options,
+      (value): value is SearchResult<StickerMediaItem> =>
+        isStickerResult(value, this.#mediaSecurity),
+    );
   }
 
   #request<T>(
@@ -162,6 +195,18 @@ export class HttpStickerProvider implements StickerProvider {
         try {
           response = await this.#fetch(url, { headers: this.#headers, signal });
         } catch (error) {
+          if (signal.aborted) {
+            if (
+              signal.reason instanceof DOMException &&
+              signal.reason.name === "TimeoutError"
+            )
+              throw new MediaProviderError(
+                "Sticker backend request timed out",
+                this.id,
+                { code: "timeout", cause: signal.reason },
+              );
+            throw signal.reason;
+          }
           throw new MediaProviderError(
             "Sticker backend request failed",
             this.id,
@@ -173,7 +218,16 @@ export class HttpStickerProvider implements StickerProvider {
             `Sticker backend returned ${response.status}`,
             this.id,
           );
-        const data: unknown = await response.json();
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch (error) {
+          throw new MediaProviderError(
+            "Sticker backend returned malformed JSON",
+            this.id,
+            { code: "invalid_response", cause: error },
+          );
+        }
         if (!validate(data))
           throw new MediaProviderError(
             "Sticker backend returned an invalid response",
@@ -202,6 +256,7 @@ function isStickerPacks(value: unknown): value is readonly StickerPack[] {
 
 function isStickerResult(
   value: unknown,
+  policy: MediaUrlPolicy,
 ): value is SearchResult<StickerMediaItem> {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Readonly<Record<string, unknown>>;
@@ -211,9 +266,12 @@ function isStickerResult(
       (item) =>
         isMediaItem(item) &&
         item.type === "sticker" &&
-        isSafeMediaUrl(item.url),
+        isSafeMediaUrl(item.url, policy) &&
+        (item.previewUrl === undefined ||
+          isSafeMediaUrl(item.previewUrl, policy)),
     ) &&
-    typeof result.hasMore === "boolean"
+    typeof result.hasMore === "boolean" &&
+    (result.nextCursor === undefined || typeof result.nextCursor === "string")
   );
 }
 

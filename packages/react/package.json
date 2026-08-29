@@ -15,12 +15,20 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js"
+    },
+    "./standalone": {
+      "types": "./dist/standalone.d.ts",
+      "import": "./dist/standalone.js"
+    },
     "./styles.css": {
       "default": "./dist/index.css"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --splitting --clean --sourcemap --external react --external react-dom",
+    "build": "tsup src/index.ts src/headless.ts src/standalone.ts --format esm --dts --splitting --clean --sourcemap --external react --external react-dom",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json"

@@ -5,6 +5,7 @@ import {
   isSafeMediaUrl,
   type GifMediaItem,
   type MediaProvider,
+  type MediaUrlPolicy,
   type ProviderAttribution,
   type SearchOptions,
   type SearchResult,
@@ -77,6 +78,9 @@ export interface HttpGifProviderOptions {
   readonly fetch?: typeof globalThis.fetch;
   readonly headers?: Readonly<Record<string, string>>;
   readonly attribution?: ProviderAttribution;
+  readonly cacheTtlMs?: number;
+  readonly timeoutMs?: number;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly requestClient?: MediaRequestClient;
 }
 
@@ -88,15 +92,32 @@ export class HttpGifProvider implements GifProvider {
   readonly #fetch: typeof globalThis.fetch;
   readonly #headers: Readonly<Record<string, string>>;
   readonly #requests: MediaRequestClient;
+  readonly #mediaSecurity: MediaUrlPolicy;
 
   constructor(options: HttpGifProviderOptions) {
-    if (!isSafeMediaUrl(options.endpoint))
-      throw new TypeError("GIF endpoint must use a safe URL scheme");
+    if (
+      !isSafeMediaUrl(options.endpoint, {
+        allowBlob: false,
+        allowDataImages: false,
+        allowHttp: true,
+      })
+    )
+      throw new TypeError("GIF endpoint must be relative, HTTP, or HTTPS");
     this.id = options.id ?? "http-gif";
     this.#endpoint = options.endpoint;
     this.#fetch = options.fetch ?? globalThis.fetch;
     this.#headers = options.headers ?? {};
-    this.#requests = options.requestClient ?? new MediaRequestClient();
+    this.#requests =
+      options.requestClient ??
+      new MediaRequestClient({
+        ...(options.cacheTtlMs === undefined
+          ? {}
+          : { cacheTtlMs: options.cacheTtlMs }),
+        ...(options.timeoutMs === undefined
+          ? {}
+          : { timeoutMs: options.timeoutMs }),
+      });
+    this.#mediaSecurity = options.mediaSecurity ?? {};
     if (options.attribution !== undefined)
       this.attribution = options.attribution;
   }
@@ -135,6 +156,21 @@ export class HttpGifProvider implements GifProvider {
         try {
           response = await this.#fetch(url, { headers: this.#headers, signal });
         } catch (error) {
+          if (signal.aborted) {
+            if (
+              signal.reason instanceof DOMException &&
+              signal.reason.name === "TimeoutError"
+            )
+              throw new MediaProviderError(
+                "GIF backend request timed out",
+                this.id,
+                {
+                  code: "timeout",
+                  cause: signal.reason,
+                },
+              );
+            throw signal.reason;
+          }
           throw new MediaProviderError("GIF backend request failed", this.id, {
             cause: error,
           });
@@ -144,8 +180,17 @@ export class HttpGifProvider implements GifProvider {
             `GIF backend returned ${response.status}`,
             this.id,
           );
-        const data: unknown = await response.json();
-        if (!isGifResult(data))
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch (error) {
+          throw new MediaProviderError(
+            "GIF backend returned malformed JSON",
+            this.id,
+            { code: "invalid_response", cause: error },
+          );
+        }
+        if (!isGifResult(data, this.#mediaSecurity))
           throw new MediaProviderError(
             "GIF backend returned an invalid response",
             this.id,
@@ -160,7 +205,10 @@ export class HttpGifProvider implements GifProvider {
   }
 }
 
-function isGifResult(value: unknown): value is SearchResult<GifMediaItem> {
+function isGifResult(
+  value: unknown,
+  policy: MediaUrlPolicy,
+): value is SearchResult<GifMediaItem> {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Readonly<Record<string, unknown>>;
   return (
@@ -169,8 +217,10 @@ function isGifResult(value: unknown): value is SearchResult<GifMediaItem> {
       (item) =>
         isMediaItem(item) &&
         item.type === "gif" &&
-        isSafeMediaUrl(item.url) &&
-        isSafeMediaUrl(item.previewUrl),
+        isSafeMediaUrl(item.url, policy) &&
+        isSafeMediaUrl(item.previewUrl, policy) &&
+        (item.thumbnailUrl === undefined ||
+          isSafeMediaUrl(item.thumbnailUrl, policy)),
     ) &&
     typeof result.hasMore === "boolean" &&
     (result.nextCursor === undefined || typeof result.nextCursor === "string")

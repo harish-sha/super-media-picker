@@ -4,21 +4,29 @@ import {
   type AnyEmojiMediaItem,
   type AnimatedMediaConfig,
   type CustomMediaItem,
+  type EmojiPack,
+  type EmojiProvider,
   type GifMediaItem,
   type MediaItem,
+  type MediaPickerAnalytics,
+  type MediaUrlPolicy,
   type MediaProvider,
   type ProviderAttribution,
   type RequestState,
+  type SearchOptions,
   type SearchResult,
   type StickerPack,
   type StickerProvider,
+  isSafeMediaUrl,
 } from "@super-media-picker/core";
 
 import type { CustomMediaTab, MediaPickerRenderers } from "../types";
+import { useProviderSearchState } from "../hooks/useProviderSearchState";
 import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 import { MediaResultsGrid } from "./MediaResultsGrid";
 
 interface CollectionPanelProps {
+  readonly analytics: MediaPickerAnalytics;
   readonly animation: AnimatedMediaConfig;
   readonly animationManager: AnimationConcurrencyManager;
   readonly favoriteIds: ReadonlySet<string>;
@@ -26,6 +34,7 @@ interface CollectionPanelProps {
   readonly onFavoriteToggle: (item: MediaItem) => void;
   readonly onSelect: (item: MediaItem) => void;
   readonly query: string;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
 }
 
@@ -41,94 +50,68 @@ interface ProviderResult<T extends MediaItem> {
 function useProviderResults<T extends MediaItem>(
   provider: MediaProvider<T>,
   query: string,
-  loadEmpty: (options: {
-    readonly cursor?: string;
-    readonly limit: number;
-    readonly signal: AbortSignal;
-  }) => Promise<SearchResult<T>>,
+  mediaType: MediaItem["type"],
+  analytics: MediaPickerAnalytics,
+  loadEmpty: (options: SearchOptions) => Promise<SearchResult<T>>,
 ): ProviderResult<T> {
-  const [items, setItems] = useState<readonly T[]>([]);
-  const [cursor, setCursor] = useState<string>();
-  const [hasMore, setHasMore] = useState(false);
-  const [state, setState] = useState<RequestState>("idle");
-  const [error, setError] = useState<Error>();
-  const [revision, setRevision] = useState(0);
-  const normalized = query.trim();
-
-  const load = useCallback(
-    async (
-      nextCursor: string | undefined,
-      append: boolean,
-      signal: AbortSignal,
-    ) => {
-      setState(append ? "loading-more" : "loading");
-      setError(undefined);
-      try {
-        const options = {
-          limit: 18,
-          signal,
-          ...(nextCursor === undefined ? {} : { cursor: nextCursor }),
-        };
-        const result =
-          normalized === ""
-            ? await loadEmpty(options)
-            : provider.search === undefined
-              ? { items: [] as readonly T[], hasMore: false }
-              : await provider.search(normalized, options);
-        if (signal.aborted) return;
-        setItems((current) =>
-          append ? [...current, ...result.items] : result.items,
-        );
-        setCursor(result.nextCursor);
-        setHasMore(result.hasMore);
-        setState(result.items.length === 0 && !append ? "empty" : "success");
-      } catch (caught) {
-        if (signal.aborted) return;
-        setError(
-          caught instanceof Error
-            ? caught
-            : new Error("Provider request failed"),
-        );
-        setState("error");
-      }
-    },
-    [loadEmpty, normalized, provider],
+  const onCompleted = useCallback(
+    (resultCount: number) =>
+      analytics.track("search_completed", {
+        mediaType,
+        provider: provider.id,
+        resultCount,
+      }),
+    [analytics, mediaType, provider.id],
   );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => void load(undefined, false, controller.signal),
-      normalized === "" ? 0 : 250,
-    );
-    return () => {
-      clearTimeout(timeout);
-      controller.abort(new DOMException("Stale request", "AbortError"));
-    };
-  }, [load, normalized, revision]);
-
+  const onError = useCallback(
+    () =>
+      analytics.track("provider_error", {
+        mediaType,
+        provider: provider.id,
+      }),
+    [analytics, mediaType, provider.id],
+  );
+  const onLoadMore = useCallback(
+    () => analytics.track("load_more", { mediaType, provider: provider.id }),
+    [analytics, mediaType, provider.id],
+  );
+  const result = useProviderSearchState({
+    provider,
+    query,
+    loadEmpty,
+    onCompleted,
+    onError,
+    onLoadMore,
+  });
   return {
-    items,
-    hasMore,
-    state,
-    ...(error === undefined ? {} : { error }),
-    loadMore: () => {
-      if (!hasMore || cursor === undefined || state === "loading-more") return;
-      void load(cursor, true, new AbortController().signal);
-    },
-    retry: () => setRevision((current) => current + 1),
+    ...result,
+    items: result.results,
   };
 }
 
-function Attribution({ value }: { readonly value?: ProviderAttribution }) {
+function Attribution({
+  value,
+  mediaSecurity,
+}: {
+  readonly value?: ProviderAttribution;
+  readonly mediaSecurity?: MediaUrlPolicy;
+}) {
   if (value === undefined) return null;
+  const logoUrl =
+    value.logoUrl !== undefined && isSafeMediaUrl(value.logoUrl, mediaSecurity)
+      ? value.logoUrl
+      : undefined;
+  const attributionUrl =
+    value.url !== undefined && isSafeMediaUrl(value.url, mediaSecurity)
+      ? value.url
+      : undefined;
   return (
     <div className="mp-attribution">
-      {value.logoUrl === undefined ? null : <img alt="" src={value.logoUrl} />}
-      {value.url === undefined ? (
+      {logoUrl === undefined ? null : <img alt="" src={logoUrl} />}
+      {attributionUrl === undefined ? (
         value.label
       ) : (
-        <a href={value.url} rel="noreferrer" target="_blank">
+        <a href={attributionUrl} rel="noreferrer" target="_blank">
           {value.label}
         </a>
       )}
@@ -180,6 +163,7 @@ function ResultState<T extends MediaItem>({
   label,
   emptyMessage,
   provider,
+  mediaSecurity,
   ...gridProps
 }: CollectionPanelProps & {
   readonly emptyMessage: string;
@@ -206,13 +190,17 @@ function ResultState<T extends MediaItem>({
     <>
       <MediaResultsGrid
         {...gridProps}
+        {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
         emptyMessage={emptyMessage}
         items={result.items}
         label={label}
       />
       <LoadMoreControl result={result} />
       {provider.attribution === undefined ? null : (
-        <Attribution value={provider.attribution} />
+        <Attribution
+          value={provider.attribution}
+          {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
+        />
       )}
     </>
   );
@@ -228,7 +216,13 @@ export function GifPanel({
       Promise.resolve({ items: [], hasMore: false }),
     [provider],
   );
-  const result = useProviderResults(provider, props.query, loadTrending);
+  const result = useProviderResults(
+    provider,
+    props.query,
+    "gif",
+    props.analytics,
+    loadTrending,
+  );
   return (
     <ResultState
       {...props}
@@ -252,19 +246,46 @@ function EmojiProviderPanel({
 }: CollectionPanelProps & {
   readonly allowAnimated: boolean;
   readonly allowCustom: boolean;
-  readonly provider: MediaProvider<AnyEmojiMediaItem>;
+  readonly provider: EmojiProvider;
 }) {
+  const [packs, setPacks] = useState<readonly EmojiPack[]>([]);
+  const [packId, setPackId] = useState("");
+  useEffect(() => {
+    if (provider.packs === undefined) return;
+    const controller = new AbortController();
+    void provider
+      .packs({ signal: controller.signal })
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setPacks(next);
+        setPackId((current) => current || next[0]?.id || "");
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setPacks([]);
+        props.analytics.track("provider_error", {
+          mediaType: "emoji",
+          provider: provider.id,
+        });
+      });
+    return () =>
+      controller.abort(new DOMException("Stale request", "AbortError"));
+  }, [props.analytics, provider]);
   const loadTrending = useCallback(
-    (options: {
-      readonly cursor?: string;
-      readonly limit: number;
-      readonly signal: AbortSignal;
-    }) =>
-      provider.trending?.(options) ??
+    (options: SearchOptions) =>
+      (packId !== "" && provider.packItems !== undefined
+        ? provider.packItems(packId, options)
+        : provider.trending?.(options)) ??
       Promise.resolve({ items: [], hasMore: false }),
-    [provider],
+    [packId, provider],
   );
-  const result = useProviderResults(provider, props.query, loadTrending);
+  const result = useProviderResults(
+    provider,
+    props.query,
+    "emoji",
+    props.analytics,
+    loadTrending,
+  );
   const visibleResult: ProviderResult<AnyEmojiMediaItem> = {
     ...result,
     items: result.items.filter(
@@ -274,13 +295,31 @@ function EmojiProviderPanel({
     ),
   };
   return (
-    <ResultState
-      {...props}
-      emptyMessage={`No emoji available from ${provider.id}.`}
-      label={`${provider.id} emoji`}
-      provider={provider}
-      result={visibleResult}
-    />
+    <>
+      {props.query.trim() === "" && packs.length > 0 ? (
+        <nav aria-label={`${provider.id} emoji packs`} className="mp-pack-nav">
+          {packs.map((pack) => (
+            <button
+              aria-pressed={pack.id === packId}
+              key={pack.id}
+              onClick={() => setPackId(pack.id)}
+              title={pack.name}
+              type="button"
+            >
+              <span aria-hidden="true">{pack.icon ?? "✨"}</span>
+              <span>{pack.name}</span>
+            </button>
+          ))}
+        </nav>
+      ) : null}
+      <ResultState
+        {...props}
+        emptyMessage={`No emoji available from ${provider.id}.`}
+        label={`${provider.id} emoji`}
+        provider={provider}
+        result={visibleResult}
+      />
+    </>
   );
 }
 
@@ -290,7 +329,7 @@ export function EmojiProviderPanels({
 }: CollectionPanelProps & {
   readonly allowAnimated: boolean;
   readonly allowCustom: boolean;
-  readonly providers: readonly MediaProvider<AnyEmojiMediaItem>[];
+  readonly providers: readonly EmojiProvider[];
 }) {
   return providers.map((provider) => (
     <EmojiProviderPanel key={provider.id} provider={provider} {...props} />
@@ -307,34 +346,43 @@ export function StickerPanel({
 }) {
   const [packs, setPacks] = useState<readonly StickerPack[]>([]);
   const [packId, setPackId] = useState("");
+  const [packError, setPackError] = useState(false);
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     void provider
-      .packs()
+      .packs({ signal: controller.signal })
       .then((next) => {
-        if (!active) return;
+        if (controller.signal.aborted) return;
+        setPackError(false);
         setPacks(next);
         setPackId((current) => current || next[0]?.id || "");
       })
       .catch(() => {
-        if (active) setPacks([]);
+        if (controller.signal.aborted) return;
+        setPacks([]);
+        setPackError(true);
+        props.analytics.track("provider_error", {
+          mediaType: "sticker",
+          provider: provider.id,
+        });
       });
-    return () => {
-      active = false;
-    };
-  }, [provider]);
+    return () =>
+      controller.abort(new DOMException("Stale request", "AbortError"));
+  }, [props.analytics, provider]);
   const loadPack = useCallback(
-    (options: {
-      readonly cursor?: string;
-      readonly limit: number;
-      readonly signal: AbortSignal;
-    }) =>
-      provider.packItems?.(packId, options) ??
-      provider.trending?.(options) ??
-      Promise.resolve({ items: [], hasMore: false }),
+    (options: SearchOptions) =>
+      packId === ""
+        ? Promise.resolve({ items: [], hasMore: false })
+        : provider.packItems(packId, options),
     [packId, provider],
   );
-  const result = useProviderResults(provider, props.query, loadPack);
+  const result = useProviderResults(
+    provider,
+    props.query,
+    "sticker",
+    props.analytics,
+    loadPack,
+  );
   const visibleResult = {
     ...result,
     items: allowAnimated
@@ -343,6 +391,11 @@ export function StickerPanel({
   };
   return (
     <>
+      {packError ? (
+        <div className="mp-provider-state" role="alert">
+          Sticker packs could not be loaded.
+        </div>
+      ) : null}
       {props.query.trim() === "" && packs.length > 0 ? (
         <nav aria-label="Sticker packs" className="mp-pack-nav">
           {packs.map((pack) => (
@@ -414,16 +467,18 @@ function CustomProviderPanel({
   readonly onTabChange: (id: string) => void;
 }) {
   const loadTrending = useCallback(
-    (options: {
-      readonly cursor?: string;
-      readonly limit: number;
-      readonly signal: AbortSignal;
-    }) =>
+    (options: SearchOptions) =>
       provider.trending?.(options) ??
       Promise.resolve({ items: [], hasMore: false }),
     [provider],
   );
-  const result = useProviderResults(provider, props.query, loadTrending);
+  const result = useProviderResults(
+    provider,
+    props.query,
+    "custom",
+    props.analytics,
+    loadTrending,
+  );
   return (
     <>
       {tabs.length > 1 ? (
@@ -456,7 +511,7 @@ export function StaticMediaPanel({
   items,
   label,
   ...props
-}: Omit<CollectionPanelProps, "query"> & {
+}: Omit<CollectionPanelProps, "analytics" | "query"> & {
   readonly items: readonly MediaItem[];
   readonly label: string;
 }) {

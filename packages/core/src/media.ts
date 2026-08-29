@@ -60,6 +60,9 @@ export interface GifMediaItem {
   readonly name?: string;
   readonly provider: string;
   readonly url: string;
+  /** Optional static poster used before an animated preview is activated. */
+  readonly thumbnailUrl?: string;
+  /** Optimized grid preview. It may itself be animated. */
   readonly previewUrl: string;
   readonly width?: number;
   readonly height?: number;
@@ -108,8 +111,9 @@ export function isUnicodeEmoji(item: MediaItem): item is UnicodeEmojiMediaItem {
 
 export function isAnimatedMedia(
   item: MediaItem,
-): item is AnimatedEmojiMediaItem | StickerMediaItem {
+): item is AnimatedEmojiMediaItem | GifMediaItem | StickerMediaItem {
   return (
+    item.type === "gif" ||
     (item.type === "emoji" && item.kind === "animated") ||
     (item.type === "sticker" && item.animated)
   );
@@ -149,7 +153,8 @@ export function isMediaItem(value: unknown): value is MediaItem {
     return (
       typeof item.provider === "string" &&
       typeof item.url === "string" &&
-      typeof item.previewUrl === "string"
+      typeof item.previewUrl === "string" &&
+      (item.thumbnailUrl === undefined || typeof item.thumbnailUrl === "string")
     );
   }
   if (item.type === "sticker") {

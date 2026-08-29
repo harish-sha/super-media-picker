@@ -6,6 +6,10 @@ export interface SearchOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface ProviderOptions {
+  readonly signal?: AbortSignal;
+}
+
 export interface SearchResult<T> {
   readonly items: readonly T[];
   readonly nextCursor?: string;
@@ -30,7 +34,17 @@ export interface EmojiPack {
   readonly name: string;
   readonly icon?: string;
   readonly provider?: string;
-  readonly items: readonly AnyEmojiMediaItem[];
+  /** Inline items are optional so remote providers can return metadata only. */
+  readonly items?: readonly AnyEmojiMediaItem[];
+}
+
+/** Optional pack-aware extension for large animated/custom emoji catalogs. */
+export interface EmojiProvider extends MediaProvider<AnyEmojiMediaItem> {
+  packs?(options?: ProviderOptions): Promise<readonly EmojiPack[]>;
+  packItems?(
+    packId: string,
+    options?: SearchOptions,
+  ): Promise<SearchResult<AnyEmojiMediaItem>>;
 }
 
 export interface StickerPack {
@@ -42,8 +56,8 @@ export interface StickerPack {
 }
 
 export interface StickerProvider extends MediaProvider<StickerMediaItem> {
-  packs(): Promise<readonly StickerPack[]>;
-  packItems?(
+  packs(options?: ProviderOptions): Promise<readonly StickerPack[]>;
+  packItems(
     packId: string,
     options?: SearchOptions,
   ): Promise<SearchResult<StickerMediaItem>>;

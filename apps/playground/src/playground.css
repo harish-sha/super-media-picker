@@ -143,6 +143,44 @@ select {
   max-width: 20rem;
 }
 
+.playground-headless {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #d8dfeb;
+  border-radius: 1rem;
+}
+
+.playground-headless input {
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.playground-headless-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.5rem;
+}
+
+.playground-headless-grid button {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  background: #f7f9fc;
+  border: 1px solid #d8dfeb;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.playground-headless-grid img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
 @media (max-width: 48rem) {
   .playground-demo {
     grid-template-columns: 1fr;

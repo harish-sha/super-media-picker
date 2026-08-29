@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,6 +13,7 @@ import {
   type AnimatedEmojiMediaItem,
   type CustomEmojiMediaItem,
   type CustomMediaItem,
+  type EmojiProvider,
   type GifMediaItem,
   type MediaItem,
   type MediaProvider,
@@ -128,6 +135,38 @@ describe("multi-media picker", () => {
     );
     expect(onSelect).toHaveBeenCalledWith(providerCustomEmoji);
     expect(screen.queryByRole("button", { name: "Provider party" })).toBeNull();
+  });
+
+  it("loads remote emoji packs only after their provider panel mounts", async () => {
+    const user = userEvent.setup();
+    const packs = vi.fn(async () => [{ id: "team", name: "Team", icon: "✨" }]);
+    const packItems = vi.fn(async () => ({
+      items: [providerAnimatedEmoji],
+      hasMore: false,
+    }));
+    const provider: EmojiProvider = {
+      id: "workspace",
+      packs,
+      packItems,
+    };
+    render(
+      <MediaPicker
+        features={{ animatedEmoji: true }}
+        onSelect={() => undefined}
+        providers={{ emoji: [provider] }}
+      />,
+    );
+    expect(
+      await screen.findByRole("navigation", {
+        name: "workspace emoji packs",
+      }),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Team" }));
+    expect(
+      await screen.findByRole("button", { name: "Provider party" }),
+    ).not.toBeNull();
+    expect(packs).toHaveBeenCalledOnce();
+    expect(packItems).toHaveBeenCalled();
   });
 
   it("loads, searches, selects, favorites, and restores normalized GIFs", async () => {
@@ -379,6 +418,92 @@ describe("animated media", () => {
     fireEvent.pointerLeave(visual);
     await waitFor(() =>
       expect(visual.getAttribute("data-active")).toBe("false"),
+    );
+  });
+
+  it("uses a GIF thumbnail while idle and only the optimized preview when focused", async () => {
+    const optimizedGif: GifMediaItem = {
+      ...gif,
+      thumbnailUrl: "https://cdn.test/poster.webp",
+      previewUrl: "https://cdn.test/preview.gif",
+      url: "https://cdn.test/original.gif",
+    };
+    render(
+      <MediaPicker
+        animatedMedia={{ autoplay: "hover" }}
+        defaultMediaType="gif"
+        features={{ gifs: true }}
+        onSelect={() => undefined}
+        providers={{
+          gifs: gifProvider({
+            trending: async () => ({ items: [optimizedGif], hasMore: false }),
+          }),
+        }}
+      />,
+    );
+    const button = await screen.findByRole("button", { name: "Party" });
+    const visual = within(button).getByRole("img", { name: "Party" });
+    expect(button.querySelector("img")?.getAttribute("src")).toBe(
+      optimizedGif.thumbnailUrl,
+    );
+    button.focus();
+    await waitFor(() =>
+      expect(button.querySelector("img")?.getAttribute("src")).toBe(
+        optimizedGif.previewUrl,
+      ),
+    );
+    expect(button.querySelector("img")?.getAttribute("src")).not.toBe(
+      optimizedGif.url,
+    );
+    button.blur();
+    await waitFor(() =>
+      expect(visual.getAttribute("data-active")).toBe("false"),
+    );
+  });
+
+  it("falls back when a static or animated asset fails", async () => {
+    const custom: CustomMediaItem = {
+      type: "custom",
+      kind: "company",
+      id: "broken",
+      name: "Broken asset",
+      url: "https://cdn.test/broken.webp",
+    };
+    const provider: MediaProvider<CustomMediaItem> = {
+      id: "company",
+      trending: async () => ({ items: [custom], hasMore: false }),
+    };
+    const view = render(
+      <MediaPicker
+        customTabs={[{ id: "company", label: "Company", provider }]}
+        defaultMediaType="custom"
+        features={{ customMedia: true }}
+        onSelect={() => undefined}
+      />,
+    );
+    const button = await screen.findByRole("button", { name: "Broken asset" });
+    fireEvent.error(button.querySelector("img")!);
+    await waitFor(() =>
+      expect(
+        view.container.querySelector("[data-media-fallback]"),
+      ).not.toBeNull(),
+    );
+
+    view.unmount();
+    render(
+      <AnimatedMediaRenderer
+        config={{ autoplay: "always" }}
+        item={animated}
+        manager={new AnimationConcurrencyManager(1)}
+      />,
+    );
+    const animatedVisual = screen.getByRole("img", { name: "Animated party" });
+    await waitFor(() =>
+      expect(animatedVisual.getAttribute("data-active")).toBe("true"),
+    );
+    fireEvent.error(animatedVisual.querySelector("img")!);
+    await waitFor(() =>
+      expect(animatedVisual.getAttribute("data-active")).toBe("false"),
     );
   });
 

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FavoritesManager,
   type FavoriteItemRecord,
-  LocalStorageAdapter,
   PersistentPreference,
   RecentItemsManager,
   type RecentItemRecord,
@@ -11,6 +10,12 @@ import {
   type SkinTone,
   type StorageAdapter,
 } from "@super-media-picker/core";
+
+import {
+  notifyPersistence,
+  subscribePersistence,
+  useResolvedStorage,
+} from "./persistenceStore";
 
 export const mediaPickerStorageKeys = Object.freeze({
   favorites: "emoji.favorites",
@@ -32,6 +37,7 @@ function isSkinTone(value: unknown): value is SkinTone {
 }
 
 export interface MediaPickerPersistenceState {
+  readonly ready: boolean;
   readonly recentRecords: readonly RecentItemRecord[];
   readonly favoriteIds: readonly string[];
   readonly favoriteRecords: readonly FavoriteItemRecord[];
@@ -43,6 +49,9 @@ export interface MediaPickerPersistenceState {
     item: string | MediaItem,
   ) => Promise<readonly string[]>;
   readonly setSkinTone: (tone: SkinTone) => void;
+  readonly clearRecents: () => Promise<void>;
+  readonly clearFavorites: () => Promise<void>;
+  readonly refresh: () => Promise<void>;
 }
 
 /** Shared persistent state used by compact and full presentations. */
@@ -50,10 +59,7 @@ export function useMediaPickerPersistence(
   storage: StorageAdapter | undefined,
   defaultSkinTone: SkinTone,
 ): MediaPickerPersistenceState {
-  const persistence = useMemo(
-    () => storage ?? new LocalStorageAdapter("media-picker"),
-    [storage],
-  );
+  const persistence = useResolvedStorage(storage);
   const recentsManager = useMemo(
     () =>
       new RecentItemsManager(persistence, {
@@ -85,33 +91,45 @@ export function useMediaPickerPersistence(
     readonly FavoriteItemRecord[]
   >([]);
   const [skinTone, setSkinToneState] = useState<SkinTone>(defaultSkinTone);
+  const [ready, setReady] = useState(false);
   const toneChangedByUser = useRef(false);
 
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
+  const refresh = useCallback(async () => {
+    const [recents, favorites, tone] = await Promise.all([
       recentsManager.getRecents(),
       favoritesManager.getFavoriteRecords(),
       tonePreference.get(),
-    ]).then(([recents, favorites, tone]) => {
-      if (!active) return;
-      setRecentRecords(recents);
-      setFavoriteRecords(favorites);
-      setFavoriteIds(favorites.map(({ id }) => id));
-      if (!toneChangedByUser.current) setSkinToneState(tone);
-    });
+    ]);
+    setRecentRecords(recents);
+    setFavoriteRecords(favorites);
+    setFavoriteIds(favorites.map(({ id }) => id));
+    if (!toneChangedByUser.current) setSkinToneState(tone);
+    setReady(true);
+  }, [favoritesManager, recentsManager, tonePreference]);
+
+  useEffect(() => {
+    let active = true;
+    const load = (): void => {
+      void refresh().catch(() => {
+        if (active) setReady(true);
+      });
+    };
+    load();
+    const unsubscribe = subscribePersistence(persistence, load);
     return () => {
       active = false;
+      unsubscribe();
     };
-  }, [favoritesManager, recentsManager, tonePreference]);
+  }, [persistence, refresh]);
 
   const recordRecent = useCallback(
     async (item: string | MediaItem) => {
       const records = await recentsManager.record(item);
       setRecentRecords(records);
+      notifyPersistence(persistence);
       return records;
     },
-    [recentsManager],
+    [persistence, recentsManager],
   );
 
   const toggleFavorite = useCallback(
@@ -119,21 +137,39 @@ export function useMediaPickerPersistence(
       const favorites = await favoritesManager.toggle(item);
       setFavoriteIds(favorites);
       setFavoriteRecords(await favoritesManager.getFavoriteRecords());
+      notifyPersistence(persistence);
       return favorites;
     },
-    [favoritesManager],
+    [favoritesManager, persistence],
   );
 
   const setSkinTone = useCallback(
     (tone: SkinTone) => {
       toneChangedByUser.current = true;
       setSkinToneState(tone);
-      void tonePreference.set(tone);
+      void tonePreference.set(tone).then(() => {
+        toneChangedByUser.current = false;
+        notifyPersistence(persistence);
+      });
     },
-    [tonePreference],
+    [persistence, tonePreference],
   );
 
+  const clearRecents = useCallback(async () => {
+    await recentsManager.clear();
+    setRecentRecords([]);
+    notifyPersistence(persistence);
+  }, [persistence, recentsManager]);
+
+  const clearFavorites = useCallback(async () => {
+    await favoritesManager.clear();
+    setFavoriteIds([]);
+    setFavoriteRecords([]);
+    notifyPersistence(persistence);
+  }, [favoritesManager, persistence]);
+
   return {
+    ready,
     recentRecords,
     favoriteIds,
     favoriteRecords,
@@ -141,5 +177,8 @@ export function useMediaPickerPersistence(
     recordRecent,
     toggleFavorite,
     setSkinTone,
+    clearRecents,
+    clearFavorites,
+    refresh,
   };
 }

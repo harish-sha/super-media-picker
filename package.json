@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "pnpm build:packages && eslint . --max-warnings 0",
+    "media:fixtures": "node tooling/scripts/build-demo-media.mjs",
     "package:check": "node tooling/scripts/validate-packages.mjs",
     "size": "size-limit",
     "storybook": "pnpm build:packages && pnpm --filter playground storybook",
@@ -32,8 +33,10 @@
     "@types/node": "^22.15.29",
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.0",
+    "gifenc": "^1.0.3",
     "globals": "^16.2.0",
     "prettier": "^3.5.3",
+    "sharp": "^0.35.4",
     "size-limit": "^11.2.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.0"
@@ -48,6 +51,16 @@
       "name": "@super-media-picker/react base UI",
       "path": "packages/react/dist/index.js",
       "limit": "20 kB"
+    },
+    {
+      "name": "@super-media-picker/react focused pickers entry",
+      "path": "packages/react/dist/standalone.js",
+      "limit": "1 kB"
+    },
+    {
+      "name": "@super-media-picker/react headless entry",
+      "path": "packages/react/dist/headless.js",
+      "limit": "1 kB"
     },
     {
       "name": "@super-media-picker/emoji compact data",
@@ -67,6 +80,16 @@
     {
       "name": "super-media-picker public entry",
       "path": "packages/super-media-picker/dist/index.js",
+      "limit": "1 kB"
+    },
+    {
+      "name": "super-media-picker headless entry",
+      "path": "packages/super-media-picker/dist/headless.js",
+      "limit": "1 kB"
+    },
+    {
+      "name": "super-media-picker providers entry",
+      "path": "packages/super-media-picker/dist/providers.js",
       "limit": "1 kB"
     }
   ]

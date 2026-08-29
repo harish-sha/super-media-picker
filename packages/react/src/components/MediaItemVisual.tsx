@@ -1,9 +1,12 @@
+import { useState } from "react";
+
 import {
   isAnimatedMedia,
   isSafeMediaUrl,
   isUnicodeEmoji,
   type AnimatedMediaConfig,
   type MediaItem,
+  type MediaUrlPolicy,
 } from "@super-media-picker/core";
 
 import type { MediaPickerRenderers } from "../types";
@@ -24,6 +27,7 @@ export interface MediaItemVisualProps {
   readonly item: MediaItem;
   readonly animation: AnimatedMediaConfig;
   readonly manager: AnimationConcurrencyManager;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
 }
 
@@ -31,6 +35,7 @@ export function MediaItemVisual({
   item,
   animation,
   manager,
+  mediaSecurity,
   renderers,
 }: MediaItemVisualProps) {
   if (isUnicodeEmoji(item)) return <span aria-hidden="true">{item.value}</span>;
@@ -40,21 +45,41 @@ export function MediaItemVisual({
         config={animation}
         item={item}
         manager={manager}
+        {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
         {...(renderers === undefined ? {} : { renderers })}
       />
     );
   }
   if (item.type === "custom" && renderers?.custom !== undefined)
     return renderers.custom(item);
-  const url =
-    item.type === "emoji"
-      ? (item.previewUrl ?? item.url)
-      : item.type === "gif"
-        ? item.previewUrl
-        : (item.previewUrl ?? item.url);
-  return isSafeMediaUrl(url) ? (
-    <img alt="" draggable={false} loading="lazy" src={url} />
+  const url = item.previewUrl ?? item.url;
+  return (
+    <StaticMediaVisual
+      url={url}
+      {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
+    />
+  );
+}
+
+function StaticMediaVisual({
+  url,
+  mediaSecurity,
+}: {
+  readonly url: string;
+  readonly mediaSecurity?: MediaUrlPolicy;
+}) {
+  const [failed, setFailed] = useState(false);
+  return !failed && isSafeMediaUrl(url, mediaSecurity) ? (
+    <img
+      alt=""
+      draggable={false}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      src={url}
+    />
   ) : (
-    <span aria-hidden="true">◌</span>
+    <span aria-hidden="true" data-media-fallback="">
+      ◌
+    </span>
   );
 }

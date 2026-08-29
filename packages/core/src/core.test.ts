@@ -39,6 +39,19 @@ describe("MediaRequestClient", () => {
     expect(load).toHaveBeenCalledOnce();
   });
 
+  it("reloads successful work after the configured cache TTL expires", async () => {
+    let now = 1_000;
+    const load = vi.fn(async () => `result-${now}`);
+    const client = new MediaRequestClient({
+      cache: new MemoryCache<unknown>(() => now),
+      cacheTtlMs: 100,
+    });
+    await expect(client.request("query", load)).resolves.toBe("result-1000");
+    now = 1_100;
+    await expect(client.request("query", load)).resolves.toBe("result-1100");
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("propagates timeout cancellation to provider work", async () => {
     const client = new MediaRequestClient({ timeoutMs: 5 });
     const request = client.request(
@@ -73,6 +86,28 @@ describe("isSafeMediaUrl", () => {
       false,
     );
     expect(isSafeMediaUrl("//untrusted.test/image.gif")).toBe(false);
+  });
+
+  it("enforces HTTPS, relative, data, and origin policy when configured", () => {
+    const policy = {
+      allowedOrigins: ["https://media.company.test"],
+      allowBlob: false,
+      allowDataImages: false,
+      allowHttp: false,
+      allowRelative: false,
+    } as const;
+    expect(
+      isSafeMediaUrl("https://media.company.test/image.webp", policy),
+    ).toBe(true);
+    expect(isSafeMediaUrl("https://other.test/image.webp", policy)).toBe(false);
+    expect(isSafeMediaUrl("http://media.company.test/image.webp", policy)).toBe(
+      false,
+    );
+    expect(isSafeMediaUrl("/media/image.webp", policy)).toBe(false);
+    expect(isSafeMediaUrl("blob:https://media.company.test/id", policy)).toBe(
+      false,
+    );
+    expect(isSafeMediaUrl("data:image/gif;base64,AAAA", policy)).toBe(false);
   });
 });
 

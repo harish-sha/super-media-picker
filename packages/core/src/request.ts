@@ -13,6 +13,15 @@ export interface MediaRequestClientOptions {
   readonly timeoutMs?: number;
 }
 
+/** Small URL policy shared by providers and renderers. */
+export interface MediaUrlPolicy {
+  readonly allowedOrigins?: readonly string[];
+  readonly allowBlob?: boolean;
+  readonly allowDataImages?: boolean;
+  readonly allowHttp?: boolean;
+  readonly allowRelative?: boolean;
+}
+
 /**
  * Small provider request coordinator with TTL caching, in-flight deduplication,
  * timeout/cancellation propagation, and deterministic cleanup.
@@ -74,15 +83,23 @@ export class MediaRequestClient {
 }
 
 /** Reject executable URL schemes while allowing browser-safe media sources. */
-export function isSafeMediaUrl(value: string): boolean {
-  if (value.startsWith("/")) return !value.startsWith("//");
+export function isSafeMediaUrl(
+  value: string,
+  policy: MediaUrlPolicy = {},
+): boolean {
+  if (value.startsWith("/"))
+    return (policy.allowRelative ?? true) && !value.startsWith("//");
   try {
     const url = new URL(value, "https://media.invalid");
+    if (url.protocol === "data:")
+      return (policy.allowDataImages ?? true) && /^data:image\//iu.test(value);
+    if (url.protocol === "blob:") return policy.allowBlob ?? true;
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    if (url.protocol === "http:" && policy.allowHttp === false) return false;
+    const allowedOrigins = policy.allowedOrigins;
     return (
-      url.protocol === "https:" ||
-      url.protocol === "http:" ||
-      url.protocol === "blob:" ||
-      (url.protocol === "data:" && /^data:image\//iu.test(value))
+      allowedOrigins === undefined ||
+      allowedOrigins.some((origin) => new URL(origin).origin === url.origin)
     );
   } catch {
     return false;

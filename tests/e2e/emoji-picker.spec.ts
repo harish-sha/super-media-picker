@@ -113,11 +113,34 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
   await page.evaluate(() => localStorage.clear());
   await page.getByRole("button", { name: "Full picker" }).click();
 
+  const animatedEmoji = page.getByRole("button", {
+    name: "Animated party",
+    exact: true,
+  });
+  await expect(animatedEmoji.locator("img")).toHaveAttribute(
+    "src",
+    "/media/animated-emoji/party.webp",
+  );
+  await animatedEmoji.hover();
+  await expect(animatedEmoji.locator("img")).toHaveAttribute(
+    "src",
+    "/media/animated-emoji/party.gif",
+  );
+
   await page.getByRole("tab", { name: "GIF" }).click();
   const party = page
     .getByRole("button", { name: "Colorful party animation" })
     .first();
   await expect(party).toBeVisible();
+  await expect(party.locator("img")).toHaveAttribute(
+    "src",
+    "/media/gifs/celebration-poster.webp",
+  );
+  await party.hover();
+  await expect(party.locator("img")).toHaveAttribute(
+    "src",
+    "/media/gifs/celebration.gif",
+  );
   await party.click();
   await expect(page.getByTestId("selection-output")).toContainText(
     '"type": "gif"',
@@ -127,6 +150,19 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
   await expect(
     page.getByRole("button", { name: "Bear sticker 1", exact: true }),
   ).toBeVisible();
+  const animatedSticker = page.getByRole("button", {
+    name: "Bear sticker 1",
+    exact: true,
+  });
+  await expect(animatedSticker.locator("img")).toHaveAttribute(
+    "src",
+    "/media/stickers/bear.webp",
+  );
+  await animatedSticker.hover();
+  await expect(animatedSticker.locator("img")).toHaveAttribute(
+    "src",
+    "/media/stickers/bear-wave.gif",
+  );
   await page.getByRole("button", { name: "Cats" }).click();
   await page
     .getByRole("button", { name: "Cat sticker 1", exact: true })
@@ -136,7 +172,15 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
   );
 
   await page.getByRole("tab", { name: "Custom" }).click();
-  await page.getByRole("button", { name: "Launch card", exact: true }).click();
+  const launch = page.getByRole("button", {
+    name: "Launch card",
+    exact: true,
+  });
+  await expect(launch.locator("img")).toHaveAttribute(
+    "src",
+    "/media/custom/launch.webp",
+  );
+  await launch.click();
   await expect(page.getByTestId("selection-output")).toContainText(
     '"type": "custom"',
   );
@@ -153,4 +197,53 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
     "Mock GIF request failed",
   );
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+});
+
+test("uses standalone and headless SDK surfaces with normalized output", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+
+  const surface = page.getByLabel("SDK surface");
+
+  await surface.selectOption("emoji");
+  await page.getByRole("searchbox", { name: "Search emoji" }).fill("rocket");
+  await page.getByRole("button", { name: "rocket", exact: true }).click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "emoji"',
+  );
+
+  await surface.selectOption("gif");
+  await page
+    .getByRole("button", { name: "Colorful party animation" })
+    .first()
+    .click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "gif"',
+  );
+
+  await surface.selectOption("sticker");
+  await page
+    .getByRole("button", { name: "Bear sticker 1", exact: true })
+    .click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"type": "sticker"',
+  );
+
+  await surface.selectOption("reaction");
+  await page.getByRole("button", { name: "thumbs up", exact: true }).click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"id": "1f44d"',
+  );
+
+  await surface.selectOption("headless");
+  await page.getByLabel("Search GIFs").fill("party");
+  await page
+    .getByRole("button", { name: /Party 1/u })
+    .first()
+    .click();
+  await expect(page.getByTestId("selection-output")).toContainText(
+    '"provider": "mock-gif"',
+  );
 });

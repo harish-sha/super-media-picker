@@ -67,6 +67,17 @@ try {
       );
     }
 
+    const forbiddenFiles = [...archiveFiles].filter((path) =>
+      /(?:^|\/)(?:\.env(?:\.|$)|test-results|playwright-report|storybook-static|public\/media)(?:\/|$)/u.test(
+        path,
+      ),
+    );
+    if (forbiddenFiles.length > 0) {
+      throw new Error(
+        `${packResult.name} contains development artifacts: ${forbiddenFiles.join(", ")}`,
+      );
+    }
+
     const packedManifest = JSON.parse(
       readArchiveFile(packResult.filename, "package.json"),
     );

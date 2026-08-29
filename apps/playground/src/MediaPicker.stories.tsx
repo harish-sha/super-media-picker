@@ -2,9 +2,14 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn, userEvent, within } from "@storybook/test";
 
 import {
+  EmojiPicker,
+  GifPicker,
   MediaPicker,
   MemoryStorageAdapter,
+  ReactionPicker,
+  StickerPicker,
   mediaPickerStorageKeys,
+  useGifSearch,
 } from "super-media-picker";
 
 import { createMockProviders, customTabs, emojiPacks } from "./mockMedia";
@@ -12,6 +17,43 @@ import { createMockProviders, customTabs, emojiPacks } from "./mockMedia";
 const normalProviders = createMockProviders("normal");
 const slowProviders = createMockProviders("delay");
 const errorProviders = createMockProviders("error");
+
+function HeadlessGifExample() {
+  const gifs = useGifSearch({ provider: normalProviders.gifs });
+  return (
+    <section aria-label="Headless GIF picker example">
+      <label>
+        Search GIFs
+        <input
+          aria-label="Search headless GIFs"
+          onChange={(event) => gifs.search(event.currentTarget.value)}
+          value={gifs.query}
+        />
+      </label>
+      <p aria-live="polite">
+        {gifs.loading
+          ? "Loading…"
+          : (gifs.error?.message ?? `${gifs.results.length} results`)}
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+        {gifs.results.map((item) => (
+          <img
+            alt={item.name}
+            height={96}
+            key={item.id}
+            src={item.previewUrl ?? item.url}
+            width={96}
+          />
+        ))}
+      </div>
+      {gifs.hasMore ? (
+        <button onClick={gifs.loadMore} type="button">
+          Load more
+        </button>
+      ) : null}
+    </section>
+  );
+}
 
 function storageWith(options: {
   readonly recents?: boolean;
@@ -272,6 +314,7 @@ export const ReducedMotion: Story = {
 
 export const GifTrending: Story = {
   args: {
+    animatedMedia: { autoplay: "visible", maxActiveAnimations: 2 },
     defaultMediaType: "gif",
     features: { emoji: true, gifs: true },
     providers: normalProviders,
@@ -280,6 +323,7 @@ export const GifTrending: Story = {
 
 export const GifSearch: Story = {
   args: {
+    animatedMedia: { autoplay: "visible", maxActiveAnimations: 2 },
     defaultMediaType: "gif",
     defaultSearchQuery: "party",
     features: { emoji: true, gifs: true },
@@ -372,4 +416,36 @@ export const ChannelRestricted: Story = {
 export const MobileAllFeatures: Story = {
   args: { ...AllFeatures.args, displayMode: "bottom-sheet" },
   parameters: { viewport: { defaultViewport: "mobile1" } },
+};
+
+export const FullMediaPicker: Story = {
+  args: { ...AllFeatures.args, mode: "full" },
+};
+
+export const StandaloneEmojiPicker: Story = {
+  render: () => (
+    <EmojiPicker
+      emojiPacks={emojiPacks}
+      features={{ animatedEmoji: true, favorites: true, recents: true }}
+      onSelect={fn()}
+    />
+  ),
+};
+
+export const StandaloneGifPicker: Story = {
+  render: () => <GifPicker onSelect={fn()} provider={normalProviders.gifs} />,
+};
+
+export const StandaloneStickerPicker: Story = {
+  render: () => (
+    <StickerPicker onSelect={fn()} provider={normalProviders.stickers} />
+  ),
+};
+
+export const StandaloneReactionPicker: Story = {
+  render: () => <ReactionPicker onSelect={fn()} source="frequent" />,
+};
+
+export const HeadlessCustomUi: Story = {
+  render: () => <HeadlessGifExample />,
 };

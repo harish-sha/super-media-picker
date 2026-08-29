@@ -10,13 +10,16 @@ import {
 import type {
   AnimatedEmojiMediaItem,
   AnimatedMediaConfig,
+  GifMediaItem,
+  MediaUrlPolicy,
   StickerMediaItem,
 } from "@super-media-picker/core";
+import { isSafeMediaUrl } from "@super-media-picker/core";
 
 import type { MediaPickerRenderers } from "../types";
 
 export class AnimationConcurrencyManager {
-  readonly #active = new Set<string>();
+  #active: Set<string> | undefined;
   readonly #maximum: number;
 
   constructor(maximum = 3) {
@@ -24,25 +27,27 @@ export class AnimationConcurrencyManager {
   }
 
   acquire(id: string): boolean {
-    if (this.#active.has(id)) return true;
-    if (this.#active.size >= this.#maximum) return false;
-    this.#active.add(id);
+    const active = (this.#active ??= new Set<string>());
+    if (active.has(id)) return true;
+    if (active.size >= this.#maximum) return false;
+    active.add(id);
     return true;
   }
 
   release(id: string): void {
-    this.#active.delete(id);
+    this.#active?.delete(id);
   }
 
   get activeCount(): number {
-    return this.#active.size;
+    return this.#active?.size ?? 0;
   }
 }
 
 export interface AnimatedMediaRendererProps {
-  readonly item: AnimatedEmojiMediaItem | StickerMediaItem;
+  readonly item: AnimatedEmojiMediaItem | GifMediaItem | StickerMediaItem;
   readonly config: AnimatedMediaConfig;
   readonly manager: AnimationConcurrencyManager;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
 }
 
@@ -50,6 +55,7 @@ export function AnimatedMediaRenderer({
   item,
   config,
   manager,
+  mediaSecurity,
   renderers,
 }: AnimatedMediaRendererProps) {
   const instanceId = useId();
@@ -59,20 +65,33 @@ export function AnimatedMediaRenderer({
   const [engaged, setEngaged] = useState(false);
   const [explicitlyActivated, setExplicitlyActivated] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [animationFailed, setAnimationFailed] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const autoplay = config.autoplay ?? "hover";
-  const animationUrl = item.type === "emoji" ? item.animationUrl : item.url;
-  const previewUrl = item.previewUrl;
-  const format = item.format ?? "webp";
+  const animationUrl =
+    item.type === "emoji"
+      ? item.animationUrl
+      : item.type === "gif"
+        ? item.previewUrl
+        : item.url;
+  const previewUrl =
+    item.type === "gif"
+      ? (item.thumbnailUrl ?? item.previewUrl)
+      : item.previewUrl;
+  const format = item.type === "gif" ? "gif" : (item.format ?? "webp");
   const label =
     item.type === "emoji"
       ? item.name
       : (item.name ?? item.alt ?? "Animated media");
+  const safeAnimationUrl = isSafeMediaUrl(animationUrl, mediaSecurity);
   const wantsAnimation =
-    explicitlyActivated ||
-    (!reducedMotion &&
-      (autoplay === "always" ||
-        (autoplay === "visible" && visible) ||
-        (autoplay === "hover" && engaged)));
+    safeAnimationUrl &&
+    !animationFailed &&
+    (explicitlyActivated ||
+      (!reducedMotion &&
+        (autoplay === "always" ||
+          (autoplay === "visible" && visible) ||
+          (autoplay === "hover" && engaged))));
   const [granted, setGranted] = useState(false);
 
   useEffect(() => {
@@ -82,6 +101,22 @@ export function AnimatedMediaRenderer({
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const control = rootRef.current?.closest("button");
+    if (control === null || control === undefined) return;
+    const focus = (): void => setEngaged(true);
+    const blur = (): void => {
+      setEngaged(false);
+      setExplicitlyActivated(false);
+    };
+    control.addEventListener("focus", focus);
+    control.addEventListener("blur", blur);
+    return () => {
+      control.removeEventListener("focus", focus);
+      control.removeEventListener("blur", blur);
+    };
   }, []);
 
   useEffect(() => {
@@ -137,21 +172,35 @@ export function AnimatedMediaRenderer({
   }
 
   function disengage(event: FocusEvent | PointerEvent): void {
-    if (event.type === "blur" || event.type === "pointerleave")
+    if (event.type === "blur" || event.type === "pointerleave") {
       setEngaged(false);
+      setExplicitlyActivated(false);
+    }
   }
 
   const staticFallback =
     previewUrl ?? (item.type === "emoji" ? item.fallbackEmoji : undefined);
+  const safePreviewUrl =
+    !previewFailed &&
+    staticFallback !== undefined &&
+    isSafeMediaUrl(staticFallback, mediaSecurity)
+      ? staticFallback
+      : undefined;
+  const fallbackGlyph = item.type === "emoji" ? item.fallbackEmoji : undefined;
   let visual;
   if (!granted) {
-    visual =
-      staticFallback?.startsWith?.("http") ||
-      staticFallback?.startsWith?.("data:") ? (
-        <img alt="" loading="lazy" src={staticFallback} />
-      ) : (
-        <span aria-hidden="true">{staticFallback ?? "◌"}</span>
-      );
+    visual = safePreviewUrl ? (
+      <img
+        alt=""
+        loading="lazy"
+        onError={() => setPreviewFailed(true)}
+        src={safePreviewUrl}
+      />
+    ) : (
+      <span aria-hidden="true" data-media-fallback="">
+        {fallbackGlyph ?? "◌"}
+      </span>
+    );
   } else if (format === "webm") {
     visual = (
       <video
@@ -162,6 +211,7 @@ export function AnimatedMediaRenderer({
         playsInline
         preload="metadata"
         ref={videoRef}
+        onError={() => setAnimationFailed(true)}
         src={animationUrl}
       />
     );
@@ -172,9 +222,20 @@ export function AnimatedMediaRenderer({
       format,
       label,
       ...(previewUrl === undefined ? {} : { previewUrl }),
-    }) ?? <span aria-hidden="true">{staticFallback ?? "◌"}</span>;
+    }) ?? (
+      <span aria-hidden="true" data-media-fallback="">
+        {fallbackGlyph ?? "◌"}
+      </span>
+    );
   } else {
-    visual = <img alt="" loading="lazy" src={animationUrl} />;
+    visual = (
+      <img
+        alt=""
+        loading="lazy"
+        onError={() => setAnimationFailed(true)}
+        src={animationUrl}
+      />
+    );
   }
 
   return (
@@ -182,6 +243,7 @@ export function AnimatedMediaRenderer({
       aria-label={label}
       className="mp-animated-media"
       data-active={granted ? "true" : "false"}
+      data-error={animationFailed || previewFailed ? "true" : undefined}
       onBlur={disengage}
       onFocus={engage}
       onPointerDown={() => {

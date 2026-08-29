@@ -561,4 +561,38 @@ describe("MediaPicker", () => {
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it("emits host-owned analytics without including search text", async () => {
+    const user = userEvent.setup();
+    const track = vi.fn();
+    const onClose = vi.fn();
+    const view = render(
+      <MediaPicker
+        analytics={{ track }}
+        onClose={onClose}
+        onSelect={() => undefined}
+      />,
+    );
+    await waitForFullPicker();
+    const search = screen.getByRole("searchbox", { name: "Search emoji" });
+    await user.type(search, "rocket");
+    await user.click(screen.getByRole("button", { name: "rocket" }));
+    search.focus();
+    await user.keyboard("{Escape}");
+    expect(track).toHaveBeenCalledWith("picker_opened", { mode: "full" });
+    expect(track).toHaveBeenCalledWith(
+      "media_selected",
+      expect.objectContaining({ mediaType: "emoji" }),
+    );
+    expect(track).toHaveBeenCalledWith("picker_closed");
+    for (const [, properties] of track.mock.calls) {
+      if (properties === undefined) continue;
+      expect(properties).not.toHaveProperty("query");
+      expect(properties).not.toHaveProperty("searchText");
+    }
+    view.unmount();
+    expect(
+      track.mock.calls.filter(([event]) => event === "picker_closed"),
+    ).toHaveLength(1);
+  });
 });

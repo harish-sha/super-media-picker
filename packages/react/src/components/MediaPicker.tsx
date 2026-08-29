@@ -1,7 +1,9 @@
 import {
   lazy,
   Suspense,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type MouseEvent,
@@ -9,6 +11,8 @@ import {
 
 import {
   defaultFeatures,
+  mediaItemKey,
+  noOpAnalytics,
   type CompactReactionSource,
   type MediaPickerMode,
 } from "@super-media-picker/core";
@@ -82,6 +86,8 @@ export function MediaPicker({
   customTabs = [],
   renderers,
   animatedMedia = {},
+  analytics = noOpAnalytics,
+  mediaSecurity,
   onSelect,
   onClose,
   storage,
@@ -105,6 +111,8 @@ export function MediaPicker({
     resolvedDisplayMode === "bottom-sheet" ||
     resolvedDisplayMode === "fullscreen";
   const state = useMediaPickerPersistence(storage, defaultSkinTone);
+  const closeTracked = useRef(false);
+  const initialMode = useRef(resolvedMode);
   const animationManager = useMemo(
     () =>
       new AnimationConcurrencyManager(animatedMedia.maxActiveAnimations ?? 3),
@@ -127,13 +135,44 @@ export function MediaPicker({
   const trackCompactRecents =
     features.recents || source === "recent" || source === "frequent";
 
+  useEffect(() => {
+    closeTracked.current = false;
+    analytics.track("picker_opened", { mode: initialMode.current });
+    return () => {
+      if (!closeTracked.current) analytics.track("picker_closed");
+    };
+  }, [analytics]);
+
+  function trackSelection(item: Parameters<typeof onSelect>[0]): void {
+    analytics.track("media_selected", {
+      id: item.id,
+      mediaType: item.type,
+      ...(item.type !== "emoji" && item.provider !== undefined
+        ? { provider: item.provider }
+        : item.type === "emoji" &&
+            "provider" in item &&
+            item.provider !== undefined
+          ? { provider: item.provider }
+          : {}),
+    });
+    onSelect(item);
+  }
+
+  function requestClose(): void {
+    if (!closeTracked.current) {
+      analytics.track("picker_closed");
+      closeTracked.current = true;
+    }
+    onClose?.();
+  }
+
   function requestMode(nextMode: MediaPickerMode): void {
     if (mode === undefined) setInternalMode(nextMode);
     onModeChange?.(nextMode);
   }
 
   function handleBackdropClick(event: MouseEvent<HTMLDivElement>): void {
-    if (event.target === event.currentTarget) onClose?.();
+    if (event.target === event.currentTarget) requestClose();
   }
 
   return (
@@ -158,7 +197,7 @@ export function MediaPicker({
           onRecordRecent={(id) => {
             if (trackCompactRecents) void state.recordRecent(id);
           }}
-          onSelect={onSelect}
+          onSelect={trackSelection}
           onSkinToneChange={state.setSkinTone}
           overlay={overlay}
           recentRecords={state.recentRecords}
@@ -167,7 +206,8 @@ export function MediaPicker({
           style={style}
           themeMode={resolvedTheme.mode}
           {...(renderers === undefined ? {} : { renderers })}
-          {...(onClose === undefined ? {} : { onClose })}
+          {...(onClose === undefined ? {} : { onClose: requestClose })}
+          {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
           {...(compact.reactions === undefined
             ? {}
             : { reactions: compact.reactions })}
@@ -188,6 +228,7 @@ export function MediaPicker({
         >
           <LazyFullMediaPicker
             animation={animatedMedia}
+            analytics={analytics}
             animationManager={animationManager}
             ariaLabel={ariaLabel}
             className={pickerClassName}
@@ -202,9 +243,18 @@ export function MediaPicker({
             onRecordRecent={(item) => {
               void state.recordRecent(item);
             }}
-            onSelect={onSelect}
+            onSelect={trackSelection}
             onSkinToneChange={state.setSkinTone}
             onToggleFavorite={(item) => {
+              const id = typeof item === "string" ? item : mediaItemKey(item);
+              analytics.track(
+                state.favoriteIds.includes(id)
+                  ? "favorite_removed"
+                  : "favorite_added",
+                typeof item === "string"
+                  ? { id: item, mediaType: "emoji" }
+                  : { id: item.id, mediaType: item.type },
+              );
               void state.toggleFavorite(item);
             }}
             overlay={overlay}
@@ -216,7 +266,8 @@ export function MediaPicker({
             {...(capabilities === undefined ? {} : { capabilities })}
             {...(providers === undefined ? {} : { providers })}
             {...(renderers === undefined ? {} : { renderers })}
-            {...(onClose === undefined ? {} : { onClose })}
+            {...(onClose === undefined ? {} : { onClose: requestClose })}
+            {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
             {...(compactAllowsCollapse
               ? { onCollapse: () => requestMode("compact") }
               : {})}

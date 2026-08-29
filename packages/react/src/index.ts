@@ -1,6 +1,8 @@
 import "./styles.css";
 
 export { MediaPicker, mediaPickerStorageKeys } from "./components/MediaPicker";
+export * from "./standalone";
+export * from "./headless";
 export {
   AnimatedMediaRenderer,
   AnimationConcurrencyManager,
@@ -20,12 +22,21 @@ export {
   FavoritesManager,
   LocalStorageAdapter,
   MemoryStorageAdapter,
+  MemoryCache,
+  MediaRequestClient,
   PersistentPreference,
   RecentItemsManager,
   createMediaPickerConfig,
+  isAnimatedMedia,
+  isMediaItem,
+  isSafeMediaUrl,
+  isUnicodeEmoji,
+  mediaItemKey,
+  noOpAnalytics,
 } from "@super-media-picker/core";
 export type {
   EmojiMediaItem,
+  AnyEmojiMediaItem,
   UnicodeEmojiMediaItem,
   AnimatedEmojiMediaItem,
   CustomEmojiMediaItem,
@@ -36,20 +47,30 @@ export type {
   AnimatedMediaFormat,
   AnimationAutoplay,
   EmojiPack,
+  EmojiProvider,
   StickerPack,
   MediaProvider,
+  ProviderOptions,
   StickerProvider,
   ProviderAttribution,
   SearchOptions,
   SearchResult,
   MediaCapabilities,
   MediaItem,
+  MediaPickerAnalytics,
+  MediaPickerAnalyticsEvent,
+  RequestState,
   MediaPickerFeatures,
   MediaPickerMode,
   MediaPickerSize,
   PickerDisplayMode,
   CompactReactionSource,
   RecentItemRecord,
+  FavoriteItemRecord,
+  MediaUrlPolicy,
+  MediaRequestClientOptions,
+  MediaRequestOptions,
+  CacheAdapter,
   SkinTone,
   StorageAdapter,
 } from "@super-media-picker/core";

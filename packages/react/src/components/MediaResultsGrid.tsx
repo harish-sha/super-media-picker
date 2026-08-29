@@ -4,6 +4,7 @@ import {
   mediaItemKey,
   type AnimatedMediaConfig,
   type MediaItem,
+  type MediaUrlPolicy,
 } from "@super-media-picker/core";
 
 import type { MediaPickerRenderers } from "../types";
@@ -17,6 +18,7 @@ export interface MediaResultsGridProps {
   readonly favoriteIds: ReadonlySet<string>;
   readonly favoritesEnabled: boolean;
   readonly items: readonly MediaItem[];
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly label: string;
   readonly onFavoriteToggle: (item: MediaItem) => void;
   readonly onSelect: (item: MediaItem) => void;
@@ -31,6 +33,7 @@ export function MediaResultsGrid({
   favoriteIds,
   favoritesEnabled,
   items,
+  mediaSecurity,
   label,
   onFavoriteToggle,
   onSelect,
@@ -115,6 +118,7 @@ export function MediaResultsGrid({
                   animation={animation}
                   item={item}
                   manager={animationManager}
+                  {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
                   {...(renderers === undefined ? {} : { renderers })}
                 />
               </button>

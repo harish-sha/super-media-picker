@@ -13,6 +13,16 @@ import type {
   PickerDisplayMode,
   StorageAdapter,
   MediaPicker,
+  EmojiPicker,
+  GifPicker,
+  StickerPicker,
+  ReactionPicker,
+  useMediaPicker,
+  useEmojiSearch,
+  useGifSearch,
+  useStickerSearch,
+  useRecents,
+  useFavorites,
   MockGifProvider,
   MockStickerProvider,
   StickerProvider,
@@ -21,6 +31,16 @@ import type {
 /** Compile-time proof of the intentionally supported public consumer surface. */
 export interface PublicApiContract {
   readonly MediaPicker: typeof MediaPicker;
+  readonly EmojiPicker: typeof EmojiPicker;
+  readonly GifPicker: typeof GifPicker;
+  readonly StickerPicker: typeof StickerPicker;
+  readonly ReactionPicker: typeof ReactionPicker;
+  readonly useMediaPicker: typeof useMediaPicker;
+  readonly useEmojiSearch: typeof useEmojiSearch;
+  readonly useGifSearch: typeof useGifSearch;
+  readonly useStickerSearch: typeof useStickerSearch;
+  readonly useRecents: typeof useRecents;
+  readonly useFavorites: typeof useFavorites;
   readonly props: MediaPickerProps;
   readonly item: MediaItem;
   readonly reactionSource: CompactReactionSource;

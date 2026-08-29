@@ -530,6 +530,15 @@
   object-fit: contain;
 }
 
+[data-media-fallback] {
+  display: grid;
+  width: 100%;
+  min-height: 3rem;
+  place-items: center;
+  color: var(--mp-text-muted);
+  font-size: 1.5rem;
+}
+
 .mp-media-favorite {
   right: 0.25rem;
   bottom: 0.25rem;

@@ -2,7 +2,12 @@ import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
+  EmojiPicker,
+  GifPicker,
   MediaPicker,
+  ReactionPicker,
+  StickerPicker,
+  useGifSearch,
   type CompactReactionSource,
   type AnimationAutoplay,
   type MediaCapabilities,
@@ -24,6 +29,8 @@ import {
 import "./playground.css";
 
 type PreviewWidth = "desktop" | "mobile";
+type SdkSurface =
+  "media" | "emoji" | "gif" | "sticker" | "reaction" | "headless";
 
 const initialFeatures: MediaPickerFeatures = {
   emoji: true,
@@ -75,6 +82,7 @@ function Playground() {
     useState<CapabilityPreset>("all");
   const [scenario, setScenario] = useState<MockScenario>("normal");
   const [autoplay, setAutoplay] = useState<AnimationAutoplay>("hover");
+  const [surface, setSurface] = useState<SdkSurface>("media");
   const providers = useMemo(() => createMockProviders(scenario), [scenario]);
 
   function setFeature(
@@ -133,6 +141,22 @@ function Playground() {
       </nav>
 
       <section aria-label="Playground controls" className="playground-controls">
+        <label>
+          SDK surface
+          <select
+            onChange={(event) =>
+              setSurface(event.currentTarget.value as SdkSurface)
+            }
+            value={surface}
+          >
+            <option value="media">MediaPicker</option>
+            <option value="emoji">EmojiPicker</option>
+            <option value="gif">GifPicker</option>
+            <option value="sticker">StickerPicker</option>
+            <option value="reaction">ReactionPicker</option>
+            <option value="headless">Headless custom UI</option>
+          </select>
+        </label>
         <label>
           Mode
           <select
@@ -303,29 +327,82 @@ function Playground() {
 
       <section className="playground-demo" aria-label="Interactive demo">
         <div className="playground-preview" data-preview-width={previewWidth}>
-          <MediaPicker
-            animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
-            capabilities={capabilityPresets[capabilityPreset]}
-            compact={{
-              allowCollapse: true,
-              allowExpand,
-              source: compactSource,
-              ...(compactSource === "custom"
+          {surface === "media" ? (
+            <MediaPicker
+              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              capabilities={capabilityPresets[capabilityPreset]}
+              compact={{
+                allowCollapse: true,
+                allowExpand,
+                source: compactSource,
+                ...(compactSource === "custom"
+                  ? { reactions: emojiPacks[0]?.items ?? [] }
+                  : {}),
+              }}
+              customTabs={customTabs}
+              displayMode={displayMode}
+              features={features}
+              emojiPacks={emojiPacks}
+              mode={mode}
+              onModeChange={setMode}
+              onSelect={setSelection}
+              preview={{ enabled: true }}
+              providers={providers}
+              size={size}
+              theme={theme}
+            />
+          ) : surface === "emoji" ? (
+            <EmojiPicker
+              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              capabilities={capabilityPresets[capabilityPreset]}
+              displayMode={displayMode}
+              emojiPacks={emojiPacks}
+              features={{
+                animatedEmoji: features.animatedEmoji,
+                favorites: features.favorites,
+                recents: features.recents,
+              }}
+              onSelect={setSelection}
+              size={size}
+              theme={theme}
+            />
+          ) : surface === "gif" ? (
+            <GifPicker
+              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              capabilities={capabilityPresets[capabilityPreset]}
+              displayMode={displayMode}
+              onSelect={setSelection}
+              provider={providers.gifs}
+              size={size}
+              theme={theme}
+            />
+          ) : surface === "sticker" ? (
+            <StickerPicker
+              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              capabilities={capabilityPresets[capabilityPreset]}
+              displayMode={displayMode}
+              onSelect={setSelection}
+              provider={providers.stickers}
+              size={size}
+              theme={theme}
+            />
+          ) : surface === "reaction" ? (
+            <ReactionPicker
+              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              displayMode={displayMode}
+              onSelect={setSelection}
+              {...(compactSource === "custom"
                 ? { reactions: emojiPacks[0]?.items ?? [] }
-                : {}),
-            }}
-            customTabs={customTabs}
-            displayMode={displayMode}
-            features={features}
-            emojiPacks={emojiPacks}
-            mode={mode}
-            onModeChange={setMode}
-            onSelect={setSelection}
-            preview={{ enabled: true }}
-            providers={providers}
-            size={size}
-            theme={theme}
-          />
+                : {})}
+              source={compactSource}
+              theme={theme}
+            />
+          ) : (
+            <HeadlessGifDemo
+              onSelect={setSelection}
+              provider={providers.gifs}
+            />
+          )}
         </div>
         <aside className="playground-output" aria-live="polite">
           <h2>Normalized selection</h2>
@@ -341,6 +418,52 @@ function Playground() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function HeadlessGifDemo({
+  provider,
+  onSelect,
+}: {
+  readonly provider: NonNullable<
+    ReturnType<typeof createMockProviders>["gifs"]
+  >;
+  readonly onSelect: (item: MediaItem) => void;
+}) {
+  const gifs = useGifSearch({ provider });
+  return (
+    <section className="playground-headless" aria-label="Headless GIF picker">
+      <label htmlFor="headless-search">Search GIFs</label>
+      <input
+        id="headless-search"
+        onChange={(event) => gifs.search(event.currentTarget.value)}
+        placeholder="Try party"
+        value={gifs.query}
+      />
+      <p aria-live="polite">
+        {gifs.loading
+          ? "Loading…"
+          : (gifs.error?.message ?? `${gifs.results.length} results`)}
+      </p>
+      <div className="playground-headless-grid">
+        {gifs.results.map((item) => (
+          <button key={item.id} onClick={() => onSelect(item)} type="button">
+            <img
+              alt=""
+              height={96}
+              src={item.previewUrl ?? item.url}
+              width={96}
+            />
+            <span>{item.name}</span>
+          </button>
+        ))}
+      </div>
+      {gifs.hasMore ? (
+        <button onClick={gifs.loadMore} type="button">
+          Load more
+        </button>
+      ) : null}
+    </section>
   );
 }
 

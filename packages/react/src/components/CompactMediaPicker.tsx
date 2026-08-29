@@ -6,6 +6,7 @@ import type {
   EmojiMediaItem,
   FavoriteItemRecord,
   MediaItem,
+  MediaUrlPolicy,
   RecentItemRecord,
   SkinTone,
 } from "@super-media-picker/core";
@@ -46,6 +47,7 @@ export interface CompactMediaPickerProps {
   readonly className: string;
   readonly favoriteRecords: readonly FavoriteItemRecord[];
   readonly maxVisibleItems: number;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly onClose?: () => void;
   readonly onExpand: () => void;
   readonly onRecordRecent: (item: string | MediaItem) => void;
@@ -147,6 +149,7 @@ export function CompactMediaPicker({
   className,
   favoriteRecords,
   maxVisibleItems,
+  mediaSecurity,
   onClose,
   onExpand,
   onRecordRecent,
@@ -249,6 +252,7 @@ export function CompactMediaPicker({
         animation={animation}
         animationManager={animationManager}
         items={items}
+        {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
         onExpand={onExpand}
         onSelect={handleSelect}
         {...(renderers === undefined ? {} : { renderers })}

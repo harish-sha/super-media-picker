@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useEffect,
   useId,
   useMemo,
   useState,
@@ -13,7 +14,9 @@ import {
   type AnimatedMediaConfig,
   type FavoriteItemRecord,
   type MediaCapabilities,
+  type MediaPickerAnalytics,
   type MediaItem,
+  type MediaUrlPolicy,
   type MediaPickerFeatures,
   type RecentItemRecord,
   type SkinTone,
@@ -73,6 +76,7 @@ interface PrimaryTabDefinition {
 export interface FullMediaPickerProps {
   readonly animation: AnimatedMediaConfig;
   readonly animationManager: AnimationConcurrencyManager;
+  readonly analytics: MediaPickerAnalytics;
   readonly ariaLabel: string;
   readonly capabilities?: Partial<MediaCapabilities>;
   readonly className: string;
@@ -84,6 +88,7 @@ export interface FullMediaPickerProps {
   readonly favoriteIds: readonly string[];
   readonly favoriteRecords: readonly FavoriteItemRecord[];
   readonly features: MediaPickerFeatures;
+  readonly mediaSecurity?: MediaUrlPolicy;
   readonly onClose?: () => void;
   readonly onCollapse?: () => void;
   readonly onRecordRecent: (item: string | MediaItem) => void;
@@ -163,6 +168,7 @@ function itemsForCollection(
 export function FullMediaPicker({
   animation,
   animationManager,
+  analytics,
   ariaLabel,
   capabilities,
   className,
@@ -174,6 +180,7 @@ export function FullMediaPicker({
   favoriteIds,
   favoriteRecords,
   features,
+  mediaSecurity,
   onClose,
   onCollapse,
   onRecordRecent,
@@ -246,7 +253,7 @@ export function FullMediaPicker({
   }, [category, favoriteRecords, query, recentRecords]);
   const extensionEmoji = useMemo<readonly MediaItem[]>(() => {
     const items = emojiPacks
-      .flatMap((pack) => pack.items)
+      .flatMap((pack) => pack.items ?? [])
       .filter((item) => {
         if (item.kind === "animated")
           return (
@@ -289,6 +296,14 @@ export function FullMediaPicker({
   }, [favoriteIds, favoriteRecords]);
   const mediaFavoriteIds = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
+  useEffect(() => {
+    if (activeTab !== "emoji" || query.trim() === "") return;
+    analytics.track("search_completed", {
+      mediaType: "emoji",
+      resultCount: emojiItems.length + extensionEmoji.length,
+    });
+  }, [activeTab, analytics, emojiItems.length, extensionEmoji.length, query]);
+
   function selectItem(item: MediaItem): void {
     onSelect(item);
     if (features.recents) onRecordRecent(item);
@@ -301,6 +316,7 @@ export function FullMediaPicker({
   }
 
   function changePrimaryTab(tab: PrimaryTab): void {
+    analytics.track("tab_changed", { mediaType: tab });
     setRequestedTab(tab);
     setQuery("");
     setCollectionView("browse");
@@ -376,6 +392,7 @@ export function FullMediaPicker({
     favoritesEnabled: features.favorites,
     onFavoriteToggle: onToggleFavorite,
     onSelect: selectItem,
+    ...(mediaSecurity === undefined ? {} : { mediaSecurity }),
     ...(renderers === undefined ? {} : { renderers }),
   } as const;
 
@@ -404,7 +421,11 @@ export function FullMediaPicker({
         <SearchInput
           autoFocus={overlay}
           label={searchLabel}
-          onChange={setQuery}
+          onChange={(nextQuery) => {
+            if (nextQuery.trim() !== "" && nextQuery !== query)
+              analytics.track("search_started", { mediaType: activeTab });
+            setQuery(nextQuery);
+          }}
           value={query}
         />
         {activeTab === "emoji" ? (
@@ -492,6 +513,7 @@ export function FullMediaPicker({
                     allowCustom={capabilities?.customEmoji !== false}
                     providers={providers.emoji}
                     query={query}
+                    analytics={analytics}
                   />
                 </Suspense>
               ) : null}
@@ -551,6 +573,7 @@ export function FullMediaPicker({
               {...sharedGridProps}
               provider={providers.gifs}
               query={query}
+              analytics={analytics}
             />
           </Suspense>
         ) : activeTab === "stickers" && providers?.stickers !== undefined ? (
@@ -566,6 +589,7 @@ export function FullMediaPicker({
               allowAnimated={capabilities?.animatedStickers !== false}
               provider={providers.stickers}
               query={query}
+              analytics={analytics}
             />
           </Suspense>
         ) : activeTab === "custom" ? (
@@ -580,6 +604,7 @@ export function FullMediaPicker({
               {...sharedGridProps}
               query={query}
               tabs={customTabs}
+              analytics={analytics}
             />
           </Suspense>
         ) : null}

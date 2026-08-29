@@ -17,13 +17,19 @@ application → super-media-picker → @super-media-picker/react
 
 Core has no framework dependency or module-time browser access. Compact emoji metadata is generated from CLDR-derived Emojibase data, so the development dataset is absent from published runtime dependencies.
 
+Production media is provider-first: npm contains code, while GIF, sticker,
+animated-emoji, and tenant catalogs come from an application backend plus
+CDN/object storage. See [backend contracts](docs/backend-api.md), [provider
+integration](docs/providers.md), and [security/CSP](docs/security.md).
+
 ## Installation
 
 ```sh
 pnpm add super-media-picker react react-dom
 ```
 
-The public aggregator remains private while the package is under development. Nothing in this repository publishes automatically.
+The public aggregator contains publication-ready metadata, but publishing is a
+manual release action. Nothing in this repository publishes automatically.
 
 ## Quick start
 
@@ -45,6 +51,68 @@ export function ComposerPicker() {
 ```
 
 Emoji is enabled by default. Provider-backed features are opt-in and their tabs appear only when enabled, channel-compatible, and configured.
+
+## Focused pickers
+
+Use the canonical package for a focused surface without maintaining a separate
+selection or persistence integration:
+
+```tsx
+import {
+  EmojiPicker,
+  GifPicker,
+  ReactionPicker,
+  StickerPicker,
+} from "super-media-picker";
+
+<EmojiPicker onSelect={handleEmoji} />;
+<GifPicker provider={gifProvider} onSelect={handleGif} />;
+<StickerPicker provider={stickerProvider} onSelect={handleSticker} />;
+<ReactionPicker source="frequent" onSelect={handleReaction} />;
+```
+
+Every focused picker is a thin composition of the `MediaPicker` engine and
+returns the same normalized media subtype. A shared `storage` adapter keeps
+skin tone, recents, and favorites synchronized across mounted surfaces.
+
+## Headless custom UI
+
+Use the root export or the CSS-free `super-media-picker/headless` subpath:
+
+```tsx
+import { useMediaPicker } from "super-media-picker/headless";
+
+function CustomPicker() {
+  const picker = useMediaPicker({
+    providers: { gifs: gifProvider, stickers: stickerProvider },
+    features: { emoji: true, gifs: true, stickers: true, recents: true },
+  });
+
+  return (
+    <section>
+      <input
+        aria-label="Search media"
+        onChange={(event) => picker.search(event.currentTarget.value)}
+        value={picker.query}
+      />
+      {picker.results.map((item) => (
+        <button
+          key={`${item.type}:${item.id}`}
+          onClick={() => picker.select(item)}
+        >
+          {item.name}
+        </button>
+      ))}
+      {picker.hasMore && <button onClick={picker.loadMore}>Load more</button>}
+    </section>
+  );
+}
+```
+
+Specialized hooks are also public: `useEmojiSearch`, `useGifSearch`,
+`useStickerSearch`, `useRecents`, and `useFavorites`. Provider adapters can be
+imported from `super-media-picker/providers`. See [the public API policy](docs/public-api.md)
+for stable, advanced, and internal boundaries.
 
 ## Compact / Reaction Mode
 
@@ -187,6 +255,8 @@ import {
 
 const gifs = new HttpGifProvider({
   endpoint: "https://api.example.test/media/gifs",
+  timeoutMs: 8_000,
+  cacheTtlMs: 60_000,
 });
 const stickers = new HttpStickerProvider({
   endpoint: "https://api.example.test/media/stickers",
@@ -200,6 +270,10 @@ const stickers = new HttpStickerProvider({
 ```
 
 Both HTTP adapters call the host application's backend—not a paid provider directly. They implement abortable requests, timeouts, TTL memory caching, request deduplication, pagination, response validation, and isolated errors. GIF results use preview assets in the grid and retain the full URL only for selection. Sticker providers expose packs and may fetch pack contents lazily. `MockGifProvider` and `MockStickerProvider` cover local development, empty/error/loading states, and pagination without credentials.
+
+For GIFs, optional `thumbnailUrl` is the idle poster, `previewUrl` is the
+optimized grid animation, and `url` is the original selection URL. The grid
+never needs to load the original asset.
 
 Registered tenant packs use the same sticker contract and shared static/animated renderer:
 
@@ -276,6 +350,39 @@ Feature flags express product configuration; capabilities apply the current chan
 - Normalized remote media URLs accept HTTP(S), browser blob URLs, local paths, and image data fixtures while rejecting executable schemes.
 - Hosts should still apply their Content Security Policy, authentication, URL allowlist, and tenant authorization at the backend boundary.
 - Tests and playground fixtures contain no credentials or proprietary provider assets.
+
+Hosts can enforce render-time and provider-response origin policy without a
+separate security dependency:
+
+```tsx
+<MediaPicker
+  mediaSecurity={{
+    allowedOrigins: ["https://media.company.com"],
+    allowDataImages: false,
+    allowHttp: false,
+  }}
+  onSelect={handleSelect}
+/>
+```
+
+## Analytics hooks
+
+Analytics is host-owned and opt-in. The picker never sends events itself and
+does not include search text in event properties:
+
+```tsx
+<MediaPicker
+  analytics={{
+    track(event, properties) {
+      applicationAnalytics.track(event, properties);
+    },
+  }}
+  onSelect={handleSelect}
+/>
+```
+
+Events cover picker open/close, tab changes, search lifecycle, provider errors,
+selection, pagination, and favorite changes.
 
 ## Recents and favorites
 
@@ -412,6 +519,6 @@ The playground imports through the built `super-media-picker` package and its pu
 
 ## Versioning and publishing
 
-Packages use Semantic Versioning, Changesets, and explicit `files` lists. Internal packages use restricted `publishConfig`; the public aggregator remains private until publishing is intentionally enabled. Use `pnpm changeset` for a public change. `pnpm package:check` creates temporary tarballs, verifies their export targets and rewritten workspace dependency ranges, and rejects leaked source/test files. It never publishes anything.
+Packages use Semantic Versioning, Changesets, and explicit `files` lists. Internal packages use restricted `publishConfig`; the public aggregator is configured for a future explicit public release. Use `pnpm changeset` for a public change. `pnpm package:check` creates temporary tarballs, verifies their export targets and rewritten workspace dependency ranges, and rejects leaked source/test files. It never publishes anything.
 
 See [implementation status](docs/implementation-status.md), [performance measurements](docs/performance.md), and [architecture decisions](docs/architecture/).

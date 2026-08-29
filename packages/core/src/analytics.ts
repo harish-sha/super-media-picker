@@ -7,6 +7,7 @@ export type MediaPickerAnalyticsEvent =
   | "emoji_selected"
   | "gif_selected"
   | "sticker_selected"
+  | "media_selected"
   | "favorite_added"
   | "favorite_removed"
   | "load_more"
