@@ -266,28 +266,49 @@ describe("multi-media picker", () => {
     render(
       <MediaPicker
         defaultMediaType="stickers"
-        features={{ stickers: true }}
+        features={{ favorites: true, recents: true, stickers: true }}
         onSelect={() => undefined}
         providers={{ stickers: stickerProvider }}
         theme="dark"
       />,
     );
-    const bears = await screen.findByRole("button", { name: "Bears" });
-    const bearIcon = bears.querySelector<HTMLImageElement>(
+    const trigger = await screen.findByRole("button", {
+      name: "Choose sticker pack, current Bears",
+    });
+    expect(
+      screen.queryByRole("navigation", { name: "Sticker packs" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Browse" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Recent" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Favorites" })).not.toBeNull();
+    const triggerIcon = trigger.querySelector<HTMLImageElement>(
       ".mp-pack-icon__image",
     );
-    expect(bearIcon?.getAttribute("src")).toBe(pixel);
+    expect(triggerIcon?.getAttribute("src")).toBe(pixel);
     expect(
       await screen.findByRole("button", { name: "Bear wave" }),
     ).not.toBeNull();
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const bears = screen.getByRole("option", { name: "Bears" });
+    expect(bears.getAttribute("aria-selected")).toBe("true");
+    const bearIcon = bears.querySelector<HTMLImageElement>(
+      ".mp-pack-icon__image",
+    );
     expect(bearIcon).not.toBeNull();
     if (bearIcon === null) throw new Error("Expected Bears pack icon image");
     fireEvent.error(bearIcon);
     expect(bears.querySelector("[data-pack-icon-fallback]")).not.toBeNull();
-    const cats = screen.getByRole("button", { name: "Cats" });
+    await user.keyboard("{ArrowDown}");
+    const cats = screen.getByRole("option", { name: "Cats" });
+    expect(document.activeElement).toBe(cats);
     expect(cats.querySelector("[data-pack-icon-fallback]")).not.toBeNull();
     expect(cats.textContent).not.toContain("\u{10FFFF}");
-    await user.click(cats);
+    await user.keyboard("{Enter}");
+    expect(document.activeElement).toBe(trigger);
+    expect(trigger.getAttribute("aria-label")).toBe(
+      "Choose sticker pack, current Cats",
+    );
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Bear wave" })).toBeNull(),
     );

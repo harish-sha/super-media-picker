@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.2` of an accessible, provider-first React SDK for
+Public beta `0.1.0-beta.3` of an accessible, provider-first React SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -66,6 +66,13 @@ import {
 <StickerPicker provider={stickerProvider} onSelect={handleSticker} />;
 <ReactionPicker source="frequent" onSelect={handleReaction} />;
 ```
+
+When an integrated `MediaPicker` starts in expandable compact mode, it renders
+only the reaction capsule until expansion. While the full picker is active the
+capsule is unmounted; Back, Escape, or backdrop dismissal returns to compact
+mode and restores focus. Sticker packs are selected from a responsive,
+keyboard-accessible `Packs` menu that remains usable with large provider-backed
+pack collections.
 
 ## Headless UI
 

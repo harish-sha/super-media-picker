@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2026-09-01
+
+### Changed
+
+- Replaced the permanent sticker-pack navigation row with a responsive,
+  accessible `Packs` selector that supports pack images, safe built-in
+  fallbacks, selected-state semantics, and scalable provider-backed pack lists.
+- Reduced sticker navigation density by presenting Browse, Recent, and
+  Favorites as a compact contextual control alongside pack selection.
+- Made expandable compact-origin pickers collapse back to the compact reaction
+  surface by default, while retaining `allowCollapse: false` as an explicit
+  one-way expansion option.
+
+### Fixed
+
+- Kept the integrated compact and full picker surfaces mutually exclusive
+  throughout expansion and collapse, including React StrictMode rendering.
+- Added consistent Back, Escape, and backdrop collapse behavior with focus
+  restoration to the compact expansion control.
+- Prevented large sticker-pack collections from overflowing narrow layouts and
+  preserved keyboard and screen-reader navigation in the responsive selector.
+
 ## [0.1.0-beta.2] - 2026-08-31
 
 ### Fixed
@@ -69,6 +91,7 @@ All notable changes to this project are documented here. The format follows
 - Production media catalogs, demo assets, credentials, tests, Storybook output,
   and internal source files are excluded from the tarball.
 
-[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...HEAD
+[0.1.0-beta.3]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.2...v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/harish-sha/super-media-picker/releases/tag/v0.1.0-beta.1

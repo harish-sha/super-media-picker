@@ -277,7 +277,7 @@ export const FullCustomDimensions: Story = {
 
 export const CompactToFull: Story = {
   args: {
-    compact: { allowCollapse: true, allowExpand: true },
+    compact: { allowExpand: true },
     defaultMode: "compact",
   },
   play: async ({ canvasElement }) => {
@@ -352,6 +352,14 @@ export const StickerPacks: Story = {
     defaultMediaType: "stickers",
     features: { emoji: true, stickers: true },
     providers: normalProviders,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Choose sticker pack, current Bears",
+      }),
+    );
   },
 };
 

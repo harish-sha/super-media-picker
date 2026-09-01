@@ -181,7 +181,9 @@ describe("public standalone pickers", () => {
         onSelect={stickerSelect}
       />,
     );
-    const waves = await screen.findByRole("button", { name: "Waves" });
+    const waves = await screen.findByRole("button", {
+      name: "Choose sticker pack, current Waves",
+    });
     expect(
       waves
         .querySelector<HTMLImageElement>(".mp-pack-icon__image")

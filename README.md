@@ -30,7 +30,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.2`. React and React DOM
+The public beta version is `0.1.0-beta.3`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -137,13 +137,18 @@ Use persisted frequency data and allow an uncontrolled transition into the full 
   compact={{
     source: "frequent",
     allowExpand: true,
-    allowCollapse: true,
     maxVisibleItems: 7,
   }}
   features={{ recents: true }}
   onSelect={handleSelect}
 />
 ```
+
+An expandable compact picker uses one integrated presentation surface at a
+time. Expanding unmounts the reaction capsule; Back, Escape, or a dismissing
+backdrop returns to compact mode and restores focus to the expansion control.
+Set `allowCollapse: false` only when the host intentionally wants expansion to
+be one-way.
 
 Custom reactions may be Unicode strings or normalized `MediaItem` objects. Normalized items keep the compact renderer extensible to tenant emoji and future reaction media without adding a second selection type.
 
@@ -276,7 +281,7 @@ const stickers = new HttpStickerProvider({
 />;
 ```
 
-Both HTTP adapters call the host application's backend—not a paid provider directly. They implement abortable requests, timeouts, TTL memory caching, request deduplication, pagination, response validation, and isolated errors. GIF results use preview assets in the grid and retain the full URL only for selection. Sticker providers expose packs and may fetch pack contents lazily. `MockGifProvider` and `MockStickerProvider` cover local development, empty/error/loading states, and pagination without credentials.
+Both HTTP adapters call the host application's backend—not a paid provider directly. They implement abortable requests, timeouts, TTL memory caching, request deduplication, pagination, response validation, and isolated errors. GIF results use preview assets in the grid and retain the full URL only for selection. Sticker providers expose packs and may fetch pack contents lazily. The sticker panel presents those packs through a responsive, keyboard-accessible `Packs` selector instead of a permanently expanding navigation row. `MockGifProvider` and `MockStickerProvider` cover local development, empty/error/loading states, and pagination without credentials.
 
 For GIFs, optional `thumbnailUrl` is the idle poster, `previewUrl` is the
 optimized grid animation, and `url` is the original selection URL. The grid
@@ -534,7 +539,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.2` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.3` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

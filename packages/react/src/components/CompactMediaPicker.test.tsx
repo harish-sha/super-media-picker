@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,6 +10,7 @@ import {
 } from "@super-media-picker/core";
 
 import { MediaPicker, mediaPickerStorageKeys } from "./MediaPicker";
+import { ReactionPicker } from "../standalone";
 
 describe("MediaPicker compact mode", () => {
   it("renders the small normalized default reaction set", () => {
@@ -261,9 +263,9 @@ describe("MediaPicker compact mode", () => {
 
   it("expands and collapses in uncontrolled mode", async () => {
     const user = userEvent.setup();
-    render(
+    const view = render(
       <MediaPicker
-        compact={{ allowExpand: true, allowCollapse: true }}
+        compact={{ allowExpand: true }}
         defaultMode="compact"
         onSelect={() => undefined}
       />,
@@ -274,11 +276,78 @@ describe("MediaPicker compact mode", () => {
     expect(
       await screen.findByRole("searchbox", { name: "Search emoji" }),
     ).not.toBeNull();
+    expect(
+      screen.queryByRole("toolbar", { name: "Quick reactions" }),
+    ).toBeNull();
+    expect(view.container.querySelectorAll(".mp-picker")).toHaveLength(1);
     await user.click(
       screen.getByRole("button", { name: "Return to compact reactions" }),
     );
+    const restoredTrigger = screen.getByRole("button", {
+      name: "Open full media picker",
+    });
+    expect(document.activeElement).toBe(restoredTrigger);
+    expect(view.container.querySelectorAll(".mp-picker")).toHaveLength(1);
+  });
+
+  it("returns from full mode with Escape and restores expand focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <MediaPicker
+        compact={{ allowExpand: true }}
+        defaultMode="compact"
+        onSelect={() => undefined}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Open full media picker" }),
+    );
+    await screen.findByRole("searchbox", { name: "Search emoji" });
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("searchbox", { name: "Search emoji" }),
+    ).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Open full media picker" }),
+    );
+  });
+
+  it("keeps one integrated surface through React StrictMode transitions", async () => {
+    const user = userEvent.setup();
+    const view = render(
+      <StrictMode>
+        <MediaPicker
+          compact={{ allowExpand: true }}
+          defaultMode="compact"
+          onSelect={() => undefined}
+        />
+      </StrictMode>,
+    );
+    expect(
+      screen.getAllByRole("toolbar", { name: "Quick reactions" }),
+    ).toHaveLength(1);
+    await user.click(
+      screen.getByRole("button", { name: "Open full media picker" }),
+    );
+    await screen.findByRole("searchbox", { name: "Search emoji" });
+    expect(
+      screen.queryByRole("toolbar", { name: "Quick reactions" }),
+    ).toBeNull();
+    expect(view.container.querySelectorAll(".mp-picker")).toHaveLength(1);
+  });
+
+  it("allows independently mounted ReactionPicker and MediaPicker surfaces", async () => {
+    render(
+      <>
+        <ReactionPicker onSelect={() => undefined} />
+        <MediaPicker mode="full" onSelect={() => undefined} />
+      </>,
+    );
     expect(
       screen.getByRole("toolbar", { name: "Quick reactions" }),
+    ).not.toBeNull();
+    expect(
+      await screen.findByRole("searchbox", { name: "Search emoji" }),
     ).not.toBeNull();
   });
 

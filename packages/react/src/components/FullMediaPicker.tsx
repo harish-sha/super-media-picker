@@ -397,6 +397,9 @@ export function FullMediaPicker({
     ...(features.recents ? (["recent"] as const) : []),
     ...(features.favorites ? (["favorites"] as const) : []),
   ];
+  const savedCollectionViews = collectionViews.filter(
+    (view): view is Exclude<CollectionView, "browse"> => view !== "browse",
+  );
   const sharedGridProps = {
     animation,
     animationManager,
@@ -431,11 +434,13 @@ export function FullMediaPicker({
           </button>
         )}
         <SearchInput
-          autoFocus={overlay}
+          autoFocus={overlay || onCollapse !== undefined}
           label={searchLabel}
           onChange={(nextQuery) => {
             if (nextQuery.trim() !== "" && nextQuery !== query)
               analytics.track("search_started", { mediaType: activeTab });
+            if (activeTab !== "emoji" && nextQuery.trim() !== "")
+              setCollectionView("browse");
             setQuery(nextQuery);
           }}
           value={query}
@@ -461,23 +466,30 @@ export function FullMediaPicker({
           </button>
         ))}
       </nav>
-      {activeTab !== "emoji" && (features.recents || features.favorites) ? (
-        <nav aria-label={`${activeTab} collections`} className="mp-context-nav">
-          {collectionViews.map((view) => (
-            <button
-              aria-pressed={collectionView === view}
-              key={view}
-              onClick={() => {
-                setCollectionView(view);
-                setQuery("");
-              }}
-              type="button"
-            >
-              {view[0]?.toLocaleUpperCase()}
-              {view.slice(1)}
-            </button>
-          ))}
-        </nav>
+      {activeTab !== "emoji" &&
+      activeTab !== "stickers" &&
+      (features.recents || features.favorites) ? (
+        <div
+          aria-label={`${activeTab} collections`}
+          className="mp-context-toolbar mp-context-toolbar--end"
+        >
+          <div className="mp-context-segments" role="group">
+            {collectionViews.map((view) => (
+              <button
+                aria-pressed={collectionView === view}
+                key={view}
+                onClick={() => {
+                  setCollectionView(view);
+                  setQuery("");
+                }}
+                type="button"
+              >
+                {view[0]?.toLocaleUpperCase()}
+                {view.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
       <div
         aria-labelledby={primaryTabId}
@@ -566,6 +578,29 @@ export function FullMediaPicker({
               panelId={emojiPanelId}
             />
           </>
+        ) : activeTab === "stickers" && providers?.stickers !== undefined ? (
+          <Suspense
+            fallback={
+              <div className="mp-provider-state" role="status">
+                Opening stickers…
+              </div>
+            }
+          >
+            <LazyStickerPanel
+              {...sharedGridProps}
+              allowAnimated={capabilities?.animatedStickers !== false}
+              collectionItems={collectionItems}
+              collections={savedCollectionViews}
+              collectionView={collectionView}
+              onCollectionViewChange={(view) => {
+                setCollectionView(view);
+                setQuery("");
+              }}
+              provider={providers.stickers}
+              query={query}
+              analytics={analytics}
+            />
+          </Suspense>
         ) : collectionView !== "browse" ? (
           <MediaResultsGrid
             {...sharedGridProps}
@@ -584,22 +619,6 @@ export function FullMediaPicker({
             <LazyGifPanel
               {...sharedGridProps}
               provider={providers.gifs}
-              query={query}
-              analytics={analytics}
-            />
-          </Suspense>
-        ) : activeTab === "stickers" && providers?.stickers !== undefined ? (
-          <Suspense
-            fallback={
-              <div className="mp-provider-state" role="status">
-                Opening stickers…
-              </div>
-            }
-          >
-            <LazyStickerPanel
-              {...sharedGridProps}
-              allowAnimated={capabilities?.animatedStickers !== false}
-              provider={providers.stickers}
               query={query}
               analytics={analytics}
             />

@@ -7,23 +7,47 @@ test("renders sticker pack image and fallback icons in full and standalone picke
   await page.getByRole("button", { name: "Full picker" }).click();
   await page.getByRole("tab", { name: "Stickers" }).click();
 
-  let bears = page.getByRole("button", { name: "Bears" });
-  let cats = page.getByRole("button", { name: "Cats" });
-  await expect(bears.locator(".mp-pack-icon__image")).toHaveAttribute(
+  let trigger = page.getByRole("button", {
+    name: "Choose sticker pack, current Bears",
+  });
+  await expect(trigger.locator(".mp-pack-icon__image")).toHaveAttribute(
     "src",
     "/media/stickers/bear.webp",
   );
+  await trigger.click();
+  let menu = page.getByRole("listbox", { name: "Sticker packs" });
+  let bears = menu.getByRole("option", { name: "Bears" });
+  let cats = menu.getByRole("option", { name: "Cats" });
+  await expect(bears).toHaveAttribute("aria-selected", "true");
   await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
   await expect(cats).not.toContainText("□");
 
   await page.getByLabel("Theme").selectOption("dark");
   await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
+  await cats.click();
+  trigger = page.getByRole("button", {
+    name: "Choose sticker pack, current Cats",
+  });
+  await expect(trigger).toHaveAttribute("aria-label", /current Cats/);
 
   await page.getByLabel("SDK surface").selectOption("sticker");
-  bears = page.getByRole("button", { name: "Bears" });
-  cats = page.getByRole("button", { name: "Cats" });
+  trigger = page.getByRole("button", {
+    name: "Choose sticker pack, current Bears",
+  });
+  await expect(trigger.locator(".mp-pack-icon__image")).toBeVisible();
+  await trigger.click();
+  menu = page.getByRole("listbox", { name: "Sticker packs" });
+  bears = menu.getByRole("option", { name: "Bears" });
+  cats = menu.getByRole("option", { name: "Cats" });
   await expect(bears.locator(".mp-pack-icon__image")).toBeVisible();
   await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect(menu).toBeVisible();
+  expect(
+    await menu.evaluate((element) => element.parentElement === document.body),
+  ).toBe(true);
+  await expect(menu).toHaveCSS("position", "fixed");
 });
 
 test("portals the tone menu beyond clipped compact content and flips in a bottom sheet", async ({
@@ -105,18 +129,22 @@ test("keyboard-selects a reaction, expands, selects from search, and collapses",
   await page.getByRole("button", { name: "Open full media picker" }).click();
   const search = page.getByRole("searchbox", { name: "Search emoji" });
   await expect(search).toBeVisible();
+  await expect(
+    page.getByRole("toolbar", { name: "Quick reactions" }),
+  ).toHaveCount(0);
   await search.fill("rocket");
   await page.getByRole("button", { name: "rocket", exact: true }).click();
   await expect(page.getByTestId("selection-output")).toContainText(
     '"value": "🚀"',
   );
 
-  await page
-    .getByRole("button", { name: "Return to compact reactions" })
-    .click();
+  await page.keyboard.press("Escape");
   await expect(
     page.getByRole("toolbar", { name: "Quick reactions" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open full media picker" }),
+  ).toBeFocused();
 });
 
 test("retains toned recents and favorites across compact/full reloads", async ({
@@ -250,7 +278,13 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
     "src",
     "/media/stickers/bear-wave.gif",
   );
-  await page.getByRole("button", { name: "Cats" }).click();
+  await page
+    .getByRole("button", { name: "Choose sticker pack, current Bears" })
+    .click();
+  await page
+    .getByRole("listbox", { name: "Sticker packs" })
+    .getByRole("option", { name: "Cats" })
+    .click();
   await page
     .getByRole("button", { name: "Cat sticker 1", exact: true })
     .click();

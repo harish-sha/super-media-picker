@@ -24,6 +24,7 @@ import type { CustomMediaTab, MediaPickerRenderers } from "../types";
 import { useProviderSearchState } from "../hooks/useProviderSearchState";
 import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 import { MediaResultsGrid } from "./MediaResultsGrid";
+import { StickerPackSelector } from "./StickerPackSelector";
 
 interface CollectionPanelProps {
   readonly analytics: MediaPickerAnalytics;
@@ -403,9 +404,19 @@ export function EmojiProviderPanels({
 export function StickerPanel({
   provider,
   allowAnimated,
+  collectionItems,
+  collections,
+  collectionView,
+  onCollectionViewChange,
   ...props
 }: CollectionPanelProps & {
   readonly allowAnimated: boolean;
+  readonly collectionItems: readonly MediaItem[];
+  readonly collections: readonly ("recent" | "favorites")[];
+  readonly collectionView: "browse" | "recent" | "favorites";
+  readonly onCollectionViewChange: (
+    view: "browse" | "recent" | "favorites",
+  ) => void;
   readonly provider: StickerProvider;
 }) {
   const [packs, setPacks] = useState<readonly StickerPack[]>([]);
@@ -460,44 +471,84 @@ export function StickerPanel({
           Sticker packs could not be loaded.
         </div>
       ) : null}
-      {props.query.trim() === "" && packs.length > 0 ? (
-        <nav aria-label="Sticker packs" className="mp-pack-nav">
-          {packs.map((pack) => (
-            <button
-              aria-label={pack.name}
-              aria-pressed={pack.id === packId}
-              key={pack.id}
-              onClick={() => setPackId(pack.id)}
-              title={pack.name}
-              type="button"
-            >
-              <span aria-hidden="true" className="mp-pack-icon">
+      {packs.length > 0 || collections.length > 0 ? (
+        <div aria-label="Sticker collections" className="mp-context-toolbar">
+          {packs.length > 0 ? (
+            <StickerPackSelector
+              onSelect={(nextPackId) => {
+                setPackId(nextPackId);
+                onCollectionViewChange("browse");
+              }}
+              packs={packs}
+              renderIcon={(pack) => (
                 <StickerPackIcon
                   pack={pack}
                   {...(props.mediaSecurity === undefined
                     ? {}
                     : { mediaSecurity: props.mediaSecurity })}
                 />
-              </span>
-            </button>
-          ))}
-        </nav>
+              )}
+              selectedId={packId}
+            />
+          ) : (
+            <span />
+          )}
+          {collections.length > 0 ? (
+            <div
+              aria-label="Saved stickers"
+              className="mp-context-segments"
+              role="group"
+            >
+              {collections.map((view) => (
+                <button
+                  aria-pressed={collectionView === view}
+                  key={view}
+                  onClick={() => onCollectionViewChange(view)}
+                  type="button"
+                >
+                  {view[0]?.toLocaleUpperCase()}
+                  {view.slice(1)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
-      <ResultState
-        {...props}
-        emptyMessage={
-          props.query.trim() === ""
-            ? "This sticker pack is empty."
-            : `No stickers found for “${props.query}”.`
-        }
-        label={
-          props.query.trim() === ""
-            ? `${packs.find(({ id }) => id === packId)?.name ?? "Sticker"} pack`
-            : "Sticker search results"
-        }
-        provider={provider}
-        result={visibleResult}
-      />
+      {collectionView === "browse" ? (
+        <ResultState
+          {...props}
+          emptyMessage={
+            props.query.trim() === ""
+              ? "This sticker pack is empty."
+              : `No stickers found for “${props.query}”.`
+          }
+          label={
+            props.query.trim() === ""
+              ? `${packs.find(({ id }) => id === packId)?.name ?? "Sticker"} pack`
+              : "Sticker search results"
+          }
+          provider={provider}
+          result={visibleResult}
+        />
+      ) : (
+        <MediaResultsGrid
+          animation={props.animation}
+          animationManager={props.animationManager}
+          emptyMessage={`No ${collectionView} stickers.`}
+          favoriteIds={props.favoriteIds}
+          favoritesEnabled={props.favoritesEnabled}
+          items={collectionItems}
+          label={`${collectionView} stickers`}
+          onFavoriteToggle={props.onFavoriteToggle}
+          onSelect={props.onSelect}
+          {...(props.mediaSecurity === undefined
+            ? {}
+            : { mediaSecurity: props.mediaSecurity })}
+          {...(props.renderers === undefined
+            ? {}
+            : { renderers: props.renderers })}
+        />
+      )}
     </>
   );
 }

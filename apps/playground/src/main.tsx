@@ -332,7 +332,6 @@ function Playground() {
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               compact={{
-                allowCollapse: true,
                 allowExpand,
                 source: compactSource,
                 ...(compactSource === "custom"

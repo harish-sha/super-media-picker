@@ -115,6 +115,9 @@ export function MediaPicker({
   const state = useMediaPickerPersistence(storage, defaultSkinTone);
   const lifecycle = useRef({ mounted: false, opened: false, closed: false });
   const initialMode = useRef(resolvedMode);
+  const [startedCompact] = useState(resolvedMode === "compact");
+  const positionerRef = useRef<HTMLDivElement>(null);
+  const restoreCompactFocus = useRef(false);
   const animationManager = useMemo(
     () =>
       new AnimationConcurrencyManager(animatedMedia.maxActiveAnimations ?? 3),
@@ -128,7 +131,8 @@ export function MediaPicker({
   const source: CompactReactionSource =
     compact.source ?? (compact.reactions === undefined ? "default" : "custom");
   const compactAllowsExpand = compact.allowExpand ?? allowExpand ?? false;
-  const compactAllowsCollapse = compact.allowCollapse ?? false;
+  const compactAllowsCollapse =
+    compact.allowCollapse ?? (startedCompact && compactAllowsExpand);
   const requestedItemCount = compact.maxVisibleItems ?? 7;
   const maxVisibleItems =
     Number.isFinite(requestedItemCount) && requestedItemCount > 0
@@ -161,6 +165,16 @@ export function MediaPicker({
     };
   }, [analytics]);
 
+  useEffect(() => {
+    if (resolvedMode !== "compact" || !restoreCompactFocus.current) return;
+    restoreCompactFocus.current = false;
+    positionerRef.current
+      ?.querySelector<HTMLButtonElement>(
+        '[aria-label="Open full media picker"]',
+      )
+      ?.focus();
+  }, [resolvedMode]);
+
   function trackSelection(item: Parameters<typeof onSelect>[0]): void {
     analytics.track("media_selected", {
       id: item.id,
@@ -185,12 +199,19 @@ export function MediaPicker({
   }
 
   function requestMode(nextMode: MediaPickerMode): void {
+    if (resolvedMode === "compact" && nextMode === "full")
+      restoreCompactFocus.current = true;
     if (mode === undefined) setInternalMode(nextMode);
     onModeChange?.(nextMode);
   }
 
   function handleBackdropClick(event: MouseEvent<HTMLDivElement>): void {
-    if (event.target === event.currentTarget) requestClose();
+    if (event.target !== event.currentTarget) return;
+    if (resolvedMode === "full" && compactAllowsCollapse) {
+      requestMode("compact");
+      return;
+    }
+    requestClose();
   }
 
   return (
@@ -201,6 +222,7 @@ export function MediaPicker({
       data-resolved-display-mode={resolvedDisplayMode}
       data-size={size}
       onMouseDown={handleBackdropClick}
+      ref={positionerRef}
     >
       {resolvedMode === "compact" ? (
         <CompactMediaPicker
