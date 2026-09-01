@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.1` of an accessible, provider-first React SDK for
+Public beta `0.1.0-beta.2` of an accessible, provider-first React SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -124,6 +124,132 @@ export const stickerProvider = new HttpStickerProvider({
   endpoint: "/api/media/stickers",
   timeoutMs: 8_000,
 });
+```
+
+The built-in adapters call the configured endpoint with query parameters:
+
+```text
+GET /api/media/gifs?mode=search&q=hello&cursor=opaque&limit=18
+GET /api/media/gifs?mode=trending&cursor=opaque&limit=18
+GET /api/media/stickers?mode=packs
+GET /api/media/stickers?mode=pack&packId=bears&cursor=opaque&limit=18
+GET /api/media/stickers?mode=search&q=hello&cursor=opaque&limit=18
+GET /api/media/stickers?mode=trending&cursor=opaque&limit=18
+```
+
+`cursor` is an opaque string. When no next page exists, return
+`{"items":[],"hasMore":false}` or another valid page and omit
+`nextCursor`; never return `nextCursor: null`.
+
+```ts
+interface SearchResult<T> {
+  items: readonly T[];
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+interface GifMediaItem {
+  type: "gif"; // required, exact value
+  id: string; // required, non-empty
+  provider: string; // required
+  url: string; // required original/selection URL
+  previewUrl: string; // required optimized grid URL
+  name?: string;
+  thumbnailUrl?: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+}
+
+interface StickerMediaItem {
+  type: "sticker"; // required, exact value
+  id: string; // required, non-empty
+  url: string; // required
+  animated: boolean; // required
+  name?: string;
+  provider?: string;
+  packId?: string;
+  previewUrl?: string;
+  format?: "gif" | "webp" | "webm" | "lottie" | "png" | "jpeg";
+  width?: number;
+  height?: number;
+  alt?: string;
+}
+
+interface StickerPack {
+  id: string; // required
+  name: string; // required
+  iconUrl?: string; // recommended image URL
+  icon?: string; // legacy text or URL; text may use the built-in fallback
+  provider?: string;
+}
+```
+
+GIF search response example:
+
+```json
+{
+  "items": [
+    {
+      "type": "gif",
+      "id": "gif_123",
+      "name": "Hello",
+      "provider": "example-provider",
+      "previewUrl": "https://media.company.com/gifs/gif_123-preview.webp",
+      "url": "https://media.company.com/gifs/gif_123.gif",
+      "width": 320,
+      "height": 240
+    }
+  ],
+  "nextCursor": "next_page",
+  "hasMore": true
+}
+```
+
+Sticker `mode=packs` returns a JSON array of `StickerPack`; every other sticker
+mode returns `SearchResult<StickerMediaItem>`. Successful responses must be
+valid JSON. Non-2xx responses, malformed JSON, invalid fields, timeouts, and
+unsafe media URLs become `MediaProviderError`. A valid empty response is
+`{"items":[],"hasMore":false}`.
+
+Pack navigation renders a policy-checked `iconUrl` as an image. Missing, unsafe,
+unsupported legacy text, or failed images use the SDK's font-independent sticker
+SVG fallback, so hosts do not need platform-specific Unicode glyphs.
+
+Configure `mediaSecurity` with production CDN origins and `allowHttp: false`.
+Attribution is provider configuration (`{ label, url?, logoUrl? }`), not a JSON
+result field. Keep vendor keys behind your backend. See the
+[complete backend contract](https://github.com/harish-sha/super-media-picker/blob/main/docs/backend-api.md)
+for animated/custom emoji shapes and a working server adapter.
+
+## Native emoji compatibility
+
+Native Unicode rendering remains lightweight and follows the host OS/browser's
+installed emoji font. The picker uses a cross-platform color-emoji stack and
+stable contained cells, but it cannot make an older Windows emoji font draw a
+newer Unicode character. `MediaPicker`, `EmojiPicker`, and `useEmojiSearch`
+therefore default `maxUnicodeVersion` to `15`:
+
+```tsx
+<EmojiPicker maxUnicodeVersion={14} onSelect={handleEmoji} />
+```
+
+Raise the value only when the supported client platforms have suitable fonts.
+For guaranteed artwork across platforms, register provider-backed custom or
+animated emoji with image previews; the SDK deliberately does not bundle a
+large proprietary image-emoji catalog. Composite sequences are returned intact
+as one `item.value`; insert with a functional state update:
+
+```tsx
+import { EmojiPicker, isUnicodeEmoji } from "super-media-picker";
+
+<EmojiPicker
+  onSelect={(item) => {
+    if (isUnicodeEmoji(item)) {
+      setValue((current) => current + item.value);
+    }
+  }}
+/>;
 ```
 
 The npm package contains UI, state, renderers, provider contracts, cache and

@@ -13,6 +13,13 @@ export interface MediaRequestClientOptions {
   readonly timeoutMs?: number;
 }
 
+interface InflightRequest<T> {
+  readonly controller: AbortController;
+  promise: Promise<T>;
+  subscribers: number;
+  abortTimer: ReturnType<typeof setTimeout> | undefined;
+}
+
 /** Small URL policy shared by providers and renderers. */
 export interface MediaUrlPolicy {
   readonly allowedOrigins?: readonly string[];
@@ -30,7 +37,7 @@ export class MediaRequestClient {
   readonly #cache: CacheAdapter<unknown>;
   readonly #cacheTtlMs: number;
   readonly #timeoutMs: number;
-  readonly #inflight = new Map<string, Promise<unknown>>();
+  readonly #inflight = new Map<string, InflightRequest<unknown>>();
 
   constructor(options: MediaRequestClientOptions = {}) {
     this.#cache = options.cache ?? new MemoryCache<unknown>();
@@ -45,20 +52,27 @@ export class MediaRequestClient {
   ): Promise<T> {
     const cached = this.#cache.get(key) as T | undefined;
     if (cached !== undefined) return Promise.resolve(cached);
-    const existing = this.#inflight.get(key) as Promise<T> | undefined;
-    if (existing !== undefined) return existing;
+    const existing = this.#inflight.get(key) as InflightRequest<T> | undefined;
+    if (existing !== undefined)
+      return this.#subscribe(existing, options.signal);
+
+    if (options.signal?.aborted)
+      return Promise.reject(abortReason(options.signal));
 
     const controller = new AbortController();
-    const abort = (): void => controller.abort(options.signal?.reason);
-    if (options.signal?.aborted) abort();
-    else options.signal?.addEventListener("abort", abort, { once: true });
     const timeout = setTimeout(
       () =>
         controller.abort(new DOMException("Request timed out", "TimeoutError")),
       Math.max(1, options.timeoutMs ?? this.#timeoutMs),
     );
-
-    const request = load(controller.signal)
+    const entry: InflightRequest<T> = {
+      controller,
+      promise: Promise.resolve(undefined as T),
+      subscribers: 0,
+      abortTimer: undefined,
+    };
+    const request = Promise.resolve()
+      .then(() => load(controller.signal))
       .then((value) => {
         this.#cache.set(key, value, options.ttlMs ?? this.#cacheTtlMs);
         return value;
@@ -70,16 +84,70 @@ export class MediaRequestClient {
       })
       .finally(() => {
         clearTimeout(timeout);
-        options.signal?.removeEventListener("abort", abort);
-        this.#inflight.delete(key);
+        if (entry.abortTimer !== undefined) clearTimeout(entry.abortTimer);
+        if (this.#inflight.get(key) === entry) this.#inflight.delete(key);
       });
-    this.#inflight.set(key, request);
-    return request;
+    entry.promise = request;
+    this.#inflight.set(key, entry);
+    return this.#subscribe(entry, options.signal);
+  }
+
+  #subscribe<T>(
+    entry: InflightRequest<T>,
+    signal: AbortSignal | undefined,
+  ): Promise<T> {
+    if (signal?.aborted) return Promise.reject(abortReason(signal));
+    if (entry.abortTimer !== undefined) {
+      clearTimeout(entry.abortTimer);
+      entry.abortTimer = undefined;
+    }
+    entry.subscribers += 1;
+
+    return new Promise<T>((resolve, reject) => {
+      let settled = false;
+      const release = (): boolean => {
+        if (settled) return false;
+        settled = true;
+        signal?.removeEventListener("abort", abort);
+        entry.subscribers = Math.max(0, entry.subscribers - 1);
+        if (entry.subscribers === 0 && !entry.controller.signal.aborted) {
+          entry.abortTimer = setTimeout(() => {
+            entry.abortTimer = undefined;
+            if (entry.subscribers === 0 && !entry.controller.signal.aborted) {
+              entry.controller.abort(
+                new DOMException("Request cancelled", "AbortError"),
+              );
+            }
+          }, 0);
+        }
+        return true;
+      };
+      const abort = (): void => {
+        if (signal !== undefined && release()) reject(abortReason(signal));
+      };
+      signal?.addEventListener("abort", abort, { once: true });
+      void entry.promise.then(
+        (value) => {
+          if (release()) resolve(value);
+        },
+        (error: unknown) => {
+          if (release()) reject(asError(error));
+        },
+      );
+    });
   }
 
   clear(): void {
     this.#cache.clear();
   }
+}
+
+function abortReason(signal: AbortSignal): Error {
+  return asError(signal.reason ?? new DOMException("Aborted", "AbortError"));
+}
+
+function asError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
 }
 
 /** Reject executable URL schemes while allowing browser-safe media sources. */

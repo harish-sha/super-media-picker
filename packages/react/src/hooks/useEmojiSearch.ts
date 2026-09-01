@@ -6,6 +6,7 @@ import type {
   UnicodeEmojiMediaItem,
 } from "@super-media-picker/core";
 import {
+  DEFAULT_MAX_UNICODE_VERSION,
   getEmojiByCategory,
   searchEmoji,
   toEmojiMediaItem,
@@ -17,6 +18,7 @@ export interface UseEmojiSearchOptions {
   readonly category?: Exclude<EmojiPickerCategory, "Recent" | "Favorites">;
   readonly skinTone?: SkinTone;
   readonly limit?: number;
+  readonly maxUnicodeVersion?: number;
 }
 
 export interface UseEmojiSearchResult {
@@ -32,14 +34,17 @@ export function useEmojiSearch({
   category = "Smileys & Emotion",
   skinTone = "default",
   limit,
+  maxUnicodeVersion = DEFAULT_MAX_UNICODE_VERSION,
 }: UseEmojiSearchOptions = {}): UseEmojiSearchResult {
   const [query, setQuery] = useState(initialQuery);
   const results = useMemo(() => {
     const records =
-      query.trim() === "" ? getEmojiByCategory(category) : searchEmoji(query);
+      query.trim() === ""
+        ? getEmojiByCategory(category, { maxUnicodeVersion })
+        : searchEmoji(query, { maxUnicodeVersion });
     const bounded = limit === undefined ? records : records.slice(0, limit);
     return bounded.map((emoji) => toEmojiMediaItem(emoji, skinTone));
-  }, [category, limit, query, skinTone]);
+  }, [category, limit, maxUnicodeVersion, query, skinTone]);
   return {
     query,
     results,

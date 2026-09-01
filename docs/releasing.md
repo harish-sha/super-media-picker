@@ -1,7 +1,7 @@
 # Public beta release checklist
 
 The monorepo root is private. Only `packages/super-media-picker` is prepared as
-the self-contained public package for `0.1.0-beta.1`; no release command runs
+the self-contained public package for `0.1.0-beta.2`; no release command runs
 automatically.
 
 ## Before publishing

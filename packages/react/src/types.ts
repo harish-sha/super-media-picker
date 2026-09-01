@@ -95,6 +95,8 @@ export interface MediaPickerProps {
   readonly defaultMediaType?: "emoji" | "gif" | "stickers" | "custom";
   readonly defaultSearchQuery?: string;
   readonly defaultSkinTone?: SkinTone;
+  /** Highest native Unicode emoji version shown; defaults to 15 for compatibility. */
+  readonly maxUnicodeVersion?: number;
   readonly className?: string;
   readonly ariaLabel?: string;
 }

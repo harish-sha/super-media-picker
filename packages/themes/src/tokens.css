@@ -12,11 +12,15 @@
   --mp-radius-md: 0.625rem;
   --mp-radius-lg: 1rem;
   --mp-font-family: inherit;
+  --mp-emoji-font-family:
+    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+    "Twemoji Mozilla", "Segoe UI Symbol", emoji, sans-serif;
   --mp-font-size: 0.875rem;
   --mp-spacing-sm: 0.375rem;
   --mp-spacing-md: 0.75rem;
   --mp-spacing-lg: 1rem;
   --mp-cell-size: 2.75rem;
+  --mp-tone-menu-z-index: 1100;
   color-scheme: light;
 }
 

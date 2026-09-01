@@ -65,6 +65,14 @@ function scoreEmoji(
 export interface EmojiSearchOptions {
   readonly category?: EmojiCategory;
   readonly limit?: number;
+  readonly maxUnicodeVersion?: number;
+}
+
+export function supportsUnicodeVersion(
+  emoji: EmojiRecord,
+  maxUnicodeVersion: number,
+): boolean {
+  return emoji.version <= maxUnicodeVersion;
 }
 
 /** Searches canonical labels, aliases/tags, and category metadata. */
@@ -80,11 +88,18 @@ export function searchEmoji(
       : emojiSearchIndex.filter(
           ({ emoji }) => emoji.category === options.category,
         );
+  const maxUnicodeVersion = options.maxUnicodeVersion;
+  const compatibleSource =
+    maxUnicodeVersion === undefined
+      ? source
+      : source.filter(({ emoji }) =>
+          supportsUnicodeVersion(emoji, maxUnicodeVersion),
+        );
 
   const results =
     normalizedQuery === ""
-      ? source.map(({ emoji }) => emoji)
-      : source
+      ? compatibleSource.map(({ emoji }) => emoji)
+      : compatibleSource
           .map((entry) => ({
             emoji: entry.emoji,
             score: scoreEmoji(entry, normalizedQuery, terms),
@@ -104,8 +119,14 @@ export function searchEmoji(
 
 export function getEmojiByCategory(
   category: EmojiCategory,
+  options: Pick<EmojiSearchOptions, "maxUnicodeVersion"> = {},
 ): readonly EmojiRecord[] {
-  return emojiData.filter((emoji) => emoji.category === category);
+  return emojiData.filter(
+    (emoji) =>
+      emoji.category === category &&
+      (options.maxUnicodeVersion === undefined ||
+        supportsUnicodeVersion(emoji, options.maxUnicodeVersion)),
+  );
 }
 
 export function getEmojiById(id: string): EmojiRecord | undefined {

@@ -16,6 +16,7 @@ import {
   type CompactReactionSource,
   type MediaPickerMode,
 } from "@super-media-picker/core";
+import { DEFAULT_MAX_UNICODE_VERSION } from "@super-media-picker/emoji/compact";
 import {
   resolveMediaPickerTheme,
   themeTokensToCssVariables,
@@ -97,6 +98,7 @@ export function MediaPicker({
   defaultMediaType = "emoji",
   defaultSearchQuery = "",
   defaultSkinTone = "default",
+  maxUnicodeVersion = DEFAULT_MAX_UNICODE_VERSION,
   className,
   ariaLabel = "Media picker",
 }: MediaPickerProps) {
@@ -111,7 +113,7 @@ export function MediaPicker({
     resolvedDisplayMode === "bottom-sheet" ||
     resolvedDisplayMode === "fullscreen";
   const state = useMediaPickerPersistence(storage, defaultSkinTone);
-  const closeTracked = useRef(false);
+  const lifecycle = useRef({ mounted: false, opened: false, closed: false });
   const initialMode = useRef(resolvedMode);
   const animationManager = useMemo(
     () =>
@@ -136,10 +138,26 @@ export function MediaPicker({
     features.recents || source === "recent" || source === "frequent";
 
   useEffect(() => {
-    closeTracked.current = false;
-    analytics.track("picker_opened", { mode: initialMode.current });
+    const lifecycleState = lifecycle.current;
+    lifecycleState.mounted = true;
+    void Promise.resolve().then(() => {
+      if (lifecycleState.mounted && !lifecycleState.opened) {
+        analytics.track("picker_opened", { mode: initialMode.current });
+        lifecycleState.opened = true;
+      }
+    });
     return () => {
-      if (!closeTracked.current) analytics.track("picker_closed");
+      lifecycleState.mounted = false;
+      void Promise.resolve().then(() => {
+        if (
+          !lifecycleState.mounted &&
+          lifecycleState.opened &&
+          !lifecycleState.closed
+        ) {
+          analytics.track("picker_closed");
+          lifecycleState.closed = true;
+        }
+      });
     };
   }, [analytics]);
 
@@ -159,9 +177,9 @@ export function MediaPicker({
   }
 
   function requestClose(): void {
-    if (!closeTracked.current) {
+    if (!lifecycle.current.closed) {
       analytics.track("picker_closed");
-      closeTracked.current = true;
+      lifecycle.current.closed = true;
     }
     onClose?.();
   }
@@ -200,6 +218,7 @@ export function MediaPicker({
           onSelect={trackSelection}
           onSkinToneChange={state.setSkinTone}
           overlay={overlay}
+          persistenceReady={state.ready}
           recentRecords={state.recentRecords}
           skinTone={state.skinTone}
           source={source}
@@ -261,6 +280,7 @@ export function MediaPicker({
             previewEnabled={preview.enabled ?? false}
             recentRecords={state.recentRecords}
             skinTone={state.skinTone}
+            maxUnicodeVersion={maxUnicodeVersion}
             style={style}
             themeMode={resolvedTheme.mode}
             {...(capabilities === undefined ? {} : { capabilities })}

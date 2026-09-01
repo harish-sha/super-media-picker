@@ -54,6 +54,7 @@ export interface CompactMediaPickerProps {
   readonly onSelect: (item: MediaItem) => void;
   readonly onSkinToneChange: (tone: SkinTone) => void;
   readonly overlay: boolean;
+  readonly persistenceReady: boolean;
   readonly renderers?: MediaPickerRenderers;
   readonly reactions?: readonly CompactReactionInput[];
   readonly recentRecords: readonly RecentItemRecord[];
@@ -156,6 +157,7 @@ export function CompactMediaPicker({
   onSelect,
   onSkinToneChange,
   overlay,
+  persistenceReady,
   renderers,
   reactions,
   recentRecords,
@@ -178,7 +180,7 @@ export function CompactMediaPicker({
     };
   }, [emojiModule, loadEmojiData]);
 
-  const items = useMemo(() => {
+  const candidates = useMemo(() => {
     let candidates: readonly MediaItem[];
     if (source === "custom") {
       candidates = (reactions ?? []).flatMap((reaction) => {
@@ -214,7 +216,49 @@ export function CompactMediaPicker({
       candidates = defaultCompactReactions;
     }
 
-    const filled = [...candidates, ...defaultCompactReactions];
+    return candidates;
+  }, [emojiModule, favoriteRecords, reactions, recentRecords, source]);
+  const stableSource = source === "recent" || source === "frequent";
+  const sessionKey = `${source}:${maxVisibleItems}`;
+  const [snapshot, setSnapshot] = useState<
+    | {
+        readonly key: string;
+        readonly candidates: readonly MediaItem[];
+      }
+    | undefined
+  >(undefined);
+  useEffect(() => {
+    if (
+      !stableSource ||
+      !persistenceReady ||
+      (loadEmojiData && emojiModule === undefined)
+    )
+      return;
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setSnapshot((current) =>
+        current?.key === sessionKey ? current : { key: sessionKey, candidates },
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    candidates,
+    emojiModule,
+    loadEmojiData,
+    persistenceReady,
+    sessionKey,
+    stableSource,
+  ]);
+  const displayedCandidates =
+    stableSource && snapshot?.key === sessionKey
+      ? snapshot.candidates
+      : candidates;
+
+  const items = useMemo(() => {
+    const filled = [...displayedCandidates, ...defaultCompactReactions];
     const unique = new Map<string, MediaItem>();
     for (const item of filled) {
       const toned = applyTone(item, skinTone, emojiModule);
@@ -222,15 +266,7 @@ export function CompactMediaPicker({
       if (!unique.has(key)) unique.set(key, toned);
     }
     return [...unique.values()].slice(0, maxVisibleItems);
-  }, [
-    emojiModule,
-    favoriteRecords,
-    maxVisibleItems,
-    reactions,
-    recentRecords,
-    skinTone,
-    source,
-  ]);
+  }, [displayedCandidates, emojiModule, maxVisibleItems, skinTone]);
 
   function handleSelect(item: MediaItem): void {
     onSelect(item);

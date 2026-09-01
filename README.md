@@ -20,6 +20,7 @@ Production media is provider-first: npm contains code, while GIF, sticker,
 animated-emoji, and tenant catalogs come from an application backend plus
 CDN/object storage. See [backend contracts](docs/backend-api.md), [provider
 integration](docs/providers.md), and [security/CSP](docs/security.md).
+Native font/version behavior is documented in [emoji compatibility](docs/emoji-compatibility.md).
 
 ## Installation
 
@@ -29,7 +30,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.1`. React and React DOM
+The public beta version is `0.1.0-beta.2`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -285,7 +286,13 @@ Registered tenant packs use the same sticker contract and shared static/animated
 
 ```tsx
 const tenantStickers = new MockStickerProvider({
-  packs: [{ id: "company", name: "Company", icon: "◆" }],
+  packs: [
+    {
+      id: "company",
+      name: "Company",
+      iconUrl: "https://media.company.com/sticker-packs/company.webp",
+    },
+  ],
   items: {
     company: [
       {
@@ -527,7 +534,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.1` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.2` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

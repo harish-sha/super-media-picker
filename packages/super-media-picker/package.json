@@ -1,6 +1,6 @@
 {
   "name": "super-media-picker",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Accessible, provider-first React picker for emoji, GIFs, stickers, and custom media.",
   "keywords": [
     "emoji-picker",

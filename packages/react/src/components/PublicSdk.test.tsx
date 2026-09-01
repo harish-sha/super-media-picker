@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -66,13 +67,81 @@ function createGifProvider(): MediaProvider<GifMediaItem> {
 function createStickerProvider(): StickerProvider {
   return {
     id: "test-stickers",
-    packs: async () => [{ id: "waves", name: "Waves" }],
+    packs: async () => [{ id: "waves", name: "Waves", iconUrl: pixel }],
     packItems: async () => ({ items: [sticker], hasMore: false }),
     search: async () => ({ items: [sticker], hasMore: false }),
   };
 }
 
 describe("public standalone pickers", () => {
+  it("survives StrictMode setup, cleanup, remount, provider load, and selection", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const storage = new MemoryStorageAdapter();
+    const provider = createStickerProvider();
+    const renderPicker = () => (
+      <StrictMode>
+        <MediaPicker
+          defaultMediaType="stickers"
+          features={{ stickers: true }}
+          onSelect={onSelect}
+          providers={{ stickers: provider }}
+          storage={storage}
+        />
+      </StrictMode>
+    );
+
+    const first = render(renderPicker());
+    await user.click(
+      await screen.findByRole("button", { name: "Wave sticker" }),
+    );
+    expect(onSelect).toHaveBeenCalledOnce();
+    first.unmount();
+
+    const second = render(renderPicker());
+    await user.click(
+      await screen.findByRole("button", { name: "Wave sticker" }),
+    );
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    second.unmount();
+
+    const emojiSelect = vi.fn();
+    render(
+      <StrictMode>
+        <EmojiPicker
+          defaultSearchQuery="rocket"
+          onSelect={emojiSelect}
+          storage={storage}
+        />
+      </StrictMode>,
+    );
+    await user.click(await screen.findByRole("button", { name: "rocket" }));
+    expect(emojiSelect).toHaveBeenCalledOnce();
+  });
+
+  it("emits one lifecycle pair for a StrictMode mount and real unmount", async () => {
+    const track = vi.fn();
+    const view = render(
+      <StrictMode>
+        <MediaPicker analytics={{ track }} onSelect={() => undefined} />
+      </StrictMode>,
+    );
+    await waitFor(() =>
+      expect(
+        track.mock.calls.filter(([event]) => event === "picker_opened"),
+      ).toHaveLength(1),
+    );
+    expect(
+      track.mock.calls.filter(([event]) => event === "picker_closed"),
+    ).toHaveLength(0);
+    view.unmount();
+    await waitFor(() =>
+      expect(
+        track.mock.calls.filter(([event]) => event === "picker_closed"),
+      ).toHaveLength(1),
+    );
+  });
+
   it("returns normalized subtype items from every focused composition", async () => {
     const user = userEvent.setup();
     const emojiSelect = vi.fn();
@@ -112,6 +181,12 @@ describe("public standalone pickers", () => {
         onSelect={stickerSelect}
       />,
     );
+    const waves = await screen.findByRole("button", { name: "Waves" });
+    expect(
+      waves
+        .querySelector<HTMLImageElement>(".mp-pack-icon__image")
+        ?.getAttribute("src"),
+    ).toBe(pixel);
     await user.click(
       await screen.findByRole("button", { name: "Wave sticker" }),
     );
@@ -227,11 +302,11 @@ describe("public standalone pickers", () => {
     );
     await user.click(screen.getByRole("button", { name: "Party" }));
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Party" })).toHaveLength(2),
+      expect(screen.getAllByRole("button", { name: "Party" })).toHaveLength(1),
     );
     await user.click(screen.getByRole("button", { name: "Favorite party" }));
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Party" })).toHaveLength(3),
+      expect(screen.getAllByRole("button", { name: "Party" })).toHaveLength(2),
     );
     await user.click(screen.getByRole("button", { name: "Medium tone" }));
     await waitFor(() =>
@@ -312,7 +387,7 @@ describe("public headless hooks", () => {
       expect(stickers.result.current.results).toEqual([sticker]),
     );
     expect(stickers.result.current.packs).toEqual([
-      { id: "waves", name: "Waves" },
+      { id: "waves", name: "Waves", iconUrl: pixel },
     ]);
 
     const brokenProvider: MediaProvider<GifMediaItem> = {

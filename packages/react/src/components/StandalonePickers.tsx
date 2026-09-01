@@ -23,6 +23,7 @@ type StandaloneCommonProps = Pick<
   | "displayMode"
   | "height"
   | "mediaSecurity"
+  | "maxUnicodeVersion"
   | "onClose"
   | "preview"
   | "renderers"

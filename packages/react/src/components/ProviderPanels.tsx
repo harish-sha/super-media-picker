@@ -119,6 +119,70 @@ function Attribution({
   );
 }
 
+function isLegacyPackIconUrl(value: string): boolean {
+  return /^(?:https?:|blob:|data:image\/|\/|\.\.?\/)/iu.test(value);
+}
+
+function StickerPackFallbackIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="mp-pack-icon__fallback"
+      data-pack-icon-fallback=""
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M6.5 3.5h7.8l4.2 4.2v9.8a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M14 3.8V8h4.2M8 14.2c1.1 1.4 2.3 2.1 3.8 2.1 1.3 0 2.4-.5 3.2-1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <circle cx="8.2" cy="11" fill="currentColor" r="1" />
+      <circle cx="14.8" cy="11" fill="currentColor" r="1" />
+    </svg>
+  );
+}
+
+function StickerPackIcon({
+  pack,
+  mediaSecurity,
+}: {
+  readonly pack: StickerPack;
+  readonly mediaSecurity?: MediaUrlPolicy;
+}) {
+  const legacyUrl =
+    pack.icon !== undefined && isLegacyPackIconUrl(pack.icon)
+      ? pack.icon
+      : undefined;
+  const candidate = pack.iconUrl ?? legacyUrl;
+  const iconUrl =
+    candidate !== undefined && isSafeMediaUrl(candidate, mediaSecurity)
+      ? candidate
+      : undefined;
+  const [failedUrl, setFailedUrl] = useState<string>();
+  if (iconUrl === undefined || failedUrl === iconUrl)
+    return <StickerPackFallbackIcon />;
+  return (
+    <img
+      alt=""
+      className="mp-pack-icon__image"
+      onError={() => setFailedUrl(iconUrl)}
+      src={iconUrl}
+    />
+  );
+}
+
 function LoadMoreControl<T extends MediaItem>({
   result,
 }: {
@@ -400,14 +464,21 @@ export function StickerPanel({
         <nav aria-label="Sticker packs" className="mp-pack-nav">
           {packs.map((pack) => (
             <button
+              aria-label={pack.name}
               aria-pressed={pack.id === packId}
               key={pack.id}
               onClick={() => setPackId(pack.id)}
               title={pack.name}
               type="button"
             >
-              <span aria-hidden="true">{pack.icon ?? "▣"}</span>
-              <span className="mp-visually-hidden">{pack.name}</span>
+              <span aria-hidden="true" className="mp-pack-icon">
+                <StickerPackIcon
+                  pack={pack}
+                  {...(props.mediaSecurity === undefined
+                    ? {}
+                    : { mediaSecurity: props.mediaSecurity })}
+                />
+              </span>
             </button>
           ))}
         </nav>

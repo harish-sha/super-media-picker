@@ -72,8 +72,13 @@ const gifItems: readonly GifMediaItem[] = Array.from(
 );
 
 const stickerPacks: readonly StickerPack[] = [
-  { id: "bears", name: "Bears", icon: "🐻", provider: "mock-stickers" },
-  { id: "cats", name: "Cats", icon: "🐱", provider: "mock-stickers" },
+  {
+    id: "bears",
+    name: "Bears",
+    iconUrl: `${media}/stickers/bear.webp`,
+    provider: "mock-stickers",
+  },
+  { id: "cats", name: "Cats", provider: "mock-stickers" },
 ];
 
 const stickerItems: Readonly<Record<string, readonly StickerMediaItem[]>> = {

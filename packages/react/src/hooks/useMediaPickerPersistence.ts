@@ -94,25 +94,42 @@ export function useMediaPickerPersistence(
   const [ready, setReady] = useState(false);
   const toneChangedByUser = useRef(false);
 
-  const refresh = useCallback(async () => {
-    const [recents, favorites, tone] = await Promise.all([
+  const readPersistence = useCallback(async () => {
+    return Promise.all([
       recentsManager.getRecents(),
       favoritesManager.getFavoriteRecords(),
       tonePreference.get(),
     ]);
-    setRecentRecords(recents);
-    setFavoriteRecords(favorites);
-    setFavoriteIds(favorites.map(({ id }) => id));
-    if (!toneChangedByUser.current) setSkinToneState(tone);
-    setReady(true);
   }, [favoritesManager, recentsManager, tonePreference]);
+
+  const applyPersistence = useCallback(
+    ([recents, favorites, tone]: Awaited<
+      ReturnType<typeof readPersistence>
+    >) => {
+      setRecentRecords(recents);
+      setFavoriteRecords(favorites);
+      setFavoriteIds(favorites.map(({ id }) => id));
+      if (!toneChangedByUser.current) setSkinToneState(tone);
+      setReady(true);
+    },
+    [],
+  );
+
+  const refresh = useCallback(async () => {
+    applyPersistence(await readPersistence());
+  }, [applyPersistence, readPersistence]);
 
   useEffect(() => {
     let active = true;
     const load = (): void => {
-      void refresh().catch(() => {
-        if (active) setReady(true);
-      });
+      void readPersistence().then(
+        (snapshot) => {
+          if (active) applyPersistence(snapshot);
+        },
+        () => {
+          if (active) setReady(true);
+        },
+      );
     };
     load();
     const unsubscribe = subscribePersistence(persistence, load);
@@ -120,7 +137,7 @@ export function useMediaPickerPersistence(
       active = false;
       unsubscribe();
     };
-  }, [persistence, refresh]);
+  }, [applyPersistence, persistence, readPersistence]);
 
   const recordRecent = useCallback(
     async (item: string | MediaItem) => {

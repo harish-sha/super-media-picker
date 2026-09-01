@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_MAX_UNICODE_VERSION,
   emojiCategories,
   emojiData,
   getEmojiByCategory,
@@ -19,6 +20,25 @@ describe("emoji dataset", () => {
       new Set(emojiCategories),
     );
   });
+
+  it.each([
+    ["grinning face", "😀"],
+    ["red heart", "❤️"],
+    ["thumbs up", "👍️"],
+    ["family: man, woman, girl", "👨‍👩‍👧"],
+    ["woman health worker", "👩‍⚕️"],
+    ["flag: United States", "🇺🇸"],
+    ["keycap: #", "#️⃣"],
+    ["face with bags under eyes", "🫩"],
+  ])("stores %s as one valid grapheme", (name, value) => {
+    const emoji = emojiData.find((candidate) => candidate.name === name);
+    expect(emoji?.value).toBe(value);
+    expect([
+      ...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(
+        emoji?.value ?? "",
+      ),
+    ]).toHaveLength(1);
+  });
 });
 
 describe("normalizeEmojiSearch", () => {
@@ -28,6 +48,17 @@ describe("normalizeEmojiSearch", () => {
 });
 
 describe("searchEmoji", () => {
+  it("supports an explicit native Unicode compatibility boundary", () => {
+    expect(DEFAULT_MAX_UNICODE_VERSION).toBe(15);
+    expect(
+      searchEmoji("face with bags under eyes", { maxUnicodeVersion: 15 }),
+    ).toHaveLength(0);
+    expect(
+      searchEmoji("face with bags under eyes", { maxUnicodeVersion: 16 })[0]
+        ?.version,
+    ).toBe(16);
+  });
+
   it.each([
     "joy",
     "laugh",

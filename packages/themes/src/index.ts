@@ -14,6 +14,7 @@ export interface MediaPickerThemeTokens {
   readonly radiusMedium?: string;
   readonly radiusLarge?: string;
   readonly fontFamily?: string;
+  readonly emojiFontFamily?: string;
   readonly fontSize?: string;
   readonly spacingSmall?: string;
   readonly spacingMedium?: string;
@@ -55,6 +56,7 @@ const tokenVariables = {
   radiusMedium: "--mp-radius-md",
   radiusLarge: "--mp-radius-lg",
   fontFamily: "--mp-font-family",
+  emojiFontFamily: "--mp-emoji-font-family",
   fontSize: "--mp-font-size",
   spacingSmall: "--mp-spacing-sm",
   spacingMedium: "--mp-spacing-md",

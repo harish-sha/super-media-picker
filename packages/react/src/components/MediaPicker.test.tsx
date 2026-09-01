@@ -72,6 +72,33 @@ describe("MediaPicker", () => {
     });
   });
 
+  it("emits one intact grapheme for one composite emoji click", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn<(item: MediaItem) => void>();
+    render(
+      <MediaPicker
+        defaultSearchQuery="family man woman girl"
+        onSelect={onSelect}
+      />,
+    );
+    await waitForFullPicker();
+    await user.click(
+      screen.getByRole("button", { name: "family: man, woman, girl" }),
+    );
+
+    expect(onSelect).toHaveBeenCalledOnce();
+    const selected = onSelect.mock.calls[0]?.[0];
+    expect(selected).toMatchObject({
+      type: "emoji",
+      value: "👨‍👩‍👧",
+    });
+    expect([
+      ...new Intl.Segmenter("en", { granularity: "grapheme" }).segment(
+        selected?.type === "emoji" && "value" in selected ? selected.value : "",
+      ),
+    ]).toHaveLength(1);
+  });
+
   it("switches and arrow-navigates category tabs while clearing search", async () => {
     const user = userEvent.setup();
     render(<MediaPicker onSelect={() => undefined} />);
@@ -464,8 +491,9 @@ describe("MediaPicker", () => {
   });
 
   it("renders the tone selector across compact/full, placement, and theme combinations", async () => {
+    const user = userEvent.setup();
     const modes = ["compact", "full"] as const;
-    const displays = ["inline", "popover", "bottom-sheet"] as const;
+    const displays = ["inline", "popover", "modal", "bottom-sheet"] as const;
     const themes = ["light", "dark", "system"] as const;
     for (const pickerMode of modes) {
       for (const displayMode of displays) {
@@ -485,7 +513,9 @@ describe("MediaPicker", () => {
             }),
           ).not.toBeNull();
           const picker = screen.getByRole(
-            displayMode === "bottom-sheet" ? "dialog" : "region",
+            displayMode === "modal" || displayMode === "bottom-sheet"
+              ? "dialog"
+              : "region",
             { name: "Media picker" },
           );
           expect(picker.getAttribute("data-theme")).toBe(theme);
@@ -494,6 +524,20 @@ describe("MediaPicker", () => {
               .querySelector(".mp-positioner")
               ?.getAttribute("data-resolved-display-mode"),
           ).toBe(displayMode);
+          await user.click(
+            screen.getByRole("button", {
+              name: "Emoji skin tone: Default",
+            }),
+          );
+          const menu = screen.getByRole("listbox", {
+            name: "Emoji skin tone",
+          });
+          await waitFor(() => expect(menu.style.visibility).toBe("visible"));
+          expect(view.container.contains(menu)).toBe(false);
+          expect(menu.parentElement).toBe(document.body);
+          expect(menu.style.position).toBe("fixed");
+          await user.keyboard("{Escape}");
+          expect(screen.queryByRole("listbox")).toBeNull();
           view.unmount();
         }
       }

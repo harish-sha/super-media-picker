@@ -81,6 +81,7 @@ const compact = records
       id: String(record.hexcode).toLowerCase(),
       value: record.emoji,
       name: label,
+      version: Number(record.version),
       category: categories.get(record.group),
       aliases: [...aliases].map(String).sort(),
       variants: (Array.isArray(record.skins) ? record.skins : [])

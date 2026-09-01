@@ -1,6 +1,7 @@
 import { compactEmojiData } from "./data/compact-emoji-data.generated";
 import { toEmojiMediaItem } from "./media";
 import type { EmojiRecord } from "./types";
+import { DEFAULT_MAX_UNICODE_VERSION } from "./types";
 import { resolveEmojiVariant, supportsSkinTone } from "./variants";
 
 const compactEmojiById = new Map(
@@ -31,6 +32,7 @@ function normalizeEmojiPresentation(value: string): string {
 
 export {
   compactEmojiData,
+  DEFAULT_MAX_UNICODE_VERSION,
   resolveEmojiVariant,
   supportsSkinTone,
   toEmojiMediaItem,

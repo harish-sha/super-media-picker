@@ -50,6 +50,9 @@ export interface EmojiProvider extends MediaProvider<AnyEmojiMediaItem> {
 export interface StickerPack {
   readonly id: string;
   readonly name: string;
+  /** Preferred image URL for pack navigation; subject to MediaUrlPolicy. */
+  readonly iconUrl?: string;
+  /** Legacy text icon or URL. Non-URL values may use the built-in fallback. */
   readonly icon?: string;
   readonly provider?: string;
   readonly stickers?: readonly StickerMediaItem[];

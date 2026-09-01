@@ -3,7 +3,11 @@
 .mp-positioner,
 .mp-positioner *,
 .mp-positioner *::before,
-.mp-positioner *::after {
+.mp-positioner *::after,
+.mp-tone-menu,
+.mp-tone-menu *,
+.mp-tone-menu *::before,
+.mp-tone-menu *::after {
   box-sizing: border-box;
 }
 
@@ -212,8 +216,8 @@
 
 .mp-tone-selector__glyph,
 .mp-tone-menu__glyph {
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-family: var(--mp-emoji-font-family);
+  line-height: 1;
 }
 
 .mp-tone-selector__glyph {
@@ -231,19 +235,20 @@
 }
 
 .mp-tone-menu {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + var(--mp-spacing-sm));
-  right: 0;
   display: grid;
   width: max-content;
   min-width: 13rem;
+  max-width: calc(100vw - 1rem);
   padding: 0.25rem;
   color: var(--mp-text);
   background: var(--mp-background);
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-radius-md);
   box-shadow: var(--mp-shadow);
+}
+
+.mp-tone-menu--portal {
+  overscroll-behavior: contain;
 }
 
 .mp-tone-menu__option {
@@ -401,8 +406,12 @@
 .mp-emoji-cell {
   position: relative;
   display: grid;
-  min-width: var(--mp-cell-size);
-  min-height: var(--mp-cell-size);
+  width: 100%;
+  height: var(--mp-cell-size);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  contain: layout paint;
 }
 
 .mp-emoji,
@@ -427,9 +436,14 @@
 }
 
 .mp-emoji {
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  font-family: var(--mp-emoji-font-family);
   font-size: 1.5rem;
+  line-height: 1;
 }
 
 .mp-favorite-toggle {
@@ -480,9 +494,9 @@
 }
 
 .mp-category {
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-family: var(--mp-emoji-font-family);
   font-size: 1.125rem;
+  line-height: 1;
 }
 
 .mp-media-grid {
@@ -561,6 +575,26 @@
   white-space: nowrap;
 }
 
+.mp-pack-icon {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  overflow: hidden;
+  color: currentcolor;
+}
+
+.mp-pack-icon__image,
+.mp-pack-icon__fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mp-pack-icon__image {
+  object-fit: contain;
+}
+
 .mp-load-more {
   align-self: center;
   margin: var(--mp-spacing-sm) auto var(--mp-spacing-md);
@@ -611,9 +645,10 @@
 }
 
 .mp-preview__glyph {
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  overflow: hidden;
+  font-family: var(--mp-emoji-font-family);
   font-size: 1.75rem;
+  line-height: 1;
 }
 
 .mp-preview__name {
@@ -673,9 +708,10 @@
 }
 
 .mp-reaction {
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  overflow: hidden;
+  font-family: var(--mp-emoji-font-family);
   font-size: 1.375rem;
+  line-height: 1;
 }
 
 .mp-reaction img {
@@ -740,13 +776,6 @@
 .mp-positioner[data-resolved-display-mode="bottom-sheet"] .mp-picker--compact {
   width: min(var(--mp-picker-width, fit-content), calc(100vw - 1rem));
   margin: 0 auto max(var(--mp-spacing-md), env(safe-area-inset-bottom));
-}
-
-.mp-positioner[data-resolved-display-mode="bottom-sheet"]
-  .mp-picker--compact
-  .mp-tone-menu {
-  top: auto;
-  bottom: calc(100% + var(--mp-spacing-sm));
 }
 
 .mp-categories::-webkit-scrollbar {

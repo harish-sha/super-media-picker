@@ -27,6 +27,8 @@ import {
 } from "./AnimatedMediaRenderer";
 import { MediaPicker } from "./MediaPicker";
 
+const pixel = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+
 const gif: GifMediaItem = {
   type: "gif",
   id: "party",
@@ -79,8 +81,8 @@ const stickerProvider: StickerProvider = {
   id: "mock-stickers",
   async packs() {
     return [
-      { id: "bears", name: "Bears", icon: "🐻" },
-      { id: "cats", name: "Cats", icon: "🐱" },
+      { id: "bears", name: "Bears", iconUrl: pixel },
+      { id: "cats", name: "Cats", icon: "\u{10FFFF}" },
     ];
   },
   async packItems(packId) {
@@ -267,12 +269,25 @@ describe("multi-media picker", () => {
         features={{ stickers: true }}
         onSelect={() => undefined}
         providers={{ stickers: stickerProvider }}
+        theme="dark"
       />,
     );
+    const bears = await screen.findByRole("button", { name: "Bears" });
+    const bearIcon = bears.querySelector<HTMLImageElement>(
+      ".mp-pack-icon__image",
+    );
+    expect(bearIcon?.getAttribute("src")).toBe(pixel);
     expect(
       await screen.findByRole("button", { name: "Bear wave" }),
     ).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Cats" }));
+    expect(bearIcon).not.toBeNull();
+    if (bearIcon === null) throw new Error("Expected Bears pack icon image");
+    fireEvent.error(bearIcon);
+    expect(bears.querySelector("[data-pack-icon-fallback]")).not.toBeNull();
+    const cats = screen.getByRole("button", { name: "Cats" });
+    expect(cats.querySelector("[data-pack-icon-fallback]")).not.toBeNull();
+    expect(cats.textContent).not.toContain("\u{10FFFF}");
+    await user.click(cats);
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Bear wave" })).toBeNull(),
     );

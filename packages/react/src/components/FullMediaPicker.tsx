@@ -27,6 +27,7 @@ import {
   getEmojiByCategory,
   getEmojiById,
   searchEmoji,
+  supportsUnicodeVersion,
   toEmojiMediaItem,
   type EmojiPickerCategory,
   type EmojiRecord,
@@ -89,6 +90,7 @@ export interface FullMediaPickerProps {
   readonly favoriteRecords: readonly FavoriteItemRecord[];
   readonly features: MediaPickerFeatures;
   readonly mediaSecurity?: MediaUrlPolicy;
+  readonly maxUnicodeVersion: number;
   readonly onClose?: () => void;
   readonly onCollapse?: () => void;
   readonly onRecordRecent: (item: string | MediaItem) => void;
@@ -124,15 +126,22 @@ function findEmojiRecord(id: string, value?: string): EmojiRecord | undefined {
 
 function resolveStoredItems(
   records: readonly RecentItemRecord[] | readonly FavoriteItemRecord[],
+  maxUnicodeVersion: number,
 ): readonly EmojiRecord[] {
   return records.flatMap((record) => {
     const item = record.item;
     if (item !== undefined && isUnicodeEmoji(item)) {
       const emoji = findEmojiRecord(item.id, item.value);
-      return emoji === undefined ? [] : [emoji];
+      return emoji === undefined ||
+        !supportsUnicodeVersion(emoji, maxUnicodeVersion)
+        ? []
+        : [emoji];
     }
     const emoji = getEmojiById(record.id);
-    return emoji === undefined ? [] : [emoji];
+    return emoji === undefined ||
+      !supportsUnicodeVersion(emoji, maxUnicodeVersion)
+      ? []
+      : [emoji];
   });
 }
 
@@ -181,6 +190,7 @@ export function FullMediaPicker({
   favoriteRecords,
   features,
   mediaSecurity,
+  maxUnicodeVersion,
   onClose,
   onCollapse,
   onRecordRecent,
@@ -246,11 +256,13 @@ export function FullMediaPicker({
     ? selectedCategory
     : "Smileys & Emotion";
   const emojiItems = useMemo(() => {
-    if (query.trim() !== "") return searchEmoji(query);
-    if (category === "Recent") return resolveStoredItems(recentRecords);
-    if (category === "Favorites") return resolveStoredItems(favoriteRecords);
-    return getEmojiByCategory(category);
-  }, [category, favoriteRecords, query, recentRecords]);
+    if (query.trim() !== "") return searchEmoji(query, { maxUnicodeVersion });
+    if (category === "Recent")
+      return resolveStoredItems(recentRecords, maxUnicodeVersion);
+    if (category === "Favorites")
+      return resolveStoredItems(favoriteRecords, maxUnicodeVersion);
+    return getEmojiByCategory(category, { maxUnicodeVersion });
+  }, [category, favoriteRecords, maxUnicodeVersion, query, recentRecords]);
   const extensionEmoji = useMemo<readonly MediaItem[]>(() => {
     const items = emojiPacks
       .flatMap((pack) => pack.items ?? [])

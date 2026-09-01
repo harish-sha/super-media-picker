@@ -1,5 +1,92 @@
 import { expect, test } from "@playwright/test";
 
+test("renders sticker pack image and fallback icons in full and standalone pickers", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Full picker" }).click();
+  await page.getByRole("tab", { name: "Stickers" }).click();
+
+  let bears = page.getByRole("button", { name: "Bears" });
+  let cats = page.getByRole("button", { name: "Cats" });
+  await expect(bears.locator(".mp-pack-icon__image")).toHaveAttribute(
+    "src",
+    "/media/stickers/bear.webp",
+  );
+  await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
+  await expect(cats).not.toContainText("□");
+
+  await page.getByLabel("Theme").selectOption("dark");
+  await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
+
+  await page.getByLabel("SDK surface").selectOption("sticker");
+  bears = page.getByRole("button", { name: "Bears" });
+  cats = page.getByRole("button", { name: "Cats" });
+  await expect(bears.locator(".mp-pack-icon__image")).toBeVisible();
+  await expect(cats.locator("[data-pack-icon-fallback]")).toBeVisible();
+});
+
+test("portals the tone menu beyond clipped compact content and flips in a bottom sheet", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Theme").selectOption("dark");
+  const preview = page.locator(".playground-preview");
+  await preview.evaluate((element) => {
+    element.style.height = "48px";
+    element.style.overflow = "hidden";
+  });
+
+  let trigger = page.getByRole("button", {
+    name: "Emoji skin tone: Default",
+  });
+  await trigger.click();
+  let menu = page.getByRole("listbox", { name: "Emoji skin tone" });
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("data-placement", /above|below/);
+  expect(
+    await menu.evaluate((element) => element.parentElement === document.body),
+  ).toBe(true);
+  const inlineBoxes = await Promise.all([
+    preview.boundingBox(),
+    menu.boundingBox(),
+  ]);
+  expect(inlineBoxes[0]).not.toBeNull();
+  expect(inlineBoxes[1]).not.toBeNull();
+  const menuEscapesClippedPreview =
+    inlineBoxes[1]!.y < inlineBoxes[0]!.y ||
+    inlineBoxes[1]!.y + inlineBoxes[1]!.height >
+      inlineBoxes[0]!.y + inlineBoxes[0]!.height;
+  expect(menuEscapesClippedPreview).toBe(true);
+  await expect(menu).toHaveCSS("position", "fixed");
+  await expect(menu).toHaveCSS("z-index", "1100");
+  await expect(menu).toHaveCSS("background-color", "rgb(25, 27, 31)");
+  await expect(
+    menu.getByRole("option", { name: "Default", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await page.getByRole("button", { name: "Mobile", exact: true }).click();
+  trigger = page.getByRole("button", {
+    name: "Emoji skin tone: Default",
+  });
+  await trigger.click();
+  menu = page.getByRole("listbox", { name: "Emoji skin tone" });
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("data-placement", "above");
+  const bottomSheetBoxes = await Promise.all([
+    trigger.boundingBox(),
+    menu.boundingBox(),
+  ]);
+  expect(bottomSheetBoxes[0]).not.toBeNull();
+  expect(bottomSheetBoxes[1]).not.toBeNull();
+  expect(bottomSheetBoxes[1]!.y + bottomSheetBoxes[1]!.height).toBeLessThan(
+    bottomSheetBoxes[0]!.y,
+  );
+});
+
 test("keyboard-selects a reaction, expands, selects from search, and collapses", async ({
   page,
 }) => {
@@ -245,5 +332,54 @@ test("uses standalone and headless SDK surfaces with normalized output", async (
     .click();
   await expect(page.getByTestId("selection-output")).toContainText(
     '"provider": "mock-gif"',
+  );
+});
+
+test("emits one intact composite grapheme from one click in StrictMode", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.getByRole("button", { name: "Full picker" }).click();
+  await page
+    .getByRole("searchbox", { name: "Search emoji" })
+    .fill("family man woman girl");
+  await page
+    .getByRole("button", { name: "family: man, woman, girl", exact: true })
+    .click();
+
+  const output = page.getByTestId("selection-output");
+  await expect(output).toContainText('"value": "👨‍👩‍👧"');
+  expect((await output.textContent())?.match(/👨‍👩‍👧/gu)).toHaveLength(1);
+});
+
+test("keeps frequent reactions fixed until remount while persisting counts", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "Frequent reactions" }).click();
+  const toolbar = page.getByRole("toolbar", { name: "Quick reactions" });
+  const labels = async () =>
+    toolbar
+      .getByRole("button")
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("aria-label")),
+      );
+  const initialOrder = await labels();
+  const foldedHands = page.getByRole("button", { name: "folded hands" });
+
+  for (let index = 0; index < 5; index += 1) {
+    await foldedHands.click();
+    await expect(foldedHands).toBeFocused();
+    expect(await labels()).toEqual(initialOrder);
+  }
+
+  await page.reload();
+  await page.getByRole("button", { name: "Frequent reactions" }).click();
+  await expect(toolbar.getByRole("button").first()).toHaveAttribute(
+    "aria-label",
+    "folded hands",
   );
 });

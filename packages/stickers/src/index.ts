@@ -116,7 +116,8 @@ export class HttpStickerProvider implements StickerProvider {
       throw new TypeError("Sticker endpoint must be relative, HTTP, or HTTPS");
     this.id = options.id ?? "http-stickers";
     this.#endpoint = options.endpoint;
-    this.#fetch = options.fetch ?? globalThis.fetch;
+    this.#fetch =
+      options.fetch ?? ((input, init) => globalThis.fetch(input, init));
     this.#headers = options.headers ?? {};
     this.#requests =
       options.requestClient ??
@@ -134,7 +135,19 @@ export class HttpStickerProvider implements StickerProvider {
   }
 
   packs(options: ProviderOptions = {}): Promise<readonly StickerPack[]> {
-    return this.#request("packs", options, isStickerPacks);
+    return this.#request("packs", options, isStickerPacks).then((packs) =>
+      packs.map((pack) => {
+        if (
+          pack.iconUrl === undefined ||
+          isSafeMediaUrl(pack.iconUrl, this.#mediaSecurity)
+        ) {
+          return pack;
+        }
+        const { iconUrl, ...safePack } = pack;
+        void iconUrl;
+        return safePack;
+      }),
+    );
   }
 
   packItems(
@@ -248,7 +261,11 @@ function isStickerPacks(value: unknown): value is readonly StickerPack[] {
       if (typeof pack !== "object" || pack === null) return false;
       const candidate = pack as Readonly<Record<string, unknown>>;
       return (
-        typeof candidate.id === "string" && typeof candidate.name === "string"
+        typeof candidate.id === "string" &&
+        typeof candidate.name === "string" &&
+        (candidate.icon === undefined || typeof candidate.icon === "string") &&
+        (candidate.iconUrl === undefined ||
+          typeof candidate.iconUrl === "string")
       );
     })
   );

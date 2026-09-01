@@ -14,7 +14,11 @@ const sticker: StickerMediaItem = {
   animated: false,
 };
 const packs: readonly StickerPack[] = [
-  { id: "bears", name: "Bears", icon: "🐻" },
+  {
+    id: "bears",
+    name: "Bears",
+    iconUrl: "https://cdn.test/packs/bears.webp",
+  },
 ];
 
 describe("MockStickerProvider", () => {
@@ -46,6 +50,62 @@ describe("MockStickerProvider", () => {
 });
 
 describe("HttpStickerProvider", () => {
+  it("invokes the native browser fetch function with its global receiver", async () => {
+    const fetch = vi.fn(async function (this: unknown) {
+      if (this !== globalThis) throw new TypeError("Illegal invocation");
+      return new Response(JSON.stringify(packs), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const provider = new HttpStickerProvider({
+        endpoint: "https://backend.test/stickers",
+      });
+      await expect(provider.packs()).resolves.toEqual(packs);
+      expect(fetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps a shared pack request alive for an immediate StrictMode resubscribe", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      (_input, init) =>
+        new Promise<Response>((resolve, reject) => {
+          resolveResponse = resolve;
+          init?.signal?.addEventListener(
+            "abort",
+            () =>
+              reject(
+                init.signal?.reason instanceof Error
+                  ? init.signal.reason
+                  : new DOMException("Aborted", "AbortError"),
+              ),
+            { once: true },
+          );
+        }),
+    );
+    const provider = new HttpStickerProvider({
+      endpoint: "https://backend.test/stickers",
+      fetch,
+    });
+    const firstController = new AbortController();
+    const secondController = new AbortController();
+    const first = provider.packs({ signal: firstController.signal });
+    firstController.abort(new DOMException("Effect cleanup", "AbortError"));
+    const second = provider.packs({ signal: secondController.signal });
+    await Promise.resolve();
+    resolveResponse?.(
+      new Response(JSON.stringify(packs), {
+        status: 200,
+      }),
+    );
+
+    await expect(first).rejects.toMatchObject({ name: "AbortError" });
+    await expect(second).resolves.toEqual(packs);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("deduplicates identical requests and caches successful pages", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
       new Response(JSON.stringify({ items: [sticker], hasMore: false }), {
@@ -94,6 +154,27 @@ describe("HttpStickerProvider", () => {
       hasMore: false,
     });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops unsafe pack icon URLs without rejecting otherwise valid packs", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            { id: "safe-pack", name: "Safe", iconUrl: "javascript:alert(1)" },
+          ]),
+          { status: 200 },
+        ),
+      );
+    const provider = new HttpStickerProvider({
+      endpoint: "https://backend.test/stickers",
+      fetch,
+    });
+
+    await expect(provider.packs()).resolves.toEqual([
+      { id: "safe-pack", name: "Safe" },
+    ]);
   });
 
   it("normalizes malformed and unsafe responses", async () => {

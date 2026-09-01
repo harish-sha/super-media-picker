@@ -5,8 +5,10 @@ export {
   getEmojiById,
   normalizeEmojiSearch,
   searchEmoji,
+  supportsUnicodeVersion,
 } from "./search";
-export { emojiCategories } from "./types";
+export type { EmojiSearchOptions } from "./search";
+export { DEFAULT_MAX_UNICODE_VERSION, emojiCategories } from "./types";
 export { resolveEmojiVariant, supportsSkinTone } from "./variants";
 export type {
   EmojiCategory,

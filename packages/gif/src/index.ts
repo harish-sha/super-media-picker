@@ -105,7 +105,8 @@ export class HttpGifProvider implements GifProvider {
       throw new TypeError("GIF endpoint must be relative, HTTP, or HTTPS");
     this.id = options.id ?? "http-gif";
     this.#endpoint = options.endpoint;
-    this.#fetch = options.fetch ?? globalThis.fetch;
+    this.#fetch =
+      options.fetch ?? ((input, init) => globalThis.fetch(input, init));
     this.#headers = options.headers ?? {};
     this.#requests =
       options.requestClient ??

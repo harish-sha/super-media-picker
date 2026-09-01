@@ -141,6 +141,66 @@ describe("MediaPicker compact mode", () => {
     expect(buttons).toHaveLength(3);
   });
 
+  it("keeps frequent reaction order and keyboard focus stable until remount", async () => {
+    const user = userEvent.setup();
+    const storage = new MemoryStorageAdapter();
+    await storage.set(mediaPickerStorageKeys.recents, [
+      { id: "2764", count: 4, lastUsedAt: 400 },
+      { id: "1f62e", count: 3, lastUsedAt: 300 },
+      { id: "1f44d", count: 1, lastUsedAt: 100 },
+    ]);
+    const first = render(
+      <MediaPicker
+        compact={{ source: "frequent", maxVisibleItems: 3 }}
+        mode="compact"
+        onSelect={() => undefined}
+        storage={storage}
+      />,
+    );
+    const toolbar = await screen.findByRole("toolbar", {
+      name: "Quick reactions",
+    });
+    await screen.findByRole("button", { name: "thumbs up" });
+    const labels = () =>
+      within(toolbar)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label"));
+    const initialOrder = labels();
+    const thumbsUp = screen.getByRole("button", { name: "thumbs up" });
+    thumbsUp.focus();
+
+    for (let index = 0; index < 5; index += 1) {
+      await user.click(thumbsUp);
+      await waitFor(async () => {
+        const records = await storage.get<
+          readonly { readonly id: string; readonly count: number }[]
+        >(mediaPickerStorageKeys.recents);
+        expect(records?.find(({ id }) => id === "1f44d")?.count).toBe(
+          index + 2,
+        );
+      });
+      expect(labels()).toEqual(initialOrder);
+      expect(document.activeElement).toBe(thumbsUp);
+    }
+
+    first.unmount();
+    render(
+      <MediaPicker
+        compact={{ source: "frequent", maxVisibleItems: 3 }}
+        mode="compact"
+        onSelect={() => undefined}
+        storage={storage}
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("toolbar", { name: "Quick reactions" }))
+          .getAllByRole("button")[0]
+          ?.getAttribute("aria-label"),
+      ).toBe("thumbs up"),
+    );
+  });
+
   it("uses persisted favorites and falls back to defaults when empty", async () => {
     const storage = new MemoryStorageAdapter();
     await storage.set(mediaPickerStorageKeys.favorites, ["1f680"]);

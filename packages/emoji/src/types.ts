@@ -18,10 +18,14 @@ export interface EmojiRecord {
   readonly id: string;
   readonly value: string;
   readonly name: string;
+  readonly version: number;
   readonly category: EmojiCategory;
   readonly aliases: readonly string[];
   readonly variants: readonly EmojiVariant[];
 }
+
+/** Conservative native-font baseline; consumers can opt into newer Unicode. */
+export const DEFAULT_MAX_UNICODE_VERSION = 15;
 
 export interface EmojiVariant {
   readonly id: string;

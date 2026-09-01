@@ -72,6 +72,43 @@ describe("MediaRequestClient", () => {
     );
     await expect(request).rejects.toMatchObject({ name: "TimeoutError" });
   });
+
+  it("keeps deduplicated work alive across an immediate StrictMode resubscribe", async () => {
+    const client = new MediaRequestClient();
+    const firstController = new AbortController();
+    const secondController = new AbortController();
+    let resolveLoad: ((value: string) => void) | undefined;
+    const load = vi.fn(
+      (signal: AbortSignal) =>
+        new Promise<string>((resolve, reject) => {
+          resolveLoad = resolve;
+          signal.addEventListener(
+            "abort",
+            () =>
+              reject(
+                signal.reason instanceof Error
+                  ? signal.reason
+                  : new DOMException("Aborted", "AbortError"),
+              ),
+            { once: true },
+          );
+        }),
+    );
+
+    const first = client.request("strict-mode", load, {
+      signal: firstController.signal,
+    });
+    firstController.abort(new DOMException("Effect cleanup", "AbortError"));
+    const second = client.request("strict-mode", load, {
+      signal: secondController.signal,
+    });
+    await Promise.resolve();
+    resolveLoad?.("result");
+
+    await expect(first).rejects.toMatchObject({ name: "AbortError" });
+    await expect(second).resolves.toBe("result");
+    expect(load).toHaveBeenCalledOnce();
+  });
 });
 
 describe("isSafeMediaUrl", () => {

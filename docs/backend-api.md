@@ -41,6 +41,36 @@ remain behind the application API.
 - Map vendor/network errors to suitable HTTP status codes without returning
   credentials or raw upstream responses.
 
+The current built-in HTTP adapters use one endpoint per media type. They append
+query parameters rather than hard-coding route suffixes:
+
+```text
+HttpGifProvider:
+  mode=search|trending, q, cursor, limit
+
+HttpStickerProvider:
+  mode=packs|pack|search|trending, packId (for pack), q, cursor, limit
+```
+
+For example, `new HttpGifProvider({ endpoint: "/api/media/gifs" })` requests
+`/api/media/gifs?mode=search&q=hello`. The REST-shaped routes below are a
+recommended host contract; a gateway/custom provider may use them directly, or
+the single endpoint may translate `mode` to them.
+
+Every paginated result has this exact shape:
+
+```ts
+interface SearchResult<T> {
+  readonly items: readonly T[];
+  readonly nextCursor?: string;
+  readonly hasMore: boolean;
+}
+```
+
+`items` and boolean `hasMore` are required. `nextCursor` is an opaque string
+and is required only when the backend has a next page. Omit it otherwise;
+`null`, numeric cursors, and provider-specific pagination objects are rejected.
+
 ## GIF routes
 
 ```http
@@ -73,6 +103,11 @@ GET /api/media/gifs/trending?cursor=opaque&limit=18
 activates the optimized `previewUrl` according to the animation policy. It does
 not load `url` merely to render the grid.
 
+For GIF items, `type`, non-empty `id`, `provider`, `url`, and `previewUrl` are
+required strings. `name`, `thumbnailUrl`, `width`, `height`, and `alt` are
+optional. The validator rejects any item whose required media URL fails the
+configured `MediaUrlPolicy`.
+
 ## Sticker routes
 
 ```http
@@ -89,7 +124,7 @@ Pack metadata:
   {
     "id": "bear-pack",
     "name": "Bears",
-    "icon": "🐻",
+    "iconUrl": "https://media.company.com/sticker-packs/bears.webp",
     "provider": "company-stickers"
   }
 ]
@@ -114,13 +149,18 @@ Pack/search result:
       "height": 256
     }
   ],
-  "nextCursor": null,
   "hasMore": false
 }
 ```
 
-Omit `nextCursor` instead of returning `null` when implementing the TypeScript
-contract directly.
+For sticker items, `type`, non-empty `id`, `url`, and boolean `animated` are
+required. `name`, `provider`, `packId`, `previewUrl`, dimensions, and `alt` are
+optional. `format` may be `gif`, `webp`, `webm`, `lottie`, `png`, or `jpeg`.
+Pack entries require only string `id` and `name`; `iconUrl`, legacy `icon`,
+`provider`, and inline `stickers` are optional. Prefer a CDN-backed `iconUrl`.
+The SDK validates it against the media URL policy and uses a built-in SVG when
+the URL is absent, unsafe, or fails to load. `mode=packs` returns the array
+directly, not wrapped in `{ "items": ... }`.
 
 ## Animated/custom emoji routes
 
@@ -133,6 +173,87 @@ GET /api/media/emoji/search?q=party&cursor=opaque&limit=18
 An `EmojiProvider` may expose pack metadata through `packs`, load only the
 selected pack through `packItems`, and optionally implement `search` and
 `trending`. Pack items use `AnimatedEmojiMediaItem` or `CustomEmojiMediaItem`.
+
+Animated emoji example:
+
+```json
+{
+  "type": "emoji",
+  "kind": "animated",
+  "id": "party",
+  "name": "Party",
+  "previewUrl": "https://media.company.com/emoji/party.webp",
+  "animationUrl": "https://media.company.com/emoji/party.webm",
+  "format": "webm",
+  "fallbackEmoji": "🎉",
+  "provider": "company-emoji"
+}
+```
+
+Animated emoji require `type: "emoji"`, `kind: "animated"`, non-empty `id`,
+`name`, `animationUrl`, and `format` (`gif`, `webp`, `webm`, or `lottie`).
+Custom emoji require `type: "emoji"`, `kind: "custom"`, non-empty `id`,
+`name`, and `url`; `previewUrl`, `fallbackText`, and `provider` are optional.
+
+The SDK currently exposes the `EmojiProvider` interface rather than a built-in
+`HttpEmojiProvider`; the host implementation is responsible for decoding JSON,
+validating its backend response, and honoring the passed `AbortSignal`.
+
+## Minimal built-in-adapter endpoint
+
+This intentionally vendor-neutral Express-style example matches the actual
+query contract. Production code must also authenticate, authorize, validate
+the cursor, and normalize the selected upstream provider's response.
+
+```ts
+app.get("/api/media/gifs", async (request, response) => {
+  const mode = request.query.mode === "search" ? "search" : "trending";
+  const query = mode === "search" ? String(request.query.q ?? "").trim() : "";
+  const cursor =
+    typeof request.query.cursor === "string" ? request.query.cursor : undefined;
+  const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 18));
+
+  if (mode === "search" && query.length === 0) {
+    return response.status(400).json({ error: "q is required" });
+  }
+
+  try {
+    const upstream = await applicationGifService({
+      mode,
+      query,
+      cursor,
+      limit,
+    });
+    const result = {
+      items: upstream.items.map(normalizeGif),
+      hasMore: upstream.nextCursor !== undefined,
+      ...(upstream.nextCursor === undefined
+        ? {}
+        : { nextCursor: upstream.nextCursor }),
+    };
+    return response.json(result);
+  } catch {
+    return response.status(502).json({ error: "media_provider_unavailable" });
+  }
+});
+```
+
+Do not return an HTTP 200 placeholder result for an upstream failure unless the
+product intentionally treats failure as empty. The HTTP adapters convert
+non-2xx status, network failure, timeout, malformed JSON, and schema failure to
+`MediaProviderError`; React panels render those errors without crashing other
+tabs.
+
+## Attribution and URL security
+
+Attribution is configured on the provider as `{ label, url?, logoUrl? }`; it is
+not read from each search response. When a vendor requires branding, populate
+that provider option and preserve it through the host integration.
+
+`isSafeMediaUrl` rejects executable schemes. Its default remains convenient for
+local development, so production integrations should explicitly set
+`allowedOrigins`, `allowHttp: false`, `allowDataImages: false`, and the desired
+relative/blob policy on both the provider and picker. See `docs/security.md`.
 
 ## Error and caching recommendations
 
