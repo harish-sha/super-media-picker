@@ -1,9 +1,9 @@
 # Backend media API contract
 
 These routes are a recommended host-application contract, not URLs hard-coded
-by the SDK. `HttpGifProvider` and `HttpStickerProvider` can point at any safe
-endpoint that translates their `mode`, query, cursor, and limit parameters into
-the normalized responses below.
+by the SDK. `HttpGifProvider`, `HttpStickerProvider`, `HttpEmojiProvider`, and
+`HttpCustomMediaProvider` can point at any safe endpoint that translates their
+`mode`, query, cursor, and limit parameters into the normalized responses below.
 
 ```text
 React application
@@ -50,6 +50,12 @@ HttpGifProvider:
 
 HttpStickerProvider:
   mode=packs|pack|search|trending, packId (for pack), q, cursor, limit
+
+HttpEmojiProvider:
+  mode=packs|pack|search|trending, packId (for pack), q, cursor, limit
+
+HttpCustomMediaProvider:
+  mode=search|trending, q, cursor, limit
 ```
 
 For example, `new HttpGifProvider({ endpoint: "/api/media/gifs" })` requests
@@ -67,8 +73,8 @@ interface SearchResult<T> {
 }
 ```
 
-`items` and boolean `hasMore` are required. `nextCursor` is an opaque string
-and is required only when the backend has a next page. Omit it otherwise;
+`items` and boolean `hasMore` are required. A non-empty `nextCursor` is required
+when `hasMore` is true. Omit it when no next page exists;
 `null`, numeric cursors, and provider-specific pagination objects are rejected.
 
 ## GIF routes
@@ -124,8 +130,11 @@ Pack metadata:
   {
     "id": "bear-pack",
     "name": "Bears",
+    "description": "Friendly bear reactions",
     "iconUrl": "https://media.company.com/sticker-packs/bears.webp",
-    "provider": "company-stickers"
+    "provider": "company-stickers",
+    "itemCount": 80,
+    "animated": true
   }
 ]
 ```
@@ -142,6 +151,7 @@ Pack/search result:
       "provider": "company-stickers",
       "name": "Waving bear",
       "animated": true,
+      "thumbnailUrl": "https://media.company.com/stickers/wave-bear-poster.webp",
       "previewUrl": "https://media.company.com/stickers/wave-bear.webp",
       "url": "https://media.company.com/stickers/wave-bear.webm",
       "format": "webm",
@@ -154,10 +164,11 @@ Pack/search result:
 ```
 
 For sticker items, `type`, non-empty `id`, `url`, and boolean `animated` are
-required. `name`, `provider`, `packId`, `previewUrl`, dimensions, and `alt` are
+required. `name`, `provider`, `packId`, `thumbnailUrl`, `previewUrl`, dimensions, and `alt` are
 optional. `format` may be `gif`, `webp`, `webm`, `lottie`, `png`, or `jpeg`.
-Pack entries require only string `id` and `name`; `iconUrl`, legacy `icon`,
-`provider`, and inline `stickers` are optional. Prefer a CDN-backed `iconUrl`.
+Pack entries require only string `id` and `name`; `description`, `iconUrl`,
+legacy `icon`, `provider`, non-negative `itemCount`, and boolean `animated` are
+optional. Remote HTTP pack metadata must not embed inline `stickers`. Prefer a CDN-backed `iconUrl`.
 The SDK validates it against the media URL policy and uses a built-in SVG when
 the URL is absent, unsafe, or fails to load. `mode=packs` returns the array
 directly, not wrapped in `{ "items": ... }`.
@@ -168,6 +179,7 @@ directly, not wrapped in `{ "items": ... }`.
 GET /api/media/emoji/packs
 GET /api/media/emoji/packs/{packId}?cursor=opaque&limit=18
 GET /api/media/emoji/search?q=party&cursor=opaque&limit=18
+GET /api/media/emoji/trending?cursor=opaque&limit=18
 ```
 
 An `EmojiProvider` may expose pack metadata through `packs`, load only the
@@ -182,7 +194,8 @@ Animated emoji example:
   "kind": "animated",
   "id": "party",
   "name": "Party",
-  "previewUrl": "https://media.company.com/emoji/party.webp",
+  "thumbnailUrl": "https://media.company.com/emoji/party-poster.webp",
+  "previewUrl": "https://media.company.com/emoji/party-preview.webp",
   "animationUrl": "https://media.company.com/emoji/party.webm",
   "format": "webm",
   "fallbackEmoji": "🎉",
@@ -192,12 +205,48 @@ Animated emoji example:
 
 Animated emoji require `type: "emoji"`, `kind: "animated"`, non-empty `id`,
 `name`, `animationUrl`, and `format` (`gif`, `webp`, `webm`, or `lottie`).
+`thumbnailUrl`, `previewUrl`, `provider`, positive dimensions, and `alt` are
+optional.
 Custom emoji require `type: "emoji"`, `kind: "custom"`, non-empty `id`,
 `name`, and `url`; `previewUrl`, `fallbackText`, and `provider` are optional.
 
-The SDK currently exposes the `EmojiProvider` interface rather than a built-in
-`HttpEmojiProvider`; the host implementation is responsible for decoding JSON,
-validating its backend response, and honoring the passed `AbortSignal`.
+`HttpEmojiProvider` implements this exact single-endpoint query contract and
+validates normalized items, asset origins, cursor shape, pack metadata, and
+dimensions. A custom `EmojiProvider` remains supported for other route shapes.
+
+## Custom media routes
+
+```http
+GET /api/media/custom/search?q=launch&cursor=opaque&limit=18
+GET /api/media/custom/trending?cursor=opaque&limit=18
+```
+
+```json
+{
+  "items": [
+    {
+      "type": "custom",
+      "id": "launch",
+      "kind": "brand-animation",
+      "name": "Product launch",
+      "thumbnailUrl": "https://media.company.com/custom/launch-poster.webp",
+      "previewUrl": "https://media.company.com/custom/launch-preview.webp",
+      "url": "https://media.company.com/custom/launch.webm",
+      "animated": true,
+      "format": "webm",
+      "width": 320,
+      "height": 180,
+      "provider": "company-library"
+    }
+  ],
+  "hasMore": false
+}
+```
+
+Custom items require `type: "custom"`, non-empty `id`, `kind`, `name`, and
+`url`. `thumbnailUrl`, `previewUrl`, `provider`, `alt`, boolean `animated`,
+format, and positive dimensions are optional. Animated custom media uses the
+same renderer lifecycle as animated emoji and stickers.
 
 ## Minimal built-in-adapter endpoint
 
@@ -246,7 +295,8 @@ tabs.
 
 ## Attribution and URL security
 
-Attribution is configured on the provider as `{ label, url?, logoUrl? }`; it is
+Attribution is configured on the provider as
+`{ label, url?, logoUrl?, required? }`; it is
 not read from each search response. When a vendor requires branding, populate
 that provider option and preserve it through the host integration.
 
@@ -260,11 +310,12 @@ relative/blob policy on both the provider and picker. See `docs/security.md`.
 - `400`: invalid query, cursor, pack ID or limit.
 - `401`/`403`: authentication or tenant authorization failure.
 - `404`: unknown pack; a missing individual CDN asset should fall back in UI.
-- `429`: rate limited; include ordinary retry metadata if the host uses it.
+- `429`: rate limited; include `Retry-After` when appropriate.
 - `502`/`503`: upstream provider unavailable.
 - `504`: upstream timeout.
 
 Cache public trending/pack metadata at the backend/CDN. Keep user-specific
 searches and tenant media private. The SDK adds only a short, configurable
-in-memory TTL and in-flight request deduplication; it is not the authoritative
-cache.
+in-memory TTL, in-flight request deduplication, and bounded retry policy; it is
+not the authoritative cache. `X-Request-Id` is preserved on normalized errors
+for diagnostics, but response bodies and upstream credentials are not exposed.

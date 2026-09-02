@@ -24,6 +24,7 @@ import {
 
 import { useMediaPickerPersistence } from "../hooks/useMediaPickerPersistence";
 import { useResolvedDisplayMode } from "../hooks/useResolvedDisplayMode";
+import { resolveProviderConfiguration } from "../providerConfig";
 import type { MediaPickerProps } from "../types";
 import { CompactMediaPicker } from "./CompactMediaPicker";
 import { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
@@ -140,6 +141,10 @@ export function MediaPicker({
       : 7;
   const trackCompactRecents =
     features.recents || source === "recent" || source === "frequent";
+  const providerConfiguration = useMemo(
+    () => resolveProviderConfiguration(providers, customTabs),
+    [customTabs, providers],
+  );
 
   useEffect(() => {
     const lifecycleState = lifecycle.current;
@@ -280,7 +285,7 @@ export function MediaPicker({
             favoriteRecords={state.favoriteRecords}
             features={features}
             emojiPacks={emojiPacks}
-            customTabs={customTabs}
+            customTabs={providerConfiguration.customTabs}
             onRecordRecent={(item) => {
               void state.recordRecent(item);
             }}
@@ -306,7 +311,9 @@ export function MediaPicker({
             style={style}
             themeMode={resolvedTheme.mode}
             {...(capabilities === undefined ? {} : { capabilities })}
-            {...(providers === undefined ? {} : { providers })}
+            {...(providerConfiguration.providers === undefined
+              ? {}
+              : { providers: providerConfiguration.providers })}
             {...(renderers === undefined ? {} : { renderers })}
             {...(onClose === undefined ? {} : { onClose: requestClose })}
             {...(mediaSecurity === undefined ? {} : { mediaSecurity })}

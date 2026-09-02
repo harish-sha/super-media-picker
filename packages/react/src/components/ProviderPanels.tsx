@@ -18,6 +18,7 @@ import {
   type StickerPack,
   type StickerProvider,
   isSafeMediaUrl,
+  supportsProviderOperation,
 } from "@super-media-picker/core";
 
 import type { CustomMediaTab, MediaPickerRenderers } from "../types";
@@ -277,8 +278,9 @@ export function GifPanel({
 }: CollectionPanelProps & { readonly provider: MediaProvider<GifMediaItem> }) {
   const loadTrending = useCallback(
     (options: Parameters<NonNullable<typeof provider.trending>>[0]) =>
-      provider.trending?.(options) ??
-      Promise.resolve({ items: [], hasMore: false }),
+      (supportsProviderOperation(provider, "trending")
+        ? provider.trending?.(options)
+        : undefined) ?? Promise.resolve({ items: [], hasMore: false }),
     [provider],
   );
   const result = useProviderResults(
@@ -340,8 +342,9 @@ function EmojiProviderPanel({
     (options: SearchOptions) =>
       (packId !== "" && provider.packItems !== undefined
         ? provider.packItems(packId, options)
-        : provider.trending?.(options)) ??
-      Promise.resolve({ items: [], hasMore: false }),
+        : supportsProviderOperation(provider, "trending")
+          ? provider.trending?.(options)
+          : undefined) ?? Promise.resolve({ items: [], hasMore: false }),
     [packId, provider],
   );
   const result = useProviderResults(
@@ -590,8 +593,9 @@ function CustomProviderPanel({
 }) {
   const loadTrending = useCallback(
     (options: SearchOptions) =>
-      provider.trending?.(options) ??
-      Promise.resolve({ items: [], hasMore: false }),
+      (supportsProviderOperation(provider, "trending")
+        ? provider.trending?.(options)
+        : undefined) ?? Promise.resolve({ items: [], hasMore: false }),
     [provider],
   );
   const result = useProviderResults(

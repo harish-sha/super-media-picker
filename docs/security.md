@@ -17,9 +17,11 @@ fixtures, and package tarballs must contain no secrets.
 ## URL policy
 
 `isSafeMediaUrl` rejects executable schemes such as `javascript:` and
-`data:text/html`. `MediaPicker.mediaSecurity` applies the same policy before
-rendering media. `HttpGifProvider` and `HttpStickerProvider` accept a matching
-`mediaSecurity` option for response validation.
+`data:text/html`, SVG data URLs, credential-bearing URLs, and protocol-relative
+URLs. `MediaPicker.mediaSecurity` applies the same policy before rendering
+media. Every built-in HTTP provider accepts a matching `mediaSecurity` option
+for response validation and a separate `endpointSecurity` policy for its
+application-backend endpoint.
 
 Production configuration should normally use:
 
@@ -39,6 +41,15 @@ compatible; production hosts should opt into HTTPS/origin restrictions.
 
 Invalid or failed image/video assets render a neutral fallback. One malformed
 item does not crash the picker or its provider panel.
+
+HTTP adapter `headers` may be a function that returns a short-lived
+application session token, and `credentials: "include"` may be used for a
+host-owned cookie session. Those are browser-to-application credentials only.
+Never place an upstream vendor key in this configuration: all npm/browser
+source and network inspection is visible to the end user.
+
+The SDK never executes provider HTML. Data images are limited to common raster
+formats; production applications should normally disable them entirely.
 
 ## Content Security Policy
 

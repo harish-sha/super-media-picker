@@ -54,7 +54,7 @@ describe("HttpGifProvider", () => {
           endpoint: "data:image/gif;base64,AAAA",
           fetch: vi.fn<typeof globalThis.fetch>(),
         }),
-    ).toThrow("relative, HTTP, or HTTPS");
+    ).toThrow("not allowed by the endpoint security policy");
   });
 
   it("calls a host backend and deduplicates identical requests", async () => {
@@ -143,6 +143,30 @@ describe("HttpGifProvider", () => {
       name: "MediaProviderError",
       providerCode: "timeout",
       cause: { name: "TimeoutError" },
+    });
+  });
+
+  it("retries retry-safe backend failures and exposes capabilities", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ items, hasMore: false }), {
+          status: 200,
+        }),
+      );
+    const provider = new HttpGifProvider({
+      endpoint: "https://backend.test/gifs",
+      fetch,
+      retry: { maxRetries: 1, baseDelayMs: 0 },
+    });
+    await expect(provider.search("party")).resolves.toMatchObject({ items });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(provider.capabilities).toMatchObject({
+      mediaType: "gif",
+      search: true,
+      trending: true,
+      pagination: true,
     });
   });
 });

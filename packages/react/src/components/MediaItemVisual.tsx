@@ -52,7 +52,7 @@ export function MediaItemVisual({
   }
   if (item.type === "custom" && renderers?.custom !== undefined)
     return renderers.custom(item);
-  const url = item.previewUrl ?? item.url;
+  const url = item.thumbnailUrl ?? item.previewUrl ?? item.url;
   return (
     <StaticMediaVisual
       url={url}

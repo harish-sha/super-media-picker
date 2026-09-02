@@ -7,6 +7,7 @@ import {
   MemoryCache,
   MemoryStorageAdapter,
   createMediaPickerConfig,
+  isMediaItem,
   isSafeMediaUrl,
 } from "./index";
 
@@ -109,12 +110,61 @@ describe("MediaRequestClient", () => {
     await expect(second).resolves.toBe("result");
     expect(load).toHaveBeenCalledOnce();
   });
+
+  it("retries only errors explicitly marked retryable", async () => {
+    const retryableLoad = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(
+        new MediaProviderError("temporary", "test", {
+          code: "unavailable",
+          retryable: true,
+        }),
+      )
+      .mockResolvedValue("recovered");
+    const client = new MediaRequestClient({
+      retry: { maxRetries: 1, baseDelayMs: 0 },
+    });
+    await expect(client.request("retry", retryableLoad)).resolves.toBe(
+      "recovered",
+    );
+    expect(retryableLoad).toHaveBeenCalledTimes(2);
+
+    const terminalLoad = vi.fn(async () => {
+      throw new MediaProviderError("invalid", "test", {
+        code: "invalid_response",
+      });
+    });
+    await expect(
+      client.request("terminal", terminalLoad),
+    ).rejects.toMatchObject({ providerCode: "invalid_response" });
+    expect(terminalLoad).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a request while it is waiting to retry", async () => {
+    const controller = new AbortController();
+    const client = new MediaRequestClient({
+      retry: { maxRetries: 2, baseDelayMs: 1_000 },
+    });
+    const load = vi.fn(async () => {
+      throw new MediaProviderError("temporary", "test", {
+        retryable: true,
+      });
+    });
+    const request = client.request("cancel-retry", load, {
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+    controller.abort(new DOMException("stale", "AbortError"));
+    await expect(request).rejects.toMatchObject({ name: "AbortError" });
+    expect(load).toHaveBeenCalledOnce();
+  });
 });
 
 describe("isSafeMediaUrl", () => {
   it("accepts browser media sources and rejects executable schemes", () => {
     expect(isSafeMediaUrl("https://cdn.test/image.webp")).toBe(true);
     expect(isSafeMediaUrl("/tenant/sticker.webp")).toBe(true);
+    expect(isSafeMediaUrl("./tenant/sticker.webp")).toBe(true);
     expect(isSafeMediaUrl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")).toBe(
       true,
     );
@@ -122,7 +172,14 @@ describe("isSafeMediaUrl", () => {
     expect(isSafeMediaUrl("data:text/html,<script>alert(1)</script>")).toBe(
       false,
     );
+    expect(
+      isSafeMediaUrl("data:image/svg+xml,<svg onload='alert(1)'></svg>"),
+    ).toBe(false);
+    expect(isSafeMediaUrl("https://user:secret@cdn.test/image.webp")).toBe(
+      false,
+    );
     expect(isSafeMediaUrl("//untrusted.test/image.gif")).toBe(false);
+    expect(isSafeMediaUrl("\\\\untrusted.test/image.gif")).toBe(false);
   });
 
   it("enforces HTTPS, relative, data, and origin policy when configured", () => {
@@ -141,10 +198,33 @@ describe("isSafeMediaUrl", () => {
       false,
     );
     expect(isSafeMediaUrl("/media/image.webp", policy)).toBe(false);
+    expect(isSafeMediaUrl("media/image.webp", policy)).toBe(false);
     expect(isSafeMediaUrl("blob:https://media.company.test/id", policy)).toBe(
       false,
     );
     expect(isSafeMediaUrl("data:image/gif;base64,AAAA", policy)).toBe(false);
+    expect(
+      isSafeMediaUrl("https://media.company.test/image.webp", {
+        allowedOrigins: ["not a valid origin"],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("normalized media validation", () => {
+  it("requires finite positive dimensions when supplied", () => {
+    const valid = {
+      type: "custom",
+      id: "asset",
+      kind: "image",
+      name: "Asset",
+      url: "https://cdn.test/asset.webp",
+      width: 320,
+      height: 180,
+    } as const;
+    expect(isMediaItem(valid)).toBe(true);
+    expect(isMediaItem({ ...valid, width: 0 })).toBe(false);
+    expect(isMediaItem({ ...valid, height: Number.NaN })).toBe(false);
   });
 });
 
@@ -231,7 +311,26 @@ describe("MediaProviderError", () => {
       name: "MediaProviderError",
       provider: "mock",
       providerCode: "offline",
+      retryable: false,
     });
     expect(vi.isMockFunction(error)).toBe(false);
+  });
+
+  it("preserves HTTP and retry metadata without response bodies", () => {
+    const error = new MediaProviderError("Rate limited", "host", {
+      code: "rate_limited",
+      status: 429,
+      retryable: true,
+      retryAfterMs: 2_000,
+      requestId: "request-123",
+    });
+    expect(error).toMatchObject({
+      provider: "host",
+      providerCode: "rate_limited",
+      status: 429,
+      retryable: true,
+      retryAfterMs: 2_000,
+      requestId: "request-123",
+    });
   });
 });

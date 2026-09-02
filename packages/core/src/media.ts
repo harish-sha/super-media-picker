@@ -27,6 +27,7 @@ export interface AnimatedEmojiMediaItem {
   readonly kind: "animated";
   readonly id: string;
   readonly name: string;
+  readonly thumbnailUrl?: string;
   readonly previewUrl?: string;
   readonly animationUrl: string;
   readonly format: AnimatedMediaFormat;
@@ -34,6 +35,7 @@ export interface AnimatedEmojiMediaItem {
   readonly width?: number;
   readonly height?: number;
   readonly provider?: string;
+  readonly alt?: string;
 }
 
 /** Tenant/workspace supplied emoji. */
@@ -43,9 +45,13 @@ export interface CustomEmojiMediaItem {
   readonly id: string;
   readonly name: string;
   readonly url: string;
+  readonly thumbnailUrl?: string;
   readonly previewUrl?: string;
   readonly fallbackText?: string;
   readonly provider?: string;
+  readonly width?: number;
+  readonly height?: number;
+  readonly alt?: string;
 }
 
 /** Backwards-compatible name for native Unicode selections. */
@@ -77,6 +83,7 @@ export interface StickerMediaItem {
   readonly provider?: string;
   readonly packId?: string;
   readonly url: string;
+  readonly thumbnailUrl?: string;
   readonly previewUrl?: string;
   readonly animated: boolean;
   readonly format?: AnimatedMediaFormat | "png" | "jpeg";
@@ -92,9 +99,14 @@ export interface CustomMediaItem {
   readonly kind: string;
   readonly name: string;
   readonly url: string;
+  readonly thumbnailUrl?: string;
   readonly previewUrl?: string;
   readonly provider?: string;
   readonly alt?: string;
+  readonly animated?: boolean;
+  readonly format?: AnimatedMediaFormat | "png" | "jpeg";
+  readonly width?: number;
+  readonly height?: number;
 }
 
 /** Every picker feature emits one of these normalized media items. */
@@ -111,11 +123,16 @@ export function isUnicodeEmoji(item: MediaItem): item is UnicodeEmojiMediaItem {
 
 export function isAnimatedMedia(
   item: MediaItem,
-): item is AnimatedEmojiMediaItem | GifMediaItem | StickerMediaItem {
+): item is
+  | AnimatedEmojiMediaItem
+  | GifMediaItem
+  | (StickerMediaItem & { readonly animated: true })
+  | (CustomMediaItem & { readonly animated: true }) {
   return (
     item.type === "gif" ||
     (item.type === "emoji" && item.kind === "animated") ||
-    (item.type === "sticker" && item.animated)
+    (item.type === "sticker" && item.animated) ||
+    (item.type === "custom" && item.animated === true)
   );
 }
 
@@ -130,42 +147,99 @@ export function mediaItemKey(item: MediaItem): string {
 export function isMediaItem(value: unknown): value is MediaItem {
   if (typeof value !== "object" || value === null) return false;
   const item = value as Readonly<Record<string, unknown>>;
-  if (typeof item.id !== "string" || item.id.length === 0) return false;
+  if (!isNonEmptyString(item.id) || !hasValidOptionalDimensions(item))
+    return false;
   if (item.type === "emoji") {
     if (item.kind === "animated") {
       return (
-        typeof item.name === "string" &&
-        typeof item.animationUrl === "string" &&
-        isAnimatedFormat(item.format)
+        isNonEmptyString(item.name) &&
+        isNonEmptyString(item.animationUrl) &&
+        isAnimatedFormat(item.format) &&
+        hasOptionalString(item.thumbnailUrl) &&
+        hasOptionalString(item.previewUrl) &&
+        hasOptionalString(item.provider) &&
+        hasOptionalString(item.alt) &&
+        hasOptionalString(item.fallbackEmoji)
       );
     }
     if (item.kind === "custom") {
-      return typeof item.name === "string" && typeof item.url === "string";
+      return (
+        isNonEmptyString(item.name) &&
+        isNonEmptyString(item.url) &&
+        hasOptionalString(item.thumbnailUrl) &&
+        hasOptionalString(item.previewUrl) &&
+        hasOptionalString(item.provider) &&
+        hasOptionalString(item.alt) &&
+        hasOptionalString(item.fallbackText)
+      );
     }
     return (
       (item.kind === undefined || item.kind === "unicode") &&
-      typeof item.value === "string" &&
-      typeof item.name === "string" &&
-      typeof item.category === "string"
+      isNonEmptyString(item.value) &&
+      isNonEmptyString(item.name) &&
+      isNonEmptyString(item.category)
     );
   }
   if (item.type === "gif") {
     return (
-      typeof item.provider === "string" &&
-      typeof item.url === "string" &&
-      typeof item.previewUrl === "string" &&
-      (item.thumbnailUrl === undefined || typeof item.thumbnailUrl === "string")
+      isNonEmptyString(item.provider) &&
+      isNonEmptyString(item.url) &&
+      isNonEmptyString(item.previewUrl) &&
+      hasOptionalString(item.thumbnailUrl) &&
+      hasOptionalString(item.name) &&
+      hasOptionalString(item.alt)
     );
   }
   if (item.type === "sticker") {
-    return typeof item.url === "string" && typeof item.animated === "boolean";
+    return (
+      isNonEmptyString(item.url) &&
+      typeof item.animated === "boolean" &&
+      hasOptionalString(item.thumbnailUrl) &&
+      hasOptionalString(item.previewUrl) &&
+      hasOptionalString(item.provider) &&
+      hasOptionalString(item.packId) &&
+      hasOptionalString(item.name) &&
+      hasOptionalString(item.alt) &&
+      (item.format === undefined || isMediaFormat(item.format))
+    );
   }
   return (
     item.type === "custom" &&
-    typeof item.kind === "string" &&
-    typeof item.name === "string" &&
-    typeof item.url === "string"
+    isNonEmptyString(item.kind) &&
+    isNonEmptyString(item.name) &&
+    isNonEmptyString(item.url) &&
+    hasOptionalString(item.thumbnailUrl) &&
+    hasOptionalString(item.previewUrl) &&
+    hasOptionalString(item.provider) &&
+    hasOptionalString(item.alt) &&
+    (item.animated === undefined || typeof item.animated === "boolean") &&
+    (item.format === undefined || isMediaFormat(item.format))
   );
+}
+
+function hasOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasValidOptionalDimensions(
+  item: Readonly<Record<string, unknown>>,
+): boolean {
+  return validDimension(item.width) && validDimension(item.height);
+}
+
+function validDimension(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (typeof value === "number" && Number.isFinite(value) && value > 0)
+  );
+}
+
+function isMediaFormat(value: unknown): boolean {
+  return isAnimatedFormat(value) || value === "png" || value === "jpeg";
 }
 
 function isAnimatedFormat(value: unknown): value is AnimatedMediaFormat {

@@ -127,6 +127,8 @@ import {
   useStickerSearch,
 } from "super-media-picker/headless";
 import {
+  HttpCustomMediaProvider,
+  HttpEmojiProvider,
   HttpGifProvider,
   HttpStickerProvider,
   type GifProvider,
@@ -142,6 +144,11 @@ declare const handleSticker: (item: StickerMediaItem) => void;
 
 new HttpGifProvider({ endpoint: "/api/media/gifs" });
 new HttpStickerProvider({ endpoint: "/api/media/stickers" });
+const emojiProvider = new HttpEmojiProvider({ endpoint: "/api/media/emoji" });
+const customProvider = new HttpCustomMediaProvider({
+  endpoint: "/api/media/custom",
+  displayName: "Company media",
+});
 void useMediaPicker;
 void useEmojiSearch;
 void useGifSearch;
@@ -151,7 +158,11 @@ void useFavorites;
 
 export const surfaces = (
   <>
-    <MediaPicker onSelect={handleMedia} />
+    <MediaPicker
+      features={{ animatedEmoji: true, customMedia: true }}
+      onSelect={handleMedia}
+      providers={{ animatedEmoji: emojiProvider, custom: customProvider }}
+    />
     <EmojiPicker onSelect={handleMedia} />
     <GifPicker provider={gifProvider} onSelect={handleGif} />
     <StickerPicker provider={stickerProvider} onSelect={handleSticker} />
@@ -174,7 +185,7 @@ for (const name of ["MediaPicker", "EmojiPicker", "GifPicker", "StickerPicker", 
 for (const name of ["useMediaPicker", "useEmojiSearch", "useGifSearch", "useStickerSearch", "useRecents", "useFavorites"]) {
   if (typeof headless[name] !== "function") throw new TypeError(\`Missing hook: \${name}\`);
 }
-for (const name of ["HttpGifProvider", "HttpStickerProvider", "MockGifProvider", "MockStickerProvider"]) {
+for (const name of ["HttpGifProvider", "HttpStickerProvider", "HttpEmojiProvider", "HttpCustomMediaProvider", "HttpProviderTransport", "MockGifProvider", "MockStickerProvider"]) {
   if (typeof providers[name] !== "function") throw new TypeError(\`Missing provider: \${name}\`);
 }
 

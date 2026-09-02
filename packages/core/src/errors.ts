@@ -19,15 +19,30 @@ export class MediaPickerError extends Error {
 export class MediaProviderError extends MediaPickerError {
   readonly provider: string;
   readonly providerCode: string | undefined;
+  readonly status: number | undefined;
+  readonly retryable: boolean;
+  readonly retryAfterMs: number | undefined;
+  readonly requestId: string | undefined;
 
   constructor(
     message: string,
     provider: string,
-    options: { readonly code?: string; readonly cause?: unknown } = {},
+    options: {
+      readonly code?: string;
+      readonly cause?: unknown;
+      readonly status?: number;
+      readonly retryable?: boolean;
+      readonly retryAfterMs?: number;
+      readonly requestId?: string;
+    } = {},
   ) {
     super(message, "request_failed", options.cause);
     this.name = "MediaProviderError";
     this.provider = provider;
     this.providerCode = options.code;
+    this.status = options.status;
+    this.retryable = options.retryable ?? false;
+    this.retryAfterMs = options.retryAfterMs;
+    this.requestId = options.requestId;
   }
 }

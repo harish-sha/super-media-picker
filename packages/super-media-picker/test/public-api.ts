@@ -32,6 +32,9 @@ void useRecents;
 void useFavorites;
 void providers.HttpGifProvider;
 void providers.HttpStickerProvider;
+void providers.HttpEmojiProvider;
+void providers.HttpCustomMediaProvider;
+void providers.HttpProviderTransport;
 if (isUnicodeEmoji(item)) {
   item.value satisfies string;
 }

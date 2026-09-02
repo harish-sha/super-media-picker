@@ -5,12 +5,21 @@ export interface MediaRequestOptions {
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
   readonly ttlMs?: number;
+  readonly retry?: MediaRetryPolicy | false;
 }
 
 export interface MediaRequestClientOptions {
   readonly cache?: CacheAdapter<unknown>;
   readonly cacheTtlMs?: number;
   readonly timeoutMs?: number;
+  readonly retry?: MediaRetryPolicy | false;
+}
+
+/** Retry settings for idempotent provider reads. `maxRetries` excludes the first attempt. */
+export interface MediaRetryPolicy {
+  readonly maxRetries?: number;
+  readonly baseDelayMs?: number;
+  readonly maxDelayMs?: number;
 }
 
 interface InflightRequest<T> {
@@ -37,12 +46,14 @@ export class MediaRequestClient {
   readonly #cache: CacheAdapter<unknown>;
   readonly #cacheTtlMs: number;
   readonly #timeoutMs: number;
+  readonly #retry: Required<MediaRetryPolicy>;
   readonly #inflight = new Map<string, InflightRequest<unknown>>();
 
   constructor(options: MediaRequestClientOptions = {}) {
     this.#cache = options.cache ?? new MemoryCache<unknown>();
     this.#cacheTtlMs = Math.max(0, options.cacheTtlMs ?? 60_000);
     this.#timeoutMs = Math.max(1, options.timeoutMs ?? 10_000);
+    this.#retry = normalizeRetryPolicy(options.retry);
   }
 
   request<T>(
@@ -72,7 +83,17 @@ export class MediaRequestClient {
       abortTimer: undefined,
     };
     const request = Promise.resolve()
-      .then(() => load(controller.signal))
+      .then(() =>
+        loadWithRetry(
+          load,
+          controller.signal,
+          options.retry === false
+            ? normalizeRetryPolicy(false)
+            : options.retry === undefined
+              ? this.#retry
+              : normalizeRetryPolicy(options.retry),
+        ),
+      )
       .then((value) => {
         this.#cache.set(key, value, options.ttlMs ?? this.#cacheTtlMs);
         return value;
@@ -155,21 +176,118 @@ export function isSafeMediaUrl(
   value: string,
   policy: MediaUrlPolicy = {},
 ): boolean {
-  if (value.startsWith("/"))
-    return (policy.allowRelative ?? true) && !value.startsWith("//");
+  if (value.length === 0 || value.trim() !== value) return false;
+  const baseOrigin = "https://media.invalid";
+  if (!/^[a-z][a-z\d+.-]*:/iu.test(value)) {
+    if (!(policy.allowRelative ?? true)) return false;
+    try {
+      return new URL(value, baseOrigin).origin === baseOrigin;
+    } catch {
+      return false;
+    }
+  }
   try {
-    const url = new URL(value, "https://media.invalid");
+    const url = new URL(value);
     if (url.protocol === "data:")
-      return (policy.allowDataImages ?? true) && /^data:image\//iu.test(value);
+      return (
+        (policy.allowDataImages ?? true) &&
+        /^data:image\/(?:avif|gif|jpeg|png|webp)(?:;|,)/iu.test(value)
+      );
     if (url.protocol === "blob:") return policy.allowBlob ?? true;
     if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    if (url.username !== "" || url.password !== "") return false;
     if (url.protocol === "http:" && policy.allowHttp === false) return false;
     const allowedOrigins = policy.allowedOrigins;
     return (
       allowedOrigins === undefined ||
-      allowedOrigins.some((origin) => new URL(origin).origin === url.origin)
+      allowedOrigins.some((origin) => safeOrigin(origin) === url.origin)
     );
   } catch {
     return false;
   }
+}
+
+function normalizeRetryPolicy(
+  policy: MediaRetryPolicy | false | undefined,
+): Required<MediaRetryPolicy> {
+  if (policy === false)
+    return { maxRetries: 0, baseDelayMs: 100, maxDelayMs: 1_000 };
+  return {
+    maxRetries: finiteNonNegativeInteger(policy?.maxRetries, 1),
+    baseDelayMs: finiteNonNegative(policy?.baseDelayMs, 100),
+    maxDelayMs: finiteNonNegative(policy?.maxDelayMs, 1_000),
+  };
+}
+
+async function loadWithRetry<T>(
+  load: (signal: AbortSignal) => Promise<T>,
+  signal: AbortSignal,
+  retry: Required<MediaRetryPolicy>,
+): Promise<T> {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await load(signal);
+    } catch (error) {
+      if (
+        signal.aborted ||
+        !(error instanceof MediaProviderError) ||
+        !error.retryable ||
+        attempt >= retry.maxRetries
+      )
+        throw error;
+      const exponentialDelay = retry.baseDelayMs * 2 ** attempt;
+      const requestedDelay = error.retryAfterMs ?? exponentialDelay;
+      await waitForRetry(Math.min(retry.maxDelayMs, requestedDelay), signal);
+      attempt += 1;
+    }
+  }
+}
+
+function waitForRetry(
+  milliseconds: number,
+  signal: AbortSignal,
+): Promise<void> {
+  if (signal.aborted) return Promise.reject(abortReason(signal));
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => {
+        signal.removeEventListener("abort", abort);
+        resolve();
+      },
+      Math.max(0, milliseconds),
+    );
+    const abort = (): void => {
+      clearTimeout(timeout);
+      reject(abortReason(signal));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
+function safeOrigin(value: string): string | undefined {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.origin
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function finiteNonNegative(
+  value: number | undefined,
+  fallback: number,
+): number {
+  return value !== undefined && Number.isFinite(value)
+    ? Math.max(0, value)
+    : fallback;
+}
+
+function finiteNonNegativeInteger(
+  value: number | undefined,
+  fallback: number,
+): number {
+  return Math.floor(finiteNonNegative(value, fallback));
 }

@@ -1,6 +1,7 @@
 import type {
   AnimatedEmojiMediaItem,
   CustomMediaTab,
+  CustomMediaProvider,
   GifProvider,
   CompactReactionSource,
   MediaCapabilities,
@@ -21,6 +22,10 @@ import type {
   MockStickerProvider,
   StickerProvider,
 } from "../src/index";
+import type {
+  HttpCustomMediaProvider,
+  HttpEmojiProvider,
+} from "../src/providers";
 import type {
   useMediaPicker,
   useEmojiSearch,
@@ -57,6 +62,9 @@ export interface PublicApiContract {
   readonly gifProvider: GifProvider;
   readonly stickerProvider: StickerProvider;
   readonly customTab: CustomMediaTab;
+  readonly customProvider: CustomMediaProvider;
+  readonly HttpEmojiProvider: typeof HttpEmojiProvider;
+  readonly HttpCustomMediaProvider: typeof HttpCustomMediaProvider;
   readonly MockGifProvider: typeof MockGifProvider;
   readonly MockStickerProvider: typeof MockStickerProvider;
 }

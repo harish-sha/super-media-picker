@@ -6,6 +6,46 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] - 2026-09-02
+
+### Added
+
+- Added direct `providers.animatedEmoji` and `providers.custom` registrations
+  while preserving beta.3 `providers.emoji` and `customTabs` compatibility.
+- Added `HttpEmojiProvider` and `HttpCustomMediaProvider` host-backend adapters,
+  shared provider capability metadata, richer pack metadata, and consistent
+  thumbnail/preview/original asset fields.
+- Added bounded retry policy, dynamic application-auth headers, HTTP status,
+  retry, request-ID error metadata, and a shared `HttpProviderTransport` across
+  built-in adapters.
+- Added an exact backend contract, a Giphy-style server-boundary reference, and
+  a design-only future hosted Super Media provider resolver architecture.
+- Added normalized attribution and capability metadata, richer pack metadata,
+  animated emoji/custom-media support, media dimensions, and distinct
+  thumbnail, preview, and original asset roles.
+
+### Changed
+
+- Standardized cursor pagination, abort-signal cancellation, timeouts, bounded
+  retries with backoff, in-flight request deduplication, and TTL memory caching
+  across `HttpGifProvider`, `HttpStickerProvider`, `HttpEmojiProvider`, and
+  `HttpCustomMediaProvider` through the shared `HttpProviderTransport`.
+- Preserved backward compatibility with `providers.emoji` and `customTabs`
+  while adding `providers.animatedEmoji` and `providers.custom`.
+- Normalized provider failures into structured `MediaProviderError` instances
+  with operation, HTTP status, provider code, retryability, retry delay, and
+  request-ID metadata when supplied by the backend.
+- Strengthened backend response validation for media discriminants, required
+  fields, dimensions, pagination invariants, and pack/result shapes.
+
+### Security
+
+- Reject credential-bearing media URLs, SVG data URLs, malformed origin
+  policies, unsafe pack icons, invalid dimensions, and paginated responses that
+  claim more data without a cursor.
+- Documented the server-side secret boundary: browser requests go to the
+  developer backend, which alone communicates with media vendors.
+
 ## [0.1.0-beta.3] - 2026-09-01
 
 ### Changed
@@ -91,7 +131,8 @@ All notable changes to this project are documented here. The format follows
 - Production media catalogs, demo assets, credentials, tests, Storybook output,
   and internal source files are excluded from the tarball.
 
-[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...HEAD
+[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.4...HEAD
+[0.1.0-beta.4]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.2...v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/harish-sha/super-media-picker/releases/tag/v0.1.0-beta.1

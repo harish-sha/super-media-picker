@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { supportsProviderOperation } from "@super-media-picker/core";
 import type {
   MediaItem,
   MediaProvider,
@@ -72,7 +73,8 @@ export function useProviderSearchState<T extends MediaItem>({
         const result =
           normalized === ""
             ? await loadEmpty(options)
-            : provider.search === undefined
+            : !supportsProviderOperation(provider, "search") ||
+                provider.search === undefined
               ? { items: [] as readonly T[], hasMore: false }
               : await provider.search(normalized, options);
         if (signal.aborted) return;

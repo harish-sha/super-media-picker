@@ -29,6 +29,12 @@ The `super-media-picker/providers` subpath is a convenient production adapter
 entry point for `HttpGifProvider`, `HttpStickerProvider`, request runtime, and
 provider types.
 
+The unreleased BYO-provider additions are additive candidates for the next
+beta: `providers.animatedEmoji`, `providers.custom`, `HttpEmojiProvider`,
+`HttpCustomMediaProvider`, shared HTTP retry/error metadata, and normalized
+provider capabilities. The beta.3 `providers.emoji` and `customTabs` contracts
+remain supported; no migration is required.
+
 ## Advanced API
 
 Custom renderers, animation policies, raw provider/cache classes, storage
@@ -47,9 +53,10 @@ exports and may change without a deprecation cycle.
 
 ## Experimental API
 
-There are no experimental exports in this release. A future experimental API
-will be explicitly named in its documentation and release notes; undocumented
-internals are not experimental APIs.
+There is no exported hosted-mode API. The future `superMode` provider resolver,
+metering, and project authentication boundary is architecture documentation
+only and must not be treated as an available prop or experimental runtime API.
+Undocumented internals are not experimental APIs.
 
 ## Deprecation policy
 

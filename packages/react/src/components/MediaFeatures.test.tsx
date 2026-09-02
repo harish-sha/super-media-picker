@@ -139,6 +139,50 @@ describe("multi-media picker", () => {
     expect(screen.queryByRole("button", { name: "Provider party" })).toBeNull();
   });
 
+  it("accepts additive animatedEmoji and custom provider registrations", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn<(item: MediaItem) => void>();
+    const emojiProvider: EmojiProvider = {
+      id: "animated-workspace",
+      trending: async () => ({
+        items: [providerAnimatedEmoji],
+        hasMore: false,
+      }),
+    };
+    const customItem: CustomMediaItem = {
+      type: "custom",
+      kind: "company",
+      id: "brand-launch",
+      name: "Brand launch",
+      url: pixel,
+    };
+    const customProvider: MediaProvider<CustomMediaItem> = {
+      id: "company-library",
+      displayName: "Company library",
+      trending: async () => ({ items: [customItem], hasMore: false }),
+    };
+    render(
+      <MediaPicker
+        features={{ animatedEmoji: true, customMedia: true }}
+        onSelect={onSelect}
+        providers={{
+          animatedEmoji: emojiProvider,
+          custom: customProvider,
+        }}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Provider party" }),
+    );
+    expect(onSelect).toHaveBeenLastCalledWith(providerAnimatedEmoji);
+    await user.click(screen.getByRole("tab", { name: "Custom" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Brand launch" }),
+    );
+    expect(onSelect).toHaveBeenLastCalledWith(customItem);
+  });
+
   it("loads remote emoji packs only after their provider panel mounts", async () => {
     const user = userEvent.setup();
     const packs = vi.fn(async () => [{ id: "team", name: "Team", icon: "✨" }]);
@@ -494,6 +538,49 @@ describe("animated media", () => {
     button.blur();
     await waitFor(() =>
       expect(visual.getAttribute("data-active")).toBe("false"),
+    );
+  });
+
+  it("uses the shared animation lifecycle for provider-backed custom media", async () => {
+    const custom: CustomMediaItem = {
+      type: "custom",
+      kind: "brand",
+      id: "animated-launch",
+      name: "Animated launch",
+      thumbnailUrl: "https://cdn.test/custom/poster.webp",
+      previewUrl: "https://cdn.test/custom/preview.webp",
+      url: "https://cdn.test/custom/original.gif",
+      animated: true,
+      format: "gif",
+    };
+    const provider: MediaProvider<CustomMediaItem> = {
+      id: "company-animation",
+      trending: async () => ({ items: [custom], hasMore: false }),
+    };
+    render(
+      <MediaPicker
+        animatedMedia={{ autoplay: "hover" }}
+        defaultMediaType="custom"
+        features={{ customMedia: true }}
+        onSelect={() => undefined}
+        providers={{ custom: provider }}
+      />,
+    );
+    const button = await screen.findByRole("button", {
+      name: "Animated launch",
+    });
+    expect(button.querySelector("img")?.getAttribute("src")).toBe(
+      custom.thumbnailUrl,
+    );
+    button.focus();
+    await waitFor(() =>
+      expect(button.querySelector("img")?.getAttribute("src")).toBe(custom.url),
+    );
+    button.blur();
+    await waitFor(() =>
+      expect(button.querySelector("img")?.getAttribute("src")).toBe(
+        custom.thumbnailUrl,
+      ),
     );
   });
 

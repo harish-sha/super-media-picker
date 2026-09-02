@@ -30,7 +30,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.3`. React and React DOM
+The public beta version is `0.1.0-beta.4`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -255,33 +255,59 @@ const emojiPacks = [
 
 WebM, animated WebP, and GIF use native browser rendering. Lottie is supported through the typed `renderers.lottie` adapter so consumers choose their compatible runtime. Hover/focus is the desktop default; `visible`, `always`, and `never` policies are available. Visibility observation, lazy assets, concurrency limits, pause/cleanup, and `prefers-reduced-motion` protection prevent grids from continuously animating every item.
 
-## GIF and sticker providers
+## Production providers
 
 ```tsx
+import { MediaPicker } from "super-media-picker";
 import {
   HttpGifProvider,
   HttpStickerProvider,
-  MediaPicker,
+  HttpEmojiProvider,
+  HttpCustomMediaProvider,
   MockStickerProvider,
-} from "super-media-picker";
+} from "super-media-picker/providers";
 
-const gifs = new HttpGifProvider({
-  endpoint: "https://api.example.test/media/gifs",
-  timeoutMs: 8_000,
-  cacheTtlMs: 60_000,
-});
-const stickers = new HttpStickerProvider({
-  endpoint: "https://api.example.test/media/stickers",
-});
+const providers = {
+  gifs: new HttpGifProvider({ endpoint: "/api/media/gifs" }),
+  stickers: new HttpStickerProvider({ endpoint: "/api/media/stickers" }),
+  animatedEmoji: new HttpEmojiProvider({ endpoint: "/api/media/emoji" }),
+  custom: new HttpCustomMediaProvider({ endpoint: "/api/media/custom" }),
+};
 
 <MediaPicker
-  features={{ gifs: true, stickers: true, recents: true, favorites: true }}
-  providers={{ gifs, stickers }}
+  features={{
+    gifs: true,
+    stickers: true,
+    animatedEmoji: true,
+    customMedia: true,
+  }}
+  providers={providers}
   onSelect={handleSelect}
 />;
 ```
 
-Both HTTP adapters call the host application's backend—not a paid provider directly. They implement abortable requests, timeouts, TTL memory caching, request deduplication, pagination, response validation, and isolated errors. GIF results use preview assets in the grid and retain the full URL only for selection. Sticker providers expose packs and may fetch pack contents lazily. The sticker panel presents those packs through a responsive, keyboard-accessible `Packs` selector instead of a permanently expanding navigation row. `MockGifProvider` and `MockStickerProvider` cover local development, empty/error/loading states, and pagination without credentials.
+All HTTP adapters call the host application's backend—not a paid provider
+directly:
+
+```text
+browser → developer backend → media vendor
+```
+
+Vendor API keys and other credentials must remain on that backend and must
+never be embedded in frontend code. The adapters implement abortable requests,
+timeouts, bounded retries with backoff, TTL
+memory caching, request deduplication, pagination, response validation,
+capability metadata, structured errors, and isolated failures. GIF results use
+preview assets in the grid and retain the full URL only for selection. Sticker
+and emoji providers expose lightweight packs and fetch selected contents lazily.
+The sticker panel presents those packs through a responsive,
+keyboard-accessible `Packs` selector. `MockGifProvider` and
+`MockStickerProvider` cover local development without credentials.
+
+Existing `providers.emoji` and `customTabs` remain supported. The additive BYO
+configuration accepts `providers.animatedEmoji` and `providers.custom` as a
+single provider or array. Hosted `superMode` is not implemented yet; its future
+resolver will produce the same provider graph.
 
 For GIFs, optional `thumbnailUrl` is the idle poster, `previewUrl` is the
 optimized grid animation, and `url` is the original selection URL. The grid
@@ -539,7 +565,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.3` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.4` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

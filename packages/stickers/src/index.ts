@@ -1,10 +1,12 @@
 import {
   MediaProviderError,
-  MediaRequestClient,
+  HttpProviderTransport,
   isMediaItem,
   isSafeMediaUrl,
   type ProviderAttribution,
   type ProviderOptions,
+  type HttpProviderAdapterOptions,
+  type MediaProviderCapabilities,
   type MediaUrlPolicy,
   type SearchOptions,
   type SearchResult,
@@ -83,55 +85,40 @@ export class MockStickerProvider implements StickerProvider {
   }
 }
 
-export interface HttpStickerProviderOptions {
-  readonly id?: string;
-  readonly endpoint: string;
-  readonly fetch?: typeof globalThis.fetch;
-  readonly headers?: Readonly<Record<string, string>>;
-  readonly attribution?: ProviderAttribution;
-  readonly cacheTtlMs?: number;
-  readonly timeoutMs?: number;
-  readonly mediaSecurity?: MediaUrlPolicy;
-  readonly requestClient?: MediaRequestClient;
+export interface HttpStickerProviderOptions extends HttpProviderAdapterOptions {
+  readonly capabilities?: MediaProviderCapabilities;
+  readonly displayName?: string;
 }
 
 /** Host-backend sticker provider with no frontend credentials. */
 export class HttpStickerProvider implements StickerProvider {
   readonly id: string;
+  readonly displayName?: string;
   readonly attribution?: ProviderAttribution;
-  readonly #endpoint: string;
-  readonly #fetch: typeof globalThis.fetch;
-  readonly #headers: Readonly<Record<string, string>>;
-  readonly #requests: MediaRequestClient;
+  readonly capabilities: MediaProviderCapabilities;
+  readonly #transport: HttpProviderTransport;
   readonly #mediaSecurity: MediaUrlPolicy;
 
   constructor(options: HttpStickerProviderOptions) {
-    if (
-      !isSafeMediaUrl(options.endpoint, {
-        allowBlob: false,
-        allowDataImages: false,
-        allowHttp: true,
-      })
-    )
-      throw new TypeError("Sticker endpoint must be relative, HTTP, or HTTPS");
-    this.id = options.id ?? "http-stickers";
-    this.#endpoint = options.endpoint;
-    this.#fetch =
-      options.fetch ?? ((input, init) => globalThis.fetch(input, init));
-    this.#headers = options.headers ?? {};
-    this.#requests =
-      options.requestClient ??
-      new MediaRequestClient({
-        ...(options.cacheTtlMs === undefined
-          ? {}
-          : { cacheTtlMs: options.cacheTtlMs }),
-        ...(options.timeoutMs === undefined
-          ? {}
-          : { timeoutMs: options.timeoutMs }),
-      });
+    this.#transport = new HttpProviderTransport(options, {
+      id: "http-stickers",
+      label: "Sticker",
+    });
+    this.id = this.#transport.id;
     this.#mediaSecurity = options.mediaSecurity ?? {};
-    if (options.attribution !== undefined)
-      this.attribution = options.attribution;
+    this.capabilities = {
+      mediaType: "sticker",
+      search: true,
+      trending: true,
+      packs: true,
+      pagination: true,
+      animatedMedia: true,
+      ...options.capabilities,
+    };
+    if (options.displayName !== undefined)
+      this.displayName = options.displayName;
+    if (this.#transport.attribution !== undefined)
+      this.attribution = this.#transport.attribution;
   }
 
   packs(options: ProviderOptions = {}): Promise<readonly StickerPack[]> {
@@ -190,66 +177,20 @@ export class HttpStickerProvider implements StickerProvider {
     options: SearchOptions & { readonly query?: string },
     validate: (value: unknown) => value is T,
   ): Promise<T> {
-    const url = new URL(
-      this.#endpoint,
-      globalThis.location?.origin ?? "http://localhost",
-    );
-    url.searchParams.set("mode", mode);
-    if (options.query !== undefined)
-      url.searchParams.set(mode === "pack" ? "packId" : "q", options.query);
-    if (options.cursor !== undefined)
-      url.searchParams.set("cursor", options.cursor);
-    if (options.limit !== undefined)
-      url.searchParams.set("limit", String(options.limit));
-    return this.#requests.request(
-      `${this.id}:${url.toString()}`,
-      async (signal) => {
-        let response: Response;
-        try {
-          response = await this.#fetch(url, { headers: this.#headers, signal });
-        } catch (error) {
-          if (signal.aborted) {
-            if (
-              signal.reason instanceof DOMException &&
-              signal.reason.name === "TimeoutError"
-            )
-              throw new MediaProviderError(
-                "Sticker backend request timed out",
-                this.id,
-                { code: "timeout", cause: signal.reason },
-              );
-            throw signal.reason;
-          }
-          throw new MediaProviderError(
-            "Sticker backend request failed",
-            this.id,
-            { cause: error },
-          );
-        }
-        if (!response.ok)
-          throw new MediaProviderError(
-            `Sticker backend returned ${response.status}`,
-            this.id,
-          );
-        let data: unknown;
-        try {
-          data = await response.json();
-        } catch (error) {
-          throw new MediaProviderError(
-            "Sticker backend returned malformed JSON",
-            this.id,
-            { code: "invalid_response", cause: error },
-          );
-        }
-        if (!validate(data))
-          throw new MediaProviderError(
-            "Sticker backend returned an invalid response",
-            this.id,
-            { code: "invalid_response" },
-          );
-        return data;
+    return this.#transport.request(
+      {
+        mode: mode as "packs" | "pack" | "search" | "trending",
+        ...(options.query === undefined
+          ? {}
+          : mode === "pack"
+            ? { packId: options.query }
+            : { query: options.query }),
+        ...(options.cursor === undefined ? {} : { cursor: options.cursor }),
+        ...(options.limit === undefined ? {} : { limit: options.limit }),
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
       },
-      options.signal === undefined ? {} : { signal: options.signal },
+      validate,
+      "Sticker",
     );
   }
 }
@@ -262,10 +203,23 @@ function isStickerPacks(value: unknown): value is readonly StickerPack[] {
       const candidate = pack as Readonly<Record<string, unknown>>;
       return (
         typeof candidate.id === "string" &&
+        candidate.id.trim().length > 0 &&
         typeof candidate.name === "string" &&
+        candidate.name.trim().length > 0 &&
+        (candidate.description === undefined ||
+          typeof candidate.description === "string") &&
         (candidate.icon === undefined || typeof candidate.icon === "string") &&
         (candidate.iconUrl === undefined ||
-          typeof candidate.iconUrl === "string")
+          typeof candidate.iconUrl === "string") &&
+        (candidate.provider === undefined ||
+          typeof candidate.provider === "string") &&
+        (candidate.itemCount === undefined ||
+          (typeof candidate.itemCount === "number" &&
+            Number.isInteger(candidate.itemCount) &&
+            candidate.itemCount >= 0)) &&
+        (candidate.animated === undefined ||
+          typeof candidate.animated === "boolean") &&
+        candidate.stickers === undefined
       );
     })
   );
@@ -284,11 +238,17 @@ function isStickerResult(
         isMediaItem(item) &&
         item.type === "sticker" &&
         isSafeMediaUrl(item.url, policy) &&
+        (item.thumbnailUrl === undefined ||
+          isSafeMediaUrl(item.thumbnailUrl, policy)) &&
         (item.previewUrl === undefined ||
           isSafeMediaUrl(item.previewUrl, policy)),
     ) &&
     typeof result.hasMore === "boolean" &&
-    (result.nextCursor === undefined || typeof result.nextCursor === "string")
+    (result.nextCursor === undefined ||
+      typeof result.nextCursor === "string") &&
+    (!result.hasMore ||
+      (typeof result.nextCursor === "string" &&
+        result.nextCursor.trim().length > 0))
   );
 }
 

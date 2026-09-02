@@ -442,4 +442,29 @@ describe("public headless hooks", () => {
     await act(async () => result.current.toggleFavorite(gif));
     expect(result.current.isFavorite(gif)).toBe(true);
   });
+
+  it("normalizes direct custom providers in the headless controller", async () => {
+    const custom = {
+      type: "custom",
+      id: "tenant-asset",
+      kind: "tenant",
+      name: "Tenant asset",
+      url: pixel,
+    } as const;
+    const provider: MediaProvider<typeof custom> = {
+      id: "tenant-library",
+      displayName: "Tenant library",
+      trending: async () => ({ items: [custom], hasMore: false }),
+    };
+    const { result } = renderHook(() =>
+      useMediaPicker({
+        defaultMediaType: "custom",
+        features: { customMedia: true },
+        providers: { custom: provider },
+      }),
+    );
+    await waitFor(() => expect(result.current.results).toEqual([custom]));
+    expect(result.current.activeMediaType).toBe("custom");
+    expect(result.current.availability.custom).toBe(true);
+  });
 });

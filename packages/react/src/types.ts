@@ -2,6 +2,7 @@ import type {
   AnimatedMediaConfig,
   AnimatedMediaFormat,
   CompactReactionSource,
+  CustomMediaProvider,
   CustomMediaItem,
   EmojiPack,
   GifMediaItem,
@@ -11,6 +12,7 @@ import type {
   MediaPickerAnalytics,
   MediaUrlPolicy,
   MediaProvider,
+  ProviderRegistration,
   MediaPickerFeatures,
   MediaPickerMode,
   MediaPickerSize,
@@ -40,7 +42,12 @@ export interface MediaPickerPreviewConfig {
 export interface MediaPickerProviders {
   readonly gifs?: MediaProvider<GifMediaItem>;
   readonly stickers?: StickerProvider;
+  /** Existing general emoji-provider registration retained for beta compatibility. */
   readonly emoji?: readonly EmojiProvider[];
+  /** Additive BYO registration for remote animated/custom emoji packs. */
+  readonly animatedEmoji?: ProviderRegistration<EmojiProvider>;
+  /** Additive BYO registration for tenant/enterprise custom media sources. */
+  readonly custom?: ProviderRegistration<CustomMediaProvider>;
 }
 
 export interface CustomMediaTab {

@@ -10,6 +10,7 @@ import {
 import type {
   AnimatedEmojiMediaItem,
   AnimatedMediaConfig,
+  CustomMediaItem,
   GifMediaItem,
   MediaUrlPolicy,
   StickerMediaItem,
@@ -44,7 +45,8 @@ export class AnimationConcurrencyManager {
 }
 
 export interface AnimatedMediaRendererProps {
-  readonly item: AnimatedEmojiMediaItem | GifMediaItem | StickerMediaItem;
+  readonly item:
+    AnimatedEmojiMediaItem | GifMediaItem | StickerMediaItem | CustomMediaItem;
   readonly config: AnimatedMediaConfig;
   readonly manager: AnimationConcurrencyManager;
   readonly mediaSecurity?: MediaUrlPolicy;
@@ -77,7 +79,7 @@ export function AnimatedMediaRenderer({
   const previewUrl =
     item.type === "gif"
       ? (item.thumbnailUrl ?? item.previewUrl)
-      : item.previewUrl;
+      : (item.thumbnailUrl ?? item.previewUrl);
   const format = item.type === "gif" ? "gif" : (item.format ?? "webp");
   const label =
     item.type === "emoji"

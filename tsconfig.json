@@ -14,5 +14,5 @@
       "super-media-picker": ["./packages/super-media-picker/src/index.ts"]
     }
   },
-  "include": ["apps", "packages", "tests", "tooling", "*.ts"]
+  "include": ["apps", "examples", "packages", "tests", "tooling", "*.ts"]
 }

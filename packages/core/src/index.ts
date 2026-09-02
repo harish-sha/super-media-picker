@@ -3,6 +3,7 @@ export * from "./cache";
 export * from "./config";
 export * from "./collections";
 export * from "./errors";
+export * from "./http-providers";
 export * from "./media";
 export * from "./provider";
 export * from "./request";

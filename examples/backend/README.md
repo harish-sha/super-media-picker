@@ -46,3 +46,9 @@ function normalizeVendorGif(input: VendorGif) {
 The adapter validates queries, calls a server-side provider, normalizes its
 payload, and returns the picker contract. Vendor credentials never cross the
 server boundary. The same pattern applies to sticker and emoji pack routes.
+
+[`giphy-style-provider.ts`](giphy-style-provider.ts) is a complete Web
+`Request`/`Response` reference for the actual `HttpGifProvider` single-endpoint
+query contract. It accepts an injected Giphy-style vendor client rather than
+selecting a commercial vendor. The upstream API key is a server dependency;
+the browser receives only normalized metadata and CDN URLs.

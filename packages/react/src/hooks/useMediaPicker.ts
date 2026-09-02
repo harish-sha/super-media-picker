@@ -14,6 +14,7 @@ import {
 } from "@super-media-picker/core";
 
 import type { CustomMediaTab, MediaPickerProviders } from "../types";
+import { resolveProviderConfiguration } from "../providerConfig";
 import { useEmojiSearch } from "./useEmojiSearch";
 import { useGifSearch } from "./useGifSearch";
 import { useMediaPickerPersistence } from "./useMediaPickerPersistence";
@@ -88,23 +89,29 @@ export function useMediaPicker({
     () => ({ ...defaultFeatures, ...featureOverrides }),
     [featureOverrides],
   );
+  const providerConfiguration = useMemo(
+    () => resolveProviderConfiguration(providers, customTabs),
+    [customTabs, providers],
+  );
+  const resolvedProviders = providerConfiguration.providers;
+  const resolvedCustomTabs = providerConfiguration.customTabs;
   const availability = useMemo<MediaTypeAvailability>(
     () => ({
       emoji: features.emoji && capabilities?.emoji !== false,
       gif:
         features.gifs &&
         capabilities?.gif !== false &&
-        providers?.gifs !== undefined,
+        resolvedProviders?.gifs !== undefined,
       stickers:
         features.stickers &&
         capabilities?.stickers !== false &&
-        providers?.stickers !== undefined,
+        resolvedProviders?.stickers !== undefined,
       custom:
         features.customMedia &&
         capabilities?.customMedia !== false &&
-        customTabs.length > 0,
+        resolvedCustomTabs.length > 0,
     }),
-    [capabilities, customTabs.length, features, providers],
+    [capabilities, features, resolvedCustomTabs.length, resolvedProviders],
   );
   const availableMediaTypes = useMemo(
     () =>
@@ -124,15 +131,16 @@ export function useMediaPicker({
     skinTone: persistence.skinTone,
   });
   const gifs = useGifSearch({
-    provider: activeMediaType === "gif" ? providers?.gifs : undefined,
+    provider: activeMediaType === "gif" ? resolvedProviders?.gifs : undefined,
     initialQuery: defaultSearchQuery,
   });
   const stickers = useStickerSearch({
-    provider: activeMediaType === "stickers" ? providers?.stickers : undefined,
+    provider:
+      activeMediaType === "stickers" ? resolvedProviders?.stickers : undefined,
     initialQuery: defaultSearchQuery,
   });
   const [customQuery, setCustomQuery] = useState(defaultSearchQuery);
-  const customProvider = customTabs[0]?.provider;
+  const customProvider = resolvedCustomTabs[0]?.provider;
   const loadCustom = useCallback(
     (options: SearchOptions) =>
       customProvider?.trending?.(options) ??

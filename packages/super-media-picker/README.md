@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.3` of an accessible, provider-first React SDK for
+Public beta `0.1.0-beta.4` of an accessible, provider-first React SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -116,22 +116,43 @@ Available hooks are `useMediaPicker`, `useEmojiSearch`, `useGifSearch`,
 Production adapters call your backend; the browser never receives vendor
 secrets:
 
-```ts
+```tsx
+import { MediaPicker } from "super-media-picker";
 import {
   HttpGifProvider,
   HttpStickerProvider,
+  HttpEmojiProvider,
+  HttpCustomMediaProvider,
 } from "super-media-picker/providers";
 
-export const gifProvider = new HttpGifProvider({
-  endpoint: "/api/media/gifs",
-  timeoutMs: 8_000,
-});
+const providers = {
+  gifs: new HttpGifProvider({ endpoint: "/api/media/gifs" }),
+  stickers: new HttpStickerProvider({ endpoint: "/api/media/stickers" }),
+  animatedEmoji: new HttpEmojiProvider({ endpoint: "/api/media/emoji" }),
+  custom: new HttpCustomMediaProvider({ endpoint: "/api/media/custom" }),
+};
 
-export const stickerProvider = new HttpStickerProvider({
-  endpoint: "/api/media/stickers",
-  timeoutMs: 8_000,
-});
+<MediaPicker
+  features={{
+    gifs: true,
+    stickers: true,
+    animatedEmoji: true,
+    customMedia: true,
+  }}
+  providers={providers}
+  onSelect={handleSelect}
+/>;
 ```
+
+```text
+browser → developer backend → media vendor
+```
+
+Vendor API keys and other credentials must remain server-side. Never embed
+them in frontend configuration, examples, or application bundles.
+
+Existing `providers.emoji` and `customTabs` remain supported. Hosted
+`superMode` is not implemented in this phase.
 
 The built-in adapters call the configured endpoint with query parameters:
 
@@ -142,11 +163,15 @@ GET /api/media/stickers?mode=packs
 GET /api/media/stickers?mode=pack&packId=bears&cursor=opaque&limit=18
 GET /api/media/stickers?mode=search&q=hello&cursor=opaque&limit=18
 GET /api/media/stickers?mode=trending&cursor=opaque&limit=18
+GET /api/media/emoji?mode=packs
+GET /api/media/emoji?mode=pack&packId=workspace&cursor=opaque&limit=18
+GET /api/media/custom?mode=search&q=launch&cursor=opaque&limit=18
 ```
 
 `cursor` is an opaque string. When no next page exists, return
 `{"items":[],"hasMore":false}` or another valid page and omit
-`nextCursor`; never return `nextCursor: null`.
+`nextCursor`; never return `nextCursor: null`. When `hasMore` is true, a
+non-empty `nextCursor` is required.
 
 ```ts
 interface SearchResult<T> {
