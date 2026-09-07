@@ -28,7 +28,7 @@
     "typecheck": "pnpm build:packages && pnpm -r --if-present typecheck"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.5",
+    "@changesets/cli": "^3.0.2",
     "@eslint/js": "^10.0.0",
     "@playwright/test": "^1.52.0",
     "@size-limit/file": "^11.2.0",
