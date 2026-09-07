@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type AnyEmojiMediaItem,
@@ -272,7 +272,7 @@ function ResultState<T extends MediaItem>({
   );
 }
 
-export function GifPanel({
+function GifPanelComponent({
   provider,
   ...props
 }: CollectionPanelProps & { readonly provider: MediaProvider<GifMediaItem> }) {
@@ -304,6 +304,8 @@ export function GifPanel({
     />
   );
 }
+
+export const GifPanel = memo(GifPanelComponent);
 
 function EmojiProviderPanel({
   provider,
@@ -391,7 +393,7 @@ function EmojiProviderPanel({
   );
 }
 
-export function EmojiProviderPanels({
+function EmojiProviderPanelsComponent({
   providers,
   ...props
 }: CollectionPanelProps & {
@@ -404,7 +406,9 @@ export function EmojiProviderPanels({
   ));
 }
 
-export function StickerPanel({
+export const EmojiProviderPanels = memo(EmojiProviderPanelsComponent);
+
+function StickerPanelComponent({
   provider,
   allowAnimated,
   collectionItems,
@@ -556,7 +560,9 @@ export function StickerPanel({
   );
 }
 
-export function CustomPanel({
+export const StickerPanel = memo(StickerPanelComponent);
+
+function CustomPanelComponent({
   tabs,
   ...props
 }: CollectionPanelProps & { readonly tabs: readonly CustomMediaTab[] }) {
@@ -578,6 +584,8 @@ export function CustomPanel({
     />
   );
 }
+
+export const CustomPanel = memo(CustomPanelComponent);
 
 function CustomProviderPanel({
   provider,

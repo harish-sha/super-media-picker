@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
   mediaItemKey,
@@ -26,7 +26,7 @@ export interface MediaResultsGridProps {
 }
 
 /** Adaptive, incrementally windowed media grid with roving keyboard focus. */
-export function MediaResultsGrid({
+export const MediaResultsGrid = memo(function MediaResultsGrid({
   animation,
   animationManager,
   emptyMessage,
@@ -149,4 +149,4 @@ export function MediaResultsGrid({
       ) : null}
     </>
   );
-}
+});

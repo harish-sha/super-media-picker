@@ -603,7 +603,7 @@ describe("MediaPicker", () => {
     await waitForFullPicker();
     await user.click(screen.getByRole("searchbox", { name: "Search emoji" }));
     await user.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
   it("emits host-owned analytics without including search text", async () => {
@@ -628,7 +628,7 @@ describe("MediaPicker", () => {
       "media_selected",
       expect.objectContaining({ mediaType: "emoji" }),
     );
-    expect(track).toHaveBeenCalledWith("picker_closed");
+    await waitFor(() => expect(track).toHaveBeenCalledWith("picker_closed"));
     for (const [, properties] of track.mock.calls) {
       if (properties === undefined) continue;
       expect(properties).not.toHaveProperty("query");

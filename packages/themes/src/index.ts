@@ -20,6 +20,12 @@ export interface MediaPickerThemeTokens {
   readonly spacingMedium?: string;
   readonly spacingLarge?: string;
   readonly cellSize?: string;
+  readonly pickerWidth?: string;
+  readonly pickerHeight?: string;
+  readonly pickerMinWidth?: string;
+  readonly pickerMaxWidth?: string;
+  readonly pickerMinHeight?: string;
+  readonly pickerMaxHeight?: string;
 }
 
 export interface MediaPickerCustomTheme {
@@ -62,6 +68,12 @@ const tokenVariables = {
   spacingMedium: "--mp-spacing-md",
   spacingLarge: "--mp-spacing-lg",
   cellSize: "--mp-cell-size",
+  pickerWidth: "--mp-picker-width",
+  pickerHeight: "--mp-picker-height",
+  pickerMinWidth: "--mp-picker-min-width",
+  pickerMaxWidth: "--mp-picker-max-width",
+  pickerMinHeight: "--mp-picker-min-height",
+  pickerMaxHeight: "--mp-picker-max-height",
 } as const satisfies Record<keyof MediaPickerThemeTokens, `--mp-${string}`>;
 
 export function themeTokensToCssVariables(

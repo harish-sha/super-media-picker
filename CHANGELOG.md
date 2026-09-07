@@ -6,6 +6,60 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-beta.5] - 2026-09-07
+
+### Added
+
+- Added first-class container dimensions, anchored floating placement with
+  collision handling, optional portal targeting, and resolved-placement
+  callbacks across the integrated and focused picker surfaces.
+- Added opt-in Pointer Events interactions for thresholded viewport-bounded
+  dragging, edge docking, constrained resizing, and bottom-sheet swipe
+  dismissal, with committed lifecycle callbacks and keyboard alternatives.
+- Added coherent `none`, `fade`, `scale`, `pop`, `slide-up`, `slide-down`,
+  `zoom`, and `spring` motion presets plus an experimental bounded sliced-proxy
+  `genie` transition for compact/full presentation changes.
+- Added Presentation Lab, Storybook examples, geometry/component/StrictMode
+  regression tests, and Chromium coverage for drag, resize, reduced motion,
+  portals, and sheet dismissal.
+
+### Changed
+
+- Moved advanced placement and gesture machinery to an on-demand presentation
+  chunk so ordinary and compact picker imports do not initialize observers or
+  pointer controllers.
+- Expanded responsive and coarse-pointer styling while preserving browser
+  zoom, content scrolling, media selection, focus restoration, Escape, Back,
+  and backdrop behavior.
+- Isolated geometry, direct manipulation, and enter/exit transforms into
+  independent positioner, gesture, and motion layers so dragging, snapping,
+  placement, and motion no longer overwrite one another.
+- Preserved visited media panels, per-tab queries, provider pages, sticker-pack
+  state, and scroll positions; added bounded emoji rendering, stable media-card
+  geometry, intent/idle code prewarming, and animation-frame-batched gestures.
+- Minified the self-contained public ESM output while retaining separate lazy
+  full-picker, provider, advanced-presentation, and genie chunks.
+- Removed the experimental public `morph` preset before beta.5 rather than
+  silently remapping it. Genie now owns the advanced origin-aware transition.
+
+### Fixed
+
+- Kept enter and exit presets active for their configured duration instead of
+  clearing the lifecycle on the next task, including lazy full-picker loading,
+  Escape, Back, backdrop dismissal, and compact/full transitions.
+- Made every supported preset visually distinct, with a controlled short
+  spring settle and fixed-overlay Genie geometry that falls back safely to
+  scale when rectangles are unavailable.
+- Isolated Genie in a viewport-clipped, body-level fixed decorative proxy so it
+  cannot move, resize, reflow, or change the scroll geometry of the host page.
+- Preserved host-page scroll coordinates while focusing the full-picker search
+  field and restoring focus to the compact trigger.
+- Added real-browser animation-property coverage plus explicit replay controls
+  in the playground, Storybook, and external Presentation Lab; diagnostics now
+  show the resolved reduced-motion state.
+- Removed interaction-blocking compact/full exit sequencing: navigation state
+  changes immediately and the incoming surface provides visual continuity.
+
 ## [0.1.0-beta.4] - 2026-09-02
 
 ### Added
@@ -131,7 +185,8 @@ All notable changes to this project are documented here. The format follows
 - Production media catalogs, demo assets, credentials, tests, Storybook output,
   and internal source files are excluded from the tarball.
 
-[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.4...HEAD
+[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.5...HEAD
+[0.1.0-beta.5]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.4...v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.2...v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.1...v0.1.0-beta.2

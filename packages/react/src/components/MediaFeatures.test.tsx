@@ -305,6 +305,45 @@ describe("multi-media picker", () => {
     await waitFor(() => expect(aborted).toContain("party"));
   });
 
+  it("preserves visited provider panels, queries, and scroll state across tab switches", async () => {
+    const user = userEvent.setup();
+    const search = vi.fn(async () => ({ items: [gif], hasMore: false }));
+    const provider = gifProvider({ search });
+    render(
+      <MediaPicker
+        features={{ gifs: true, stickers: true }}
+        onSelect={() => undefined}
+        providers={{ gifs: provider, stickers: stickerProvider }}
+      />,
+    );
+    await user.click(await screen.findByRole("tab", { name: "GIF" }));
+    const input = screen.getByRole("searchbox", { name: "Search GIFs" });
+    await user.type(input, "party");
+    await waitFor(() => expect(search).toHaveBeenCalledOnce());
+    const gifPanel = document.querySelector<HTMLElement>(
+      '[data-media-panel="gif"]',
+    );
+    expect(gifPanel).not.toBeNull();
+    if (gifPanel === null) throw new Error("Expected the visited GIF panel");
+    gifPanel.scrollTop = 72;
+
+    await user.click(screen.getByRole("tab", { name: "Stickers" }));
+    await screen.findByRole("button", {
+      name: "Choose sticker pack, current Bears",
+    });
+    expect(gifPanel.hidden).toBe(true);
+    await user.click(screen.getByRole("tab", { name: "GIF" }));
+
+    expect(gifPanel.hidden).toBe(false);
+    expect(gifPanel.scrollTop).toBe(72);
+    expect(
+      screen.getByRole<HTMLInputElement>("searchbox", {
+        name: "Search GIFs",
+      }).value,
+    ).toBe("party");
+    expect(search).toHaveBeenCalledOnce();
+  });
+
   it("navigates sticker packs without affecting other tabs", async () => {
     const user = userEvent.setup();
     render(

@@ -16,6 +16,8 @@ require a major version after 1.0.
   `useStickerSearch`, `useRecents`, and `useFavorites`.
 - Normalized media item, provider, capabilities, persistence, animation,
   rendering, analytics, and configuration types documented in the README.
+- Presentation geometry: `dimensions`, anchored `placement`, portal targeting,
+  and the documented ordinary motion presets. `genie` remains experimental.
 - `super-media-picker/styles.css`.
 
 Focused pickers are thin configurations of the same picker engine. They emit
@@ -29,11 +31,11 @@ The `super-media-picker/providers` subpath is a convenient production adapter
 entry point for `HttpGifProvider`, `HttpStickerProvider`, request runtime, and
 provider types.
 
-The unreleased BYO-provider additions are additive candidates for the next
-beta: `providers.animatedEmoji`, `providers.custom`, `HttpEmojiProvider`,
+Beta.4's `providers.animatedEmoji`, `providers.custom`, `HttpEmojiProvider`,
 `HttpCustomMediaProvider`, shared HTTP retry/error metadata, and normalized
-provider capabilities. The beta.3 `providers.emoji` and `customTabs` contracts
-remain supported; no migration is required.
+provider capabilities are additive stable beta APIs. The beta.3
+`providers.emoji` and `customTabs` contracts remain supported; no migration is
+required.
 
 ## Advanced API
 
@@ -43,6 +45,15 @@ APIs. They are public and typed, but require the host to preserve the documented
 media and security contracts. Scoped `@super-media-picker/*` workspace modules
 are internal release inputs during the beta and are not supported npm consumer
 entry points.
+
+Pointer dragging, docking/snap, interactive resize, sheet swipe thresholds,
+controlled position, and their lifecycle callbacks are advanced presentation
+APIs. Their configuration shapes are public and typed. The fixed-overlay,
+sliced-proxy `genie` motion preset is experimental during the beta. The former
+experimental `morph` preset was removed before beta.5 and is not a public
+configuration value.
+Internal geometry, observer, gesture-session, and long-press hooks are not
+exported.
 
 ## Internal implementation
 

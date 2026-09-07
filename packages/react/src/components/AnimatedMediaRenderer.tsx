@@ -194,9 +194,13 @@ export function AnimatedMediaRenderer({
     visual = safePreviewUrl ? (
       <img
         alt=""
+        decoding="async"
+        draggable={false}
+        {...(item.height === undefined ? {} : { height: item.height })}
         loading="lazy"
         onError={() => setPreviewFailed(true)}
         src={safePreviewUrl}
+        {...(item.width === undefined ? {} : { width: item.width })}
       />
     ) : (
       <span aria-hidden="true" data-media-fallback="">
@@ -233,9 +237,13 @@ export function AnimatedMediaRenderer({
     visual = (
       <img
         alt=""
+        decoding="async"
+        draggable={false}
+        {...(item.height === undefined ? {} : { height: item.height })}
         loading="lazy"
         onError={() => setAnimationFailed(true)}
         src={animationUrl}
+        {...(item.width === undefined ? {} : { width: item.width })}
       />
     );
   }

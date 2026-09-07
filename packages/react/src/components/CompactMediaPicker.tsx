@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import type {
   AnimatedMediaConfig,
@@ -50,6 +57,7 @@ export interface CompactMediaPickerProps {
   readonly mediaSecurity?: MediaUrlPolicy;
   readonly onClose?: () => void;
   readonly onExpand: () => void;
+  readonly onExpandIntent?: () => void;
   readonly onRecordRecent: (item: string | MediaItem) => void;
   readonly onSelect: (item: MediaItem) => void;
   readonly onSkinToneChange: (tone: SkinTone) => void;
@@ -62,6 +70,8 @@ export interface CompactMediaPickerProps {
   readonly source: CompactReactionSource;
   readonly style: CSSProperties;
   readonly themeMode: string;
+  readonly presentationControls?: ReactNode;
+  readonly surfaceRef?: RefObject<HTMLElement | null>;
 }
 
 function needsEmojiData(
@@ -153,6 +163,7 @@ export function CompactMediaPicker({
   mediaSecurity,
   onClose,
   onExpand,
+  onExpandIntent,
   onRecordRecent,
   onSelect,
   onSkinToneChange,
@@ -165,6 +176,8 @@ export function CompactMediaPicker({
   source,
   style,
   themeMode,
+  presentationControls,
+  surfaceRef,
 }: CompactMediaPickerProps) {
   const [emojiModule, setEmojiModule] = useState<EmojiModule>();
   const loadEmojiData = needsEmojiData(source, reactions);
@@ -278,11 +291,13 @@ export function CompactMediaPicker({
     <section
       aria-label={ariaLabel}
       aria-modal={overlay ? true : undefined}
-      className={`${className} mp-picker--compact mp-mode-enter`}
+      className={`${className} mp-picker--compact`}
       data-theme={themeMode}
       role={overlay ? "dialog" : "region"}
       style={style}
+      ref={surfaceRef}
     >
+      {presentationControls}
       <CompactReactionBar
         allowExpand={allowExpand}
         animation={animation}
@@ -290,6 +305,7 @@ export function CompactMediaPicker({
         items={items}
         {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
         onExpand={onExpand}
+        {...(onExpandIntent === undefined ? {} : { onExpandIntent })}
         onSelect={handleSelect}
         {...(renderers === undefined ? {} : { renderers })}
         {...(onClose === undefined ? {} : { onEscape: onClose })}

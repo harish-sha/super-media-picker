@@ -24,6 +24,7 @@ export default defineConfig({
     "react/jsx-dev-runtime",
   ],
   format: ["esm"],
+  minify: true,
   noExternal: internalPackages,
   platform: "browser",
   sourcemap: false,

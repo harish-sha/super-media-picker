@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import type { SkinTone } from "@super-media-picker/core";
 import {
@@ -20,8 +20,9 @@ export interface EmojiGridProps {
 }
 
 const minimumCellSize = 44;
+const initialWindowSize = 240;
 
-export function EmojiGrid({
+export const EmojiGrid = memo(function EmojiGrid({
   items,
   label,
   emptyMessage,
@@ -34,6 +35,10 @@ export function EmojiGrid({
   resetKey,
 }: EmojiGridProps) {
   const [navigation, setNavigation] = useState({ key: resetKey, index: 0 });
+  const [window, setWindow] = useState({
+    key: resetKey,
+    size: initialWindowSize,
+  });
   const gridRef = useRef<HTMLDivElement>(null);
   const requestedIndex = navigation.key === resetKey ? navigation.index : 0;
   const activeIndex = Math.min(requestedIndex, Math.max(0, items.length - 1));
@@ -45,9 +50,11 @@ export function EmojiGrid({
       })),
     [items, skinTone],
   );
+  const windowSize = window.key === resetKey ? window.size : initialWindowSize;
+  const visibleItems = resolvedItems.slice(0, windowSize);
 
   function focusAt(index: number): void {
-    const lastIndex = Math.max(0, items.length - 1);
+    const lastIndex = Math.max(0, visibleItems.length - 1);
     const nextIndex = Math.min(lastIndex, Math.max(0, index));
     setNavigation({ key: resetKey, index: nextIndex });
     gridRef.current
@@ -71,7 +78,7 @@ export function EmojiGrid({
       ArrowLeft: index - 1,
       ArrowRight: index + 1,
       ArrowUp: index - columns,
-      End: items.length - 1,
+      End: visibleItems.length - 1,
       Home: 0,
     };
     const destination = destinations[event.key];
@@ -89,45 +96,63 @@ export function EmojiGrid({
   }
 
   return (
-    <div aria-label={label} className="mp-grid" ref={gridRef} role="grid">
-      {resolvedItems.map(({ emoji, resolved }, index) => {
-        const favorite = favoriteIds.has(emoji.id);
-        return (
-          <div className="mp-emoji-cell" key={resolved.id} role="gridcell">
-            <button
-              aria-label={resolved.name}
-              className="mp-emoji"
-              data-emoji-select=""
-              onClick={() => onSelect(emoji)}
-              onFocus={() => {
-                setNavigation({ key: resetKey, index });
-                onPreview?.(emoji);
-              }}
-              onKeyDown={(event) => handleKeyDown(event, index)}
-              onMouseEnter={() => onPreview?.(emoji)}
-              tabIndex={index === activeIndex ? 0 : -1}
-              title={resolved.name}
-              type="button"
-            >
-              <span aria-hidden="true">{resolved.value}</span>
-            </button>
-            {favoritesEnabled ? (
+    <>
+      <div aria-label={label} className="mp-grid" ref={gridRef} role="grid">
+        {visibleItems.map(({ emoji, resolved }, index) => {
+          const favorite = favoriteIds.has(emoji.id);
+          return (
+            <div className="mp-emoji-cell" key={resolved.id} role="gridcell">
               <button
-                aria-label={`${favorite ? "Remove" : "Add"} ${emoji.name} ${favorite ? "from" : "to"} favorites`}
-                aria-pressed={favorite}
-                className="mp-favorite-toggle"
-                onClick={() => onFavoriteToggle(emoji)}
-                onFocus={() => setNavigation({ key: resetKey, index })}
+                aria-label={resolved.name}
+                className="mp-emoji"
+                data-emoji-select=""
+                onClick={() => onSelect(emoji)}
+                onFocus={() => {
+                  setNavigation({ key: resetKey, index });
+                  onPreview?.(emoji);
+                }}
+                onKeyDown={(event) => handleKeyDown(event, index)}
+                onMouseEnter={() => onPreview?.(emoji)}
                 tabIndex={index === activeIndex ? 0 : -1}
-                title={`${favorite ? "Remove from" : "Add to"} favorites`}
+                title={resolved.name}
                 type="button"
               >
-                <span aria-hidden="true">{favorite ? "★" : "☆"}</span>
+                <span aria-hidden="true">{resolved.value}</span>
               </button>
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
+              {favoritesEnabled ? (
+                <button
+                  aria-label={`${favorite ? "Remove" : "Add"} ${emoji.name} ${favorite ? "from" : "to"} favorites`}
+                  aria-pressed={favorite}
+                  className="mp-favorite-toggle"
+                  onClick={() => onFavoriteToggle(emoji)}
+                  onFocus={() => setNavigation({ key: resetKey, index })}
+                  tabIndex={index === activeIndex ? 0 : -1}
+                  title={`${favorite ? "Remove from" : "Add to"} favorites`}
+                  type="button"
+                >
+                  <span aria-hidden="true">{favorite ? "★" : "☆"}</span>
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      {visibleItems.length < resolvedItems.length ? (
+        <button
+          className="mp-load-more"
+          onClick={() =>
+            setWindow((current) => ({
+              key: resetKey,
+              size:
+                (current.key === resetKey ? current.size : initialWindowSize) +
+                initialWindowSize,
+            }))
+          }
+          type="button"
+        >
+          Show more emoji
+        </button>
+      ) : null}
+    </>
   );
-}
+});

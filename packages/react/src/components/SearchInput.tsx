@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 export interface SearchInputProps {
   readonly autoFocus?: boolean;
@@ -16,6 +16,11 @@ export function SearchInput({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!autoFocus) return;
+    inputRef.current?.focus({ preventScroll: true });
+  }, [autoFocus]);
+
   function clear(): void {
     onChange("");
     inputRef.current?.focus();
@@ -30,7 +35,6 @@ export function SearchInput({
         ⌕
       </span>
       <input
-        autoFocus={autoFocus}
         className="mp-search__input"
         id={inputId}
         onChange={(event) => onChange(event.currentTarget.value)}

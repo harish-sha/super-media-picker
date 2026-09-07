@@ -283,7 +283,7 @@ describe("MediaPicker compact mode", () => {
     await user.click(
       screen.getByRole("button", { name: "Return to compact reactions" }),
     );
-    const restoredTrigger = screen.getByRole("button", {
+    const restoredTrigger = await screen.findByRole("button", {
       name: "Open full media picker",
     });
     expect(document.activeElement).toBe(restoredTrigger);
@@ -304,12 +304,13 @@ describe("MediaPicker compact mode", () => {
     );
     await screen.findByRole("searchbox", { name: "Search emoji" });
     await user.keyboard("{Escape}");
+    const restoredTrigger = await screen.findByRole("button", {
+      name: "Open full media picker",
+    });
     expect(
       screen.queryByRole("searchbox", { name: "Search emoji" }),
     ).toBeNull();
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Open full media picker" }),
-    );
+    expect(document.activeElement).toBe(restoredTrigger);
   });
 
   it("keeps one integrated surface through React StrictMode transitions", async () => {
@@ -366,7 +367,7 @@ describe("MediaPicker compact mode", () => {
     await user.click(
       screen.getByRole("button", { name: "Open full media picker" }),
     );
-    expect(onModeChange).toHaveBeenCalledWith("full");
+    await waitFor(() => expect(onModeChange).toHaveBeenCalledWith("full"));
     expect(screen.queryByRole("searchbox")).toBeNull();
 
     view.rerender(
@@ -382,7 +383,9 @@ describe("MediaPicker compact mode", () => {
     await user.click(
       screen.getByRole("button", { name: "Return to compact reactions" }),
     );
-    expect(onModeChange).toHaveBeenLastCalledWith("compact");
+    await waitFor(() =>
+      expect(onModeChange).toHaveBeenLastCalledWith("compact"),
+    );
     expect(
       screen.getByRole("searchbox", { name: "Search emoji" }),
     ).not.toBeNull();
@@ -444,7 +447,7 @@ describe("MediaPicker compact mode", () => {
     );
     screen.getByRole("button", { name: "thumbs up" }).focus();
     await user.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
   it("switches compact reaction variants through the shared tone menu", async () => {

@@ -82,7 +82,12 @@
     {
       "name": "super-media-picker public entry",
       "path": "packages/super-media-picker/dist/index.js",
-      "limit": "7 kB"
+      "limit": "7.5 kB"
+    },
+    {
+      "name": "super-media-picker advanced presentation",
+      "path": "packages/super-media-picker/dist/AdvancedPresentation-*.js",
+      "limit": "6 kB"
     },
     {
       "name": "super-media-picker headless entry",

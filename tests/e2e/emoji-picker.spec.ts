@@ -118,9 +118,16 @@ test("keyboard-selects a reaction, expands, selects from search, and collapses",
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
+  await expect(page.locator(".mp-positioner").first()).toHaveAttribute(
+    "data-motion-state",
+    "open",
+  );
   const thumbsUp = page.getByRole("button", { name: "thumbs up" });
+  const heart = page.getByRole("button", { name: "red heart" });
   await thumbsUp.focus();
+  await expect(thumbsUp).toBeFocused();
   await page.keyboard.press("ArrowRight");
+  await expect(heart).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("selection-output")).toContainText(
     '"value": "❤️"',

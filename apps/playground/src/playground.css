@@ -96,6 +96,12 @@ select {
   padding: 0.4rem 2rem 0.4rem 0.6rem;
 }
 
+.playground-controls input[type="number"] {
+  width: 7rem;
+  min-height: 2.5rem;
+  padding: 0 0.6rem;
+}
+
 .playground-controls .playground-checkbox {
   min-height: 2.5rem;
   flex-direction: row;
@@ -141,6 +147,77 @@ select {
 
 .playground-preview[data-preview-width="mobile"] {
   max-width: 20rem;
+}
+
+.presentation-lab {
+  position: relative;
+  height: 46rem;
+  padding: 1rem;
+  border: 1px dashed #8ea0bc;
+  border-radius: 1rem;
+  background-image: linear-gradient(
+    45deg,
+    rgb(255 255 255 / 45%) 25%,
+    transparent 25%,
+    transparent 75%,
+    rgb(255 255 255 / 45%) 75%
+  );
+  background-size: 1.5rem 1.5rem;
+}
+
+.presentation-lab__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.presentation-lab__header button {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.presentation-lab__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.presentation-lab__diagnostics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  color: #eef3ff;
+  background: #172033;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.presentation-lab__diagnostics div {
+  min-width: 0;
+}
+
+.presentation-lab__diagnostics .presentation-lab__diagnostic-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid #34415a;
+}
+
+.presentation-lab__diagnostics dt {
+  color: #9eb0cf;
+}
+
+.presentation-lab__diagnostics dd {
+  overflow-wrap: anywhere;
+  margin: 0.15rem 0 0;
+  font-weight: 700;
 }
 
 .playground-headless {

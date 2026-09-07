@@ -21,6 +21,8 @@ animated-emoji, and tenant catalogs come from an application backend plus
 CDN/object storage. See [backend contracts](docs/backend-api.md), [provider
 integration](docs/providers.md), and [security/CSP](docs/security.md).
 Native font/version behavior is documented in [emoji compatibility](docs/emoji-compatibility.md).
+Layout and input integration are documented in [presentation, geometry, and
+motion](docs/presentation.md).
 
 ## Installation
 
@@ -30,7 +32,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.4`. React and React DOM
+The public beta version is `0.1.0-beta.5`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -176,13 +178,20 @@ In controlled mode, expand/collapse emits `onModeChange`; the host remains respo
 <MediaPicker mode="full" size="lg" onSelect={handleSelect} />
 ```
 
-`sm`, `md`, and `lg` presets use shared CSS variables and responsive constraints. Explicit dimensions accept numbers as pixels or any valid CSS length:
+`sm`, `md`, and `lg` control density. The separate `dimensions` API accepts
+numbers as pixels or CSS-compatible lengths and retains viewport safety:
 
 ```tsx
 <MediaPicker
+  dimensions={{
+    width: 420,
+    height: "60dvh",
+    minWidth: 320,
+    maxWidth: 640,
+    minHeight: 360,
+    maxHeight: 720,
+  }}
   mode="full"
-  width={360}
-  height="60vh"
   preview={{ enabled: true }}
   onSelect={handleSelect}
 />
@@ -192,9 +201,32 @@ The three layout concepts are independent:
 
 - `mode`: `compact` reaction bar or `full` picker content.
 - `displayMode`: placement as `auto`, `inline`, `popover`, `modal`, `bottom-sheet`, or `fullscreen`.
-- `size`: `sm`, `md`, or `lg` preset, optionally overridden by `width`/`height`.
+- `size`: `sm`, `md`, or `lg` density preset.
+- `dimensions`: width, height, and min/max container constraints.
 
 For example, `mode="compact" displayMode="popover"` is a quick desktop reaction surface, while `mode="full" displayMode="inline" size="lg"` is a large embedded picker.
+
+Floating popovers can anchor, flip, clamp, and portal without changing provider
+configuration:
+
+```tsx
+<MediaPicker
+  anchorRef={buttonRef}
+  displayMode="popover"
+  placement="bottom-start"
+  draggable={{ enabled: true, snap: "nearest-edge" }}
+  resizable={{ enabled: true, directions: ["bottom-right"] }}
+  motion="scale"
+  onSelect={handleSelect}
+/>
+```
+
+Bottom sheets optionally support handle-only swipe dismissal. All spatial
+gestures use Pointer Events, retain keyboard alternatives, and respect
+`prefers-reduced-motion`. See the [presentation guide](docs/presentation.md) for
+the full API, responsive behavior, and the experimental compact-to-full sliced
+`genie` preset. Legacy `width` / `height` props remain compatible
+but are deprecated in favor of `dimensions`.
 
 ## Emoji only
 
@@ -565,7 +597,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.4` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.5` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

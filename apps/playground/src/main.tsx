@@ -1,4 +1,4 @@
-import { StrictMode, useMemo, useState } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
@@ -12,8 +12,14 @@ import {
   type MediaCapabilities,
   type MediaItem,
   type MediaPickerFeatures,
+  type MediaPickerActiveGesture,
+  type MediaPickerMotionPreset,
   type MediaPickerMode,
+  type MediaPickerPlacement,
+  type MediaPickerPoint,
+  type MediaPickerResolvedDimensions,
   type MediaPickerSize,
+  type MediaPickerSnap,
   type MediaPickerThemeMode,
   type PickerDisplayMode,
 } from "super-media-picker";
@@ -31,6 +37,24 @@ import "./playground.css";
 type PreviewWidth = "desktop" | "mobile";
 type SdkSurface =
   "media" | "emoji" | "gif" | "sticker" | "reaction" | "headless";
+
+interface FluidityDiagnostics {
+  readonly activeAnimatedMedia: number;
+  readonly activePanel: string;
+  readonly lastTabSwitch: string;
+  readonly lazyPanels: string;
+  readonly longTasks: number;
+  readonly mediaNodes: number;
+}
+
+const initialFluidity: FluidityDiagnostics = {
+  activeAnimatedMedia: 0,
+  activePanel: "compact",
+  lastTabSwitch: "not measured",
+  lazyPanels: "none",
+  longTasks: 0,
+  mediaNodes: 0,
+};
 
 const initialFeatures: MediaPickerFeatures = {
   emoji: true,
@@ -83,7 +107,162 @@ function Playground() {
   const [scenario, setScenario] = useState<MockScenario>("normal");
   const [autoplay, setAutoplay] = useState<AnimationAutoplay>("hover");
   const [surface, setSurface] = useState<SdkSurface>("media");
+  const [pickerWidth, setPickerWidth] = useState(420);
+  const [pickerHeight, setPickerHeight] = useState(560);
+  const [placement, setPlacement] = useState<MediaPickerPlacement>("auto");
+  const [draggable, setDraggable] = useState(false);
+  const [resizable, setResizable] = useState(false);
+  const [snap, setSnap] = useState<MediaPickerSnap>("none");
+  const [swipeToDismiss, setSwipeToDismiss] = useState(false);
+  const [motion, setMotion] = useState<MediaPickerMotionPreset>("pop");
+  const [simulateReducedMotion, setSimulateReducedMotion] = useState(false);
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false);
+  const [motionReplayKey, setMotionReplayKey] = useState(0);
+  const [inputMode, setInputMode] = useState("actual device");
+  const [position, setPosition] = useState<MediaPickerPoint>();
+  const [resolvedDimensions, setResolvedDimensions] =
+    useState<MediaPickerResolvedDimensions>();
+  const [resolvedPlacement, setResolvedPlacement] = useState("bottom-start");
+  const [activeGesture, setActiveGesture] =
+    useState<MediaPickerActiveGesture>("idle");
+  const [fluidity, setFluidity] =
+    useState<FluidityDiagnostics>(initialFluidity);
+  const anchorRef = useRef<HTMLButtonElement>(null);
   const providers = useMemo(() => createMockProviders(scenario), [scenario]);
+  const resolvedReducedMotion = simulateReducedMotion || systemReducedMotion;
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setSystemReducedMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    let longTasks = 0;
+    let frame: number | undefined;
+    let tabStartedAt: number | undefined;
+    let lastTabSwitch = "not measured";
+    let previousPanel = "compact";
+    const update = () => {
+      frame = undefined;
+      const picker = document.querySelector<HTMLElement>(".mp-picker");
+      const activePanel = picker?.dataset.activeMediaType ?? "compact";
+      if (activePanel !== previousPanel) {
+        previousPanel = activePanel;
+        if (tabStartedAt !== undefined) {
+          lastTabSwitch = `${(performance.now() - tabStartedAt).toFixed(2)} ms`;
+          performance.clearMarks("super-media-picker:tab-content-ready");
+          performance.clearMeasures("super-media-picker:tab-switch");
+          performance.mark("super-media-picker:tab-content-ready");
+          performance.measure(
+            "super-media-picker:tab-switch",
+            "super-media-picker:tab-switch-start",
+            "super-media-picker:tab-content-ready",
+          );
+          tabStartedAt = undefined;
+        }
+      }
+      const activeRoot =
+        picker?.querySelector<HTMLElement>(
+          `[data-media-panel="${activePanel}"]`,
+        ) ?? picker;
+      setFluidity({
+        activeAnimatedMedia:
+          activeRoot?.querySelectorAll('.mp-animated-media[data-active="true"]')
+            .length ?? 0,
+        activePanel,
+        lastTabSwitch,
+        lazyPanels: picker?.dataset.loadedMediaTypes ?? "none",
+        longTasks,
+        mediaNodes:
+          activeRoot?.querySelectorAll(".mp-emoji-cell, .mp-media-cell")
+            .length ?? 0,
+      });
+    };
+    const schedule = () => {
+      if (frame === undefined) frame = requestAnimationFrame(update);
+    };
+    const mutation = new MutationObserver(schedule);
+    const positioner = document.querySelector(".mp-positioner");
+    const measureTabIntent = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('.mp-primary-tabs [role="tab"]') !== null
+      ) {
+        tabStartedAt = performance.now();
+        performance.clearMarks("super-media-picker:tab-switch-start");
+        performance.mark("super-media-picker:tab-switch-start");
+      }
+    };
+    if (positioner !== null) {
+      mutation.observe(positioner, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+      });
+      positioner.addEventListener("pointerdown", measureTabIntent, true);
+      positioner.addEventListener("keydown", measureTabIntent, true);
+    }
+    const observer =
+      typeof PerformanceObserver === "undefined"
+        ? undefined
+        : new PerformanceObserver((entries) => {
+            longTasks += entries
+              .getEntries()
+              .filter((entry) => entry.duration >= 50).length;
+            schedule();
+          });
+    try {
+      observer?.observe({ type: "longtask", buffered: true });
+    } catch {
+      // Long-task entries are optional development diagnostics.
+    }
+    schedule();
+    return () => {
+      mutation.disconnect();
+      positioner?.removeEventListener("pointerdown", measureTabIntent, true);
+      positioner?.removeEventListener("keydown", measureTabIntent, true);
+      observer?.disconnect();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [motionReplayKey, surface]);
+
+  function replayMotion(nextMotion = motion): void {
+    if (surface === "media")
+      setMode(nextMotion === "genie" ? "compact" : "full");
+    setMotionReplayKey((current) => current + 1);
+  }
+
+  const presentationProps = {
+    anchorRef,
+    dimensions: {
+      height: pickerHeight,
+      maxHeight: 720,
+      maxWidth: 720,
+      minHeight: 320,
+      minWidth: 300,
+      width: pickerWidth,
+    },
+    draggable: {
+      enabled: draggable,
+      onPositionChange: setPosition,
+      snap,
+      snapThreshold: 32,
+    },
+    motion: resolvedReducedMotion ? ("none" as const) : motion,
+    onInteractionChange: setActiveGesture,
+    onResolvedPlacementChange: setResolvedPlacement,
+    placement,
+    resizable: {
+      directions: ["right", "bottom", "bottom-right"] as const,
+      enabled: resizable,
+      onDimensionsChange: setResolvedDimensions,
+    },
+    swipeToDismiss: { enabled: swipeToDismiss },
+  };
 
   function setFeature(
     feature: keyof MediaPickerFeatures,
@@ -224,6 +403,112 @@ function Playground() {
           </select>
         </label>
         <label>
+          Width
+          <input
+            max="720"
+            min="300"
+            onChange={(event) =>
+              setPickerWidth(event.currentTarget.valueAsNumber)
+            }
+            type="number"
+            value={pickerWidth}
+          />
+        </label>
+        <label>
+          Height
+          <input
+            max="720"
+            min="320"
+            onChange={(event) =>
+              setPickerHeight(event.currentTarget.valueAsNumber)
+            }
+            type="number"
+            value={pickerHeight}
+          />
+        </label>
+        <label>
+          Placement
+          <select
+            onChange={(event) =>
+              setPlacement(event.currentTarget.value as MediaPickerPlacement)
+            }
+            value={placement}
+          >
+            {[
+              "auto",
+              "top",
+              "top-start",
+              "top-end",
+              "bottom",
+              "bottom-start",
+              "bottom-end",
+              "left",
+              "right",
+            ].map((value) => (
+              <option key={value}>{value}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Snap
+          <select
+            onChange={(event) =>
+              setSnap(event.currentTarget.value as MediaPickerSnap)
+            }
+            value={snap}
+          >
+            {[
+              "none",
+              "nearest-edge",
+              "left",
+              "right",
+              "top",
+              "bottom",
+              "corners",
+            ].map((value) => (
+              <option key={value}>{value}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Motion
+          <select
+            onChange={(event) => {
+              const next = event.currentTarget.value as MediaPickerMotionPreset;
+              setMotion(next);
+              replayMotion(next);
+            }}
+            value={motion}
+          >
+            {[
+              "none",
+              "fade",
+              "scale",
+              "pop",
+              "slide-up",
+              "slide-down",
+              "zoom",
+              "spring",
+              "genie",
+            ].map((value) => (
+              <option key={value}>{value}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Pointer/input
+          <select
+            onChange={(event) => setInputMode(event.currentTarget.value)}
+            value={inputMode}
+          >
+            <option>actual device</option>
+            <option>mouse checklist</option>
+            <option>touch checklist</option>
+            <option>pen checklist</option>
+            <option>keyboard checklist</option>
+          </select>
+        </label>
+        <label>
           Reactions
           <select
             onChange={(event) =>
@@ -291,6 +576,41 @@ function Playground() {
         </label>
         <label className="playground-checkbox">
           <input
+            checked={draggable}
+            onChange={(event) => setDraggable(event.currentTarget.checked)}
+            type="checkbox"
+          />
+          Draggable
+        </label>
+        <label className="playground-checkbox">
+          <input
+            checked={resizable}
+            onChange={(event) => setResizable(event.currentTarget.checked)}
+            type="checkbox"
+          />
+          Resizable
+        </label>
+        <label className="playground-checkbox">
+          <input
+            checked={swipeToDismiss}
+            onChange={(event) => setSwipeToDismiss(event.currentTarget.checked)}
+            type="checkbox"
+          />
+          Swipe dismiss
+        </label>
+        <label className="playground-checkbox">
+          <input
+            checked={simulateReducedMotion}
+            onChange={(event) => {
+              setSimulateReducedMotion(event.currentTarget.checked);
+              replayMotion();
+            }}
+            type="checkbox"
+          />
+          Simulate reduced motion
+        </label>
+        <label className="playground-checkbox">
+          <input
             checked={features.recents}
             onChange={(event) =>
               setFeature("recents", event.currentTarget.checked)
@@ -326,12 +646,29 @@ function Playground() {
       </section>
 
       <section className="playground-demo" aria-label="Interactive demo">
-        <div className="playground-preview" data-preview-width={previewWidth}>
+        <div
+          className="playground-preview presentation-lab"
+          data-preview-width={previewWidth}
+        >
+          <div className="presentation-lab__header">
+            <strong>Presentation Lab</strong>
+            <div className="presentation-lab__actions">
+              <button onClick={() => replayMotion()} type="button">
+                Replay selected motion
+              </button>
+              <button ref={anchorRef} type="button">
+                Floating anchor
+              </button>
+            </div>
+          </div>
           {surface === "media" ? (
             <MediaPicker
+              key={`media-${motionReplayKey}`}
+              {...presentationProps}
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               compact={{
+                allowCollapse: true,
                 allowExpand,
                 source: compactSource,
                 ...(compactSource === "custom"
@@ -352,6 +689,8 @@ function Playground() {
             />
           ) : surface === "emoji" ? (
             <EmojiPicker
+              key={`emoji-${motionReplayKey}`}
+              {...presentationProps}
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
@@ -367,6 +706,8 @@ function Playground() {
             />
           ) : surface === "gif" ? (
             <GifPicker
+              key={`gif-${motionReplayKey}`}
+              {...presentationProps}
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
@@ -377,6 +718,8 @@ function Playground() {
             />
           ) : surface === "sticker" ? (
             <StickerPicker
+              key={`sticker-${motionReplayKey}`}
+              {...presentationProps}
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
@@ -387,6 +730,8 @@ function Playground() {
             />
           ) : surface === "reaction" ? (
             <ReactionPicker
+              key={`reaction-${motionReplayKey}`}
+              {...presentationProps}
               animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
               displayMode={displayMode}
               onSelect={setSelection}
@@ -402,6 +747,74 @@ function Playground() {
               provider={providers.gifs}
             />
           )}
+          <dl className="presentation-lab__diagnostics">
+            <div>
+              <dt>Pointer</dt>
+              <dd>{inputMode}</dd>
+            </div>
+            <div>
+              <dt>Gesture</dt>
+              <dd>{activeGesture}</dd>
+            </div>
+            <div>
+              <dt>Position</dt>
+              <dd data-testid="presentation-position">
+                {position === undefined
+                  ? "automatic"
+                  : `${position.x}, ${position.y}`}
+              </dd>
+            </div>
+            <div>
+              <dt>Dimensions</dt>
+              <dd data-testid="presentation-dimensions">
+                {resolvedDimensions === undefined
+                  ? `${pickerWidth} × ${pickerHeight}`
+                  : `${Math.round(resolvedDimensions.width)} × ${Math.round(resolvedDimensions.height)}`}
+              </dd>
+            </div>
+            <div>
+              <dt>Placement</dt>
+              <dd>{resolvedPlacement}</dd>
+            </div>
+            <div>
+              <dt>Reduced motion</dt>
+              <dd data-testid="resolved-reduced-motion">
+                {resolvedReducedMotion
+                  ? simulateReducedMotion
+                    ? "reduced (simulated)"
+                    : "reduced (system)"
+                  : "no-preference (system)"}
+              </dd>
+            </div>
+            <div className="presentation-lab__diagnostic-heading">
+              <dt>Fluidity</dt>
+              <dd>local diagnostics</dd>
+            </div>
+            <div>
+              <dt>Last tab switch</dt>
+              <dd data-testid="last-tab-switch">{fluidity.lastTabSwitch}</dd>
+            </div>
+            <div>
+              <dt>Active panel</dt>
+              <dd>{fluidity.activePanel}</dd>
+            </div>
+            <div>
+              <dt>Media nodes</dt>
+              <dd>{fluidity.mediaNodes}</dd>
+            </div>
+            <div>
+              <dt>Active animation</dt>
+              <dd>{fluidity.activeAnimatedMedia}</dd>
+            </div>
+            <div>
+              <dt>Long tasks</dt>
+              <dd>{fluidity.longTasks}</dd>
+            </div>
+            <div>
+              <dt>Loaded panels</dt>
+              <dd>{fluidity.lazyPanels}</dd>
+            </div>
+          </dl>
         </div>
         <aside className="playground-output" aria-live="polite">
           <h2>Normalized selection</h2>

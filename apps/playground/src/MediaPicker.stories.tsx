@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, userEvent, within } from "@storybook/test";
+import { useRef, useState } from "react";
 
 import {
   EmojiPicker,
@@ -9,6 +10,7 @@ import {
   ReactionPicker,
   StickerPicker,
   mediaPickerStorageKeys,
+  type MediaPickerMotionPreset,
 } from "super-media-picker";
 import { useGifSearch } from "super-media-picker/headless";
 
@@ -272,7 +274,122 @@ export const FullLarge: Story = {
 };
 
 export const FullCustomDimensions: Story = {
-  args: { height: "65vh", mode: "full", width: "min(90vw, 30rem)" },
+  args: {
+    dimensions: {
+      height: "65vh",
+      maxHeight: 720,
+      maxWidth: 640,
+      minHeight: 360,
+      minWidth: 320,
+      width: "min(90vw, 30rem)",
+    },
+    mode: "full",
+  },
+};
+
+function AnchoredPlacementExample() {
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div style={{ minHeight: "44rem", padding: "8rem 2rem" }}>
+      <button ref={anchorRef} type="button">
+        Picker anchor
+      </button>
+      <MediaPicker
+        anchorRef={anchorRef}
+        dimensions={{ height: 420, width: 360 }}
+        displayMode="popover"
+        onSelect={fn()}
+        placement="bottom-start"
+      />
+    </div>
+  );
+}
+
+export const PlacementAndCollision: Story = {
+  render: () => <AnchoredPlacementExample />,
+};
+
+export const DraggableFloatingPicker: Story = {
+  args: {
+    dimensions: { height: 430, width: 360 },
+    displayMode: "popover",
+    draggable: { enabled: true, snap: "nearest-edge", snapThreshold: 32 },
+  },
+};
+
+export const ResizablePicker: Story = {
+  args: {
+    dimensions: {
+      height: 440,
+      maxHeight: 700,
+      maxWidth: 680,
+      minHeight: 340,
+      minWidth: 300,
+      width: 380,
+    },
+    resizable: {
+      directions: ["right", "bottom", "bottom-right"],
+      enabled: true,
+    },
+  },
+};
+
+function MotionGalleryExample() {
+  const presets = [
+    "none",
+    "fade",
+    "scale",
+    "pop",
+    "slide-up",
+    "slide-down",
+    "zoom",
+    "spring",
+  ] as const;
+  return (
+    <div style={{ display: "grid", gap: "1rem" }}>
+      {presets.map((motion) => (
+        <MotionSample key={motion} motion={motion} />
+      ))}
+    </div>
+  );
+}
+
+function MotionSample({
+  motion,
+}: {
+  readonly motion: MediaPickerMotionPreset;
+}) {
+  const [replay, setReplay] = useState(0);
+  return (
+    <div style={{ display: "grid", gap: "0.375rem" }}>
+      <strong>{motion}</strong>
+      <ReactionPicker key={replay} motion={motion} onSelect={fn()} />
+      <button onClick={() => setReplay((current) => current + 1)} type="button">
+        Replay {motion}
+      </button>
+    </div>
+  );
+}
+
+export const MotionGallery: Story = {
+  render: () => <MotionGalleryExample />,
+};
+
+function SpatialMotionExample({ preset }: { readonly preset: "genie" }) {
+  const [mode, setMode] = useState<"compact" | "full">("compact");
+  return (
+    <MediaPicker
+      compact={{ allowCollapse: true, allowExpand: true }}
+      mode={mode}
+      motion={{ duration: 280, preset }}
+      onModeChange={setMode}
+      onSelect={fn()}
+    />
+  );
+}
+
+export const CompactToFullGenie: Story = {
+  render: () => <SpatialMotionExample preset="genie" />,
 };
 
 export const CompactToFull: Story = {
@@ -309,7 +426,9 @@ export const ReducedMotion: Story = {
     animatedMedia: { autoplay: "never" },
     emojiPacks,
     features: { emoji: true, animatedEmoji: true },
+    motion: "spring",
   },
+  parameters: { emulatedMedia: { reducedMotion: "reduce" } },
 };
 
 export const GifTrending: Story = {

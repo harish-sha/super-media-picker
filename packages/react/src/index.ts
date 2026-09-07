@@ -16,6 +16,22 @@ export type {
   MediaPickerPreviewConfig,
   MediaPickerProps,
   MediaPickerRenderers,
+  MediaPickerActiveGesture,
+  MediaPickerCssDimension,
+  MediaPickerDimensions,
+  MediaPickerDragEvent,
+  MediaPickerDraggableConfig,
+  MediaPickerMotion,
+  MediaPickerMotionConfig,
+  MediaPickerMotionPreset,
+  MediaPickerPlacement,
+  MediaPickerPoint,
+  MediaPickerResizableConfig,
+  MediaPickerResizeDirection,
+  MediaPickerResizeEvent,
+  MediaPickerResolvedDimensions,
+  MediaPickerSnap,
+  MediaPickerSwipeToDismissConfig,
 } from "./types";
 
 export {

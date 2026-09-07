@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.4` of an accessible, provider-first React SDK for
+Public beta `0.1.0-beta.5` of an accessible, provider-first React SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -73,6 +73,32 @@ capsule is unmounted; Back, Escape, or backdrop dismissal returns to compact
 mode and restores focus. Sticker packs are selected from a responsive,
 keyboard-accessible `Packs` menu that remains usable with large provider-backed
 pack collections.
+
+## Presentation and motion
+
+Density (`size`) and container geometry (`dimensions`) are independent. Floating
+pickers can anchor, portal, flip/clamp, drag, dock, and resize without changing
+provider configuration:
+
+```tsx
+<MediaPicker
+  anchorRef={triggerRef}
+  dimensions={{ width: 420, height: 520, minWidth: 320, maxHeight: 720 }}
+  displayMode="popover"
+  placement="bottom-start"
+  draggable={{ enabled: true, snap: "nearest-edge" }}
+  resizable={{ enabled: true, directions: ["bottom-right"] }}
+  motion="spring"
+  onSelect={handleSelect}
+/>
+```
+
+Motion presets are `none`, `fade`, `scale`, `pop`, `slide-up`, `slide-down`,
+`zoom`, and `spring`. The fixed-overlay sliced-proxy `genie` preset is an
+experimental beta API. Motion uses separate geometry, direct-manipulation, and
+transform/opacity layers and resolves to `none` for
+`prefers-reduced-motion`. The optional drag/resize/swipe controller and genie
+renderer are lazy chunks; ordinary compact pickers do not initialize them.
 
 ## Headless UI
 

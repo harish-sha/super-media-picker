@@ -20,6 +20,7 @@ export interface CompactReactionBarProps {
   readonly allowExpand: boolean;
   readonly onEscape?: () => void;
   readonly onExpand: () => void;
+  readonly onExpandIntent?: () => void;
   readonly onSelect: (item: MediaItem) => void;
 }
 
@@ -32,6 +33,7 @@ export function CompactReactionBar({
   allowExpand,
   onEscape,
   onExpand,
+  onExpandIntent,
   onSelect,
 }: CompactReactionBarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -117,8 +119,13 @@ export function CompactReactionBar({
           className="mp-expand"
           data-compact-control=""
           onClick={onExpand}
-          onFocus={() => setActiveIndex(items.length)}
+          onFocus={() => {
+            setActiveIndex(items.length);
+            onExpandIntent?.();
+          }}
           onKeyDown={(event) => handleControlKeyDown(event, items.length)}
+          onPointerDown={onExpandIntent}
+          onPointerEnter={onExpandIntent}
           tabIndex={resolvedActiveIndex === items.length ? 0 : -1}
           title="Open full media picker"
           type="button"

@@ -1,12 +1,18 @@
 import {
   lazy,
   Suspense,
+  useCallback,
+  useDeferredValue,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
 } from "react";
 
 import {
@@ -46,25 +52,32 @@ import { EmojiPreview } from "./EmojiPreview";
 import { MediaResultsGrid } from "./MediaResultsGrid";
 import { SearchInput } from "./SearchInput";
 import { SkinToneSelector } from "./SkinToneSelector";
+import type * as ProviderPanelsModule from "./ProviderPanels";
 
 type PrimaryTab = "emoji" | "gif" | "stickers" | "custom";
 type CollectionView = "browse" | "recent" | "favorites";
 
+let providerPanelsModule: Promise<typeof ProviderPanelsModule> | undefined;
+
+function loadProviderPanels() {
+  return (providerPanelsModule ??= import("./ProviderPanels"));
+}
+
 const LazyGifPanel = lazy(() =>
-  import("./ProviderPanels").then(({ GifPanel }) => ({ default: GifPanel })),
+  loadProviderPanels().then(({ GifPanel }) => ({ default: GifPanel })),
 );
 const LazyEmojiProviderPanels = lazy(() =>
-  import("./ProviderPanels").then(({ EmojiProviderPanels }) => ({
+  loadProviderPanels().then(({ EmojiProviderPanels }) => ({
     default: EmojiProviderPanels,
   })),
 );
 const LazyStickerPanel = lazy(() =>
-  import("./ProviderPanels").then(({ StickerPanel }) => ({
+  loadProviderPanels().then(({ StickerPanel }) => ({
     default: StickerPanel,
   })),
 );
 const LazyCustomPanel = lazy(() =>
-  import("./ProviderPanels").then(({ CustomPanel }) => ({
+  loadProviderPanels().then(({ CustomPanel }) => ({
     default: CustomPanel,
   })),
 );
@@ -73,6 +86,8 @@ interface PrimaryTabDefinition {
   readonly id: PrimaryTab;
   readonly label: string;
 }
+
+const emptyMediaItems: readonly MediaItem[] = [];
 
 export interface FullMediaPickerProps {
   readonly animation: AnimatedMediaConfig;
@@ -105,6 +120,9 @@ export interface FullMediaPickerProps {
   readonly skinTone: SkinTone;
   readonly style: CSSProperties;
   readonly themeMode: string;
+  readonly presentationControls?: ReactNode;
+  readonly resizeControls?: ReactNode;
+  readonly surfaceRef?: RefObject<HTMLElement | null>;
 }
 
 type MediaPickerPropsEmojiPacks = NonNullable<MediaPickerProps["emojiPacks"]>;
@@ -205,6 +223,9 @@ export function FullMediaPicker({
   skinTone,
   style,
   themeMode,
+  presentationControls,
+  resizeControls,
+  surfaceRef,
 }: FullMediaPickerProps) {
   const availableTabs = useMemo<readonly PrimaryTabDefinition[]>(
     () => [
@@ -234,16 +255,41 @@ export function FullMediaPicker({
   const activeTab = availableTabs.some(({ id }) => id === requestedTab)
     ? requestedTab
     : availableTabs[0]?.id;
-  const [query, setQuery] = useState(defaultSearchQuery);
-  const [collectionView, setCollectionView] =
-    useState<CollectionView>("browse");
+  const [queries, setQueries] = useState<Partial<Record<PrimaryTab, string>>>(
+    () => ({ [defaultMediaType]: defaultSearchQuery }),
+  );
+  const query = activeTab === undefined ? "" : (queries[activeTab] ?? "");
+  const activeSearch = useMemo(
+    () => ({ query, tab: activeTab }),
+    [activeTab, query],
+  );
+  const deferredSearch = useDeferredValue(activeSearch);
+  const queryFor = useCallback(
+    (tab: PrimaryTab) =>
+      tab === activeTab && deferredSearch.tab === tab
+        ? deferredSearch.query
+        : (queries[tab] ?? ""),
+    [activeTab, deferredSearch, queries],
+  );
+  const [collectionViews, setCollectionViews] = useState<
+    Partial<Record<PrimaryTab, CollectionView>>
+  >({});
+  const collectionView =
+    activeTab === undefined
+      ? "browse"
+      : (collectionViews[activeTab] ?? "browse");
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<PrimaryTab>>(
+    () => new Set([defaultMediaType]),
+  );
+  const scrollPositions = useRef(new Map<PrimaryTab, number>());
   const [selectedCategory, setSelectedCategory] =
     useState<EmojiPickerCategory>(defaultCategory);
   const [previewEmoji, setPreviewEmoji] = useState<EmojiRecord>();
   const instanceId = useId().replaceAll(":", "");
   const categoryTabPrefix = `${instanceId}-mp-category`;
   const emojiPanelId = `${instanceId}-mp-emoji-panel`;
-  const primaryPanelId = `${instanceId}-mp-primary-panel`;
+  const primaryPanelId = (tab: PrimaryTab) =>
+    `${instanceId}-mp-primary-panel-${tab}`;
   const categories = useMemo<readonly EmojiPickerCategory[]>(
     () => [
       ...(features.recents ? (["Recent"] as const) : []),
@@ -252,17 +298,34 @@ export function FullMediaPicker({
     ],
     [features.favorites, features.recents],
   );
+  const availableCollectionViews = useMemo<readonly CollectionView[]>(
+    () => [
+      "browse",
+      ...(features.recents ? (["recent"] as const) : []),
+      ...(features.favorites ? (["favorites"] as const) : []),
+    ],
+    [features.favorites, features.recents],
+  );
+  const savedCollectionViews = useMemo(
+    () =>
+      availableCollectionViews.filter(
+        (view): view is Exclude<CollectionView, "browse"> => view !== "browse",
+      ),
+    [availableCollectionViews],
+  );
   const category = categories.includes(selectedCategory)
     ? selectedCategory
     : "Smileys & Emotion";
+  const emojiQuery = queryFor("emoji");
   const emojiItems = useMemo(() => {
-    if (query.trim() !== "") return searchEmoji(query, { maxUnicodeVersion });
+    if (emojiQuery.trim() !== "")
+      return searchEmoji(emojiQuery, { maxUnicodeVersion });
     if (category === "Recent")
       return resolveStoredItems(recentRecords, maxUnicodeVersion);
     if (category === "Favorites")
       return resolveStoredItems(favoriteRecords, maxUnicodeVersion);
     return getEmojiByCategory(category, { maxUnicodeVersion });
-  }, [category, favoriteRecords, maxUnicodeVersion, query, recentRecords]);
+  }, [category, emojiQuery, favoriteRecords, maxUnicodeVersion, recentRecords]);
   const extensionEmoji = useMemo<readonly MediaItem[]>(() => {
     const items = emojiPacks
       .flatMap((pack) => pack.items ?? [])
@@ -273,7 +336,7 @@ export function FullMediaPicker({
           );
         return capabilities?.customEmoji !== false;
       });
-    const normalized = query.trim().toLocaleLowerCase();
+    const normalized = emojiQuery.trim().toLocaleLowerCase();
     if (category === "Recent")
       return recentRecords.flatMap(({ item }) =>
         item?.type === "emoji" && !isUnicodeEmoji(item) ? [item] : [],
@@ -293,7 +356,7 @@ export function FullMediaPicker({
     emojiPacks,
     favoriteRecords,
     features.animatedEmoji,
-    query,
+    emojiQuery,
     recentRecords,
   ]);
   const emojiFavoriteIds = useMemo(() => {
@@ -309,29 +372,102 @@ export function FullMediaPicker({
   const mediaFavoriteIds = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   useEffect(() => {
-    if (activeTab !== "emoji" || query.trim() === "") return;
+    if (activeTab !== "emoji" || emojiQuery.trim() === "") return;
     analytics.track("search_completed", {
       mediaType: "emoji",
       resultCount: emojiItems.length + extensionEmoji.length,
     });
-  }, [activeTab, analytics, emojiItems.length, extensionEmoji.length, query]);
+  }, [
+    activeTab,
+    analytics,
+    emojiItems.length,
+    emojiQuery,
+    extensionEmoji.length,
+  ]);
 
-  function selectItem(item: MediaItem): void {
-    onSelect(item);
-    if (features.recents) onRecordRecent(item);
-  }
+  useEffect(() => {
+    const hasRemotePanels = availableTabs.some(
+      ({ id }) => id === "gif" || id === "stickers" || id === "custom",
+    );
+    if (!hasRemotePanels || typeof window === "undefined") return;
+    const warm = () => void loadProviderPanels();
+    if (window.requestIdleCallback !== undefined) {
+      const handle = window.requestIdleCallback(warm, { timeout: 500 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(warm, 80);
+    return () => window.clearTimeout(handle);
+  }, [availableTabs]);
 
-  function selectEmoji(emoji: EmojiRecord): void {
-    const item = toEmojiMediaItem(emoji, skinTone);
-    onSelect(item);
-    if (features.recents) onRecordRecent(emoji.id);
-  }
+  useLayoutEffect(() => {
+    if (activeTab === undefined) return;
+    const surface = surfaceRef?.current;
+    const activePanel = surface?.querySelector<HTMLElement>(
+      `[data-media-panel="${activeTab}"]`,
+    );
+    const scroller =
+      activePanel?.querySelector<HTMLElement>(".mp-content") ?? activePanel;
+    const savedScroll = scrollPositions.current.get(activeTab);
+    if (
+      scroller !== null &&
+      scroller !== undefined &&
+      savedScroll !== undefined
+    )
+      scroller.scrollTop = savedScroll;
+    surface?.setAttribute("data-active-media-type", activeTab);
+    surface?.setAttribute(
+      "data-loaded-media-types",
+      [...visitedTabs].join(","),
+    );
+  }, [activeTab, surfaceRef, visitedTabs]);
+
+  const selectItem = useCallback(
+    (item: MediaItem): void => {
+      onSelect(item);
+      if (features.recents) onRecordRecent(item);
+    },
+    [features.recents, onRecordRecent, onSelect],
+  );
+
+  const selectEmoji = useCallback(
+    (emoji: EmojiRecord): void => {
+      const item = toEmojiMediaItem(emoji, skinTone);
+      onSelect(item);
+      if (features.recents) onRecordRecent(emoji.id);
+    },
+    [features.recents, onRecordRecent, onSelect, skinTone],
+  );
+  const toggleEmojiFavorite = useCallback(
+    (emoji: EmojiRecord) => onToggleFavorite(emoji.id),
+    [onToggleFavorite],
+  );
+  const changeStickerCollection = useCallback(
+    (view: "browse" | "recent" | "favorites") => {
+      setCollectionViews((current) => ({ ...current, stickers: view }));
+      setQueries((current) => ({ ...current, stickers: "" }));
+    },
+    [],
+  );
 
   function changePrimaryTab(tab: PrimaryTab): void {
+    if (tab === activeTab) return;
+    if (activeTab !== undefined) {
+      const activePanel = surfaceRef?.current?.querySelector<HTMLElement>(
+        `[data-media-panel="${activeTab}"]`,
+      );
+      const scroller =
+        activePanel?.querySelector<HTMLElement>(".mp-content") ?? activePanel;
+      if (scroller !== null && scroller !== undefined)
+        scrollPositions.current.set(activeTab, scroller.scrollTop);
+    }
     analytics.track("tab_changed", { mediaType: tab });
+    setVisitedTabs((current) => {
+      if (current.has(tab)) return current;
+      const next = new Set(current);
+      next.add(tab);
+      return next;
+    });
     setRequestedTab(tab);
-    setQuery("");
-    setCollectionView("browse");
   }
 
   function handlePrimaryTabKeyDown(
@@ -358,21 +494,40 @@ export function FullMediaPicker({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (event.key !== "Escape") return;
-    const action = onCollapse ?? onClose;
-    if (action === undefined) return;
-    event.stopPropagation();
-    action();
+    if (event.key === "Escape") {
+      const action = onCollapse ?? onClose;
+      if (action === undefined) return;
+      event.stopPropagation();
+      action();
+      return;
+    }
+    if (event.key !== "Tab" || !overlay) return;
+    const focusable = [
+      ...event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.hidden);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (first === undefined || last === undefined) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   if (activeTab === undefined) {
     return (
       <section
         aria-label={ariaLabel}
-        className={`${className} mp-picker--full mp-mode-enter`}
+        className={`${className} mp-picker--full`}
         data-theme={themeMode}
         role="region"
         style={style}
+        ref={surfaceRef}
       >
         <div className="mp-empty" role="status">
           No media features are enabled.
@@ -382,23 +537,19 @@ export function FullMediaPicker({
   }
 
   const searchLabel = `Search ${activeTab === "gif" ? "GIFs" : activeTab}`;
-  const primaryTabId = `${instanceId}-mp-primary-${activeTab}`;
-  const collectionItems =
-    collectionView === "browse"
-      ? []
+  const collectionFor = (tab: PrimaryTab): CollectionView =>
+    collectionViews[tab] ?? "browse";
+  const collectionItemsFor = (tab: PrimaryTab) =>
+    collectionFor(tab) === "browse"
+      ? emptyMediaItems
       : itemsForCollection(
-          activeTab,
-          collectionView,
+          tab,
+          collectionFor(tab) as Exclude<CollectionView, "browse">,
           recentRecords,
           favoriteRecords,
         );
-  const collectionViews: readonly CollectionView[] = [
-    "browse",
-    ...(features.recents ? (["recent"] as const) : []),
-    ...(features.favorites ? (["favorites"] as const) : []),
-  ];
-  const savedCollectionViews = collectionViews.filter(
-    (view): view is Exclude<CollectionView, "browse"> => view !== "browse",
+  const renderedTabs = availableTabs.filter(
+    ({ id }) => id === activeTab || visitedTabs.has(id),
   );
   const sharedGridProps = {
     animation,
@@ -415,13 +566,15 @@ export function FullMediaPicker({
     <section
       aria-label={ariaLabel}
       aria-modal={overlay ? true : undefined}
-      className={`${className} mp-picker--full mp-mode-enter`}
+      className={`${className} mp-picker--full`}
       data-theme={themeMode}
       onKeyDown={handleKeyDown}
       role={overlay ? "dialog" : "region"}
       style={style}
+      ref={surfaceRef}
     >
       <header className="mp-header">
+        {presentationControls}
         {onCollapse === undefined ? null : (
           <button
             aria-label="Return to compact reactions"
@@ -440,8 +593,11 @@ export function FullMediaPicker({
             if (nextQuery.trim() !== "" && nextQuery !== query)
               analytics.track("search_started", { mediaType: activeTab });
             if (activeTab !== "emoji" && nextQuery.trim() !== "")
-              setCollectionView("browse");
-            setQuery(nextQuery);
+              setCollectionViews((current) => ({
+                ...current,
+                [activeTab]: "browse",
+              }));
+            setQueries((current) => ({ ...current, [activeTab]: nextQuery }));
           }}
           value={query}
         />
@@ -452,7 +608,7 @@ export function FullMediaPicker({
       <nav aria-label="Media types" className="mp-primary-tabs" role="tablist">
         {availableTabs.map((tab, index) => (
           <button
-            aria-controls={primaryPanelId}
+            aria-controls={primaryPanelId(tab.id)}
             aria-selected={tab.id === activeTab}
             id={`${instanceId}-mp-primary-${tab.id}`}
             key={tab.id}
@@ -474,13 +630,19 @@ export function FullMediaPicker({
           className="mp-context-toolbar mp-context-toolbar--end"
         >
           <div className="mp-context-segments" role="group">
-            {collectionViews.map((view) => (
+            {availableCollectionViews.map((view) => (
               <button
                 aria-pressed={collectionView === view}
                 key={view}
                 onClick={() => {
-                  setCollectionView(view);
-                  setQuery("");
+                  setCollectionViews((current) => ({
+                    ...current,
+                    [activeTab]: view,
+                  }));
+                  setQueries((current) => ({
+                    ...current,
+                    [activeTab]: "",
+                  }));
                 }}
                 type="button"
               >
@@ -491,155 +653,166 @@ export function FullMediaPicker({
           </div>
         </div>
       ) : null}
-      <div
-        aria-labelledby={primaryTabId}
-        className="mp-primary-panel"
-        id={primaryPanelId}
-        role="tabpanel"
-      >
-        {activeTab === "emoji" ? (
-          <>
-            <div className="mp-section-title">
-              {query.trim() === "" ? category : "Search results"}
-              <span aria-live="polite" className="mp-result-count">
-                {emojiItems.length + extensionEmoji.length} emoji
-              </span>
-            </div>
-            <div
-              aria-labelledby={categoryTabId(categoryTabPrefix, category)}
-              className="mp-content"
-              id={emojiPanelId}
-              role="tabpanel"
-              tabIndex={-1}
-            >
-              {extensionEmoji.length > 0 ? (
-                <MediaResultsGrid
-                  {...sharedGridProps}
-                  emptyMessage="No custom emoji."
-                  items={extensionEmoji}
-                  label="Custom and animated emoji"
-                />
-              ) : null}
-              {providers?.emoji !== undefined && providers.emoji.length > 0 ? (
-                <Suspense
-                  fallback={
-                    <div className="mp-provider-state" role="status">
-                      Opening provider emoji…
-                    </div>
-                  }
+      {renderedTabs.map(({ id: tab }) => {
+        const tabQuery = queryFor(tab);
+        const tabCollection = collectionFor(tab);
+        const tabCollectionItems = collectionItemsFor(tab);
+        return (
+          <div
+            aria-labelledby={`${instanceId}-mp-primary-${tab}`}
+            className="mp-primary-panel"
+            data-media-panel={tab}
+            hidden={tab !== activeTab}
+            id={primaryPanelId(tab)}
+            key={tab}
+            role="tabpanel"
+          >
+            {tab === "emoji" ? (
+              <>
+                <div className="mp-section-title">
+                  {tabQuery.trim() === "" ? category : "Search results"}
+                  <span aria-live="polite" className="mp-result-count">
+                    {emojiItems.length + extensionEmoji.length} emoji
+                  </span>
+                </div>
+                <div
+                  aria-labelledby={categoryTabId(categoryTabPrefix, category)}
+                  className="mp-content"
+                  id={emojiPanelId}
+                  role="tabpanel"
+                  tabIndex={-1}
                 >
-                  <LazyEmojiProviderPanels
-                    {...sharedGridProps}
-                    allowAnimated={
-                      features.animatedEmoji &&
-                      capabilities?.animatedEmoji !== false
+                  {extensionEmoji.length > 0 ? (
+                    <MediaResultsGrid
+                      {...sharedGridProps}
+                      emptyMessage="No custom emoji."
+                      items={extensionEmoji}
+                      label="Custom and animated emoji"
+                    />
+                  ) : null}
+                  {providers?.emoji !== undefined &&
+                  providers.emoji.length > 0 ? (
+                    <Suspense
+                      fallback={
+                        <div className="mp-provider-state" role="status">
+                          Opening provider emoji…
+                        </div>
+                      }
+                    >
+                      <LazyEmojiProviderPanels
+                        {...sharedGridProps}
+                        allowAnimated={
+                          features.animatedEmoji &&
+                          capabilities?.animatedEmoji !== false
+                        }
+                        allowCustom={capabilities?.customEmoji !== false}
+                        providers={providers.emoji}
+                        query={tabQuery}
+                        analytics={analytics}
+                      />
+                    </Suspense>
+                  ) : null}
+                  <EmojiGrid
+                    emptyMessage={
+                      extensionEmoji.length > 0
+                        ? ""
+                        : emptyMessage(category, tabQuery)
                     }
-                    allowCustom={capabilities?.customEmoji !== false}
-                    providers={providers.emoji}
-                    query={query}
-                    analytics={analytics}
+                    favoriteIds={emojiFavoriteIds}
+                    favoritesEnabled={features.favorites}
+                    items={emojiItems}
+                    label={
+                      tabQuery.trim() === ""
+                        ? `${category} emoji`
+                        : `Emoji search results for ${tabQuery}`
+                    }
+                    onFavoriteToggle={toggleEmojiFavorite}
+                    onSelect={selectEmoji}
+                    resetKey={`${category}:${tabQuery}:${skinTone}`}
+                    skinTone={skinTone}
+                    {...(previewEnabled ? { onPreview: setPreviewEmoji } : {})}
                   />
-                </Suspense>
-              ) : null}
-              <EmojiGrid
-                emptyMessage={
-                  extensionEmoji.length > 0 ? "" : emptyMessage(category, query)
+                </div>
+                {previewEnabled ? (
+                  <EmojiPreview
+                    emoji={previewEmoji ?? emojiItems[0]}
+                    skinTone={skinTone}
+                  />
+                ) : null}
+                <CategoryNavigation
+                  activeCategory={category}
+                  categories={categories}
+                  idPrefix={categoryTabPrefix}
+                  onChange={(next) => {
+                    setSelectedCategory(next);
+                    setPreviewEmoji(undefined);
+                    setQueries((current) => ({ ...current, emoji: "" }));
+                  }}
+                  panelId={emojiPanelId}
+                />
+              </>
+            ) : tab === "stickers" && providers?.stickers !== undefined ? (
+              <Suspense
+                fallback={
+                  <div className="mp-provider-state" role="status">
+                    Opening stickers…
+                  </div>
                 }
-                favoriteIds={emojiFavoriteIds}
-                favoritesEnabled={features.favorites}
-                items={emojiItems}
-                label={
-                  query.trim() === ""
-                    ? `${category} emoji`
-                    : `Emoji search results for ${query}`
+              >
+                <LazyStickerPanel
+                  {...sharedGridProps}
+                  allowAnimated={capabilities?.animatedStickers !== false}
+                  collectionItems={tabCollectionItems}
+                  collections={savedCollectionViews}
+                  collectionView={tabCollection}
+                  onCollectionViewChange={changeStickerCollection}
+                  provider={providers.stickers}
+                  query={tabQuery}
+                  analytics={analytics}
+                />
+              </Suspense>
+            ) : tabCollection !== "browse" ? (
+              <MediaResultsGrid
+                {...sharedGridProps}
+                emptyMessage={`No ${tabCollection} ${tab}.`}
+                items={tabCollectionItems}
+                label={`${tabCollection} ${tab}`}
+              />
+            ) : tab === "gif" && providers?.gifs !== undefined ? (
+              <Suspense
+                fallback={
+                  <div className="mp-provider-state" role="status">
+                    Opening GIFs…
+                  </div>
                 }
-                onFavoriteToggle={(emoji) => onToggleFavorite(emoji.id)}
-                onSelect={selectEmoji}
-                resetKey={`${category}:${query}:${skinTone}`}
-                skinTone={skinTone}
-                {...(previewEnabled ? { onPreview: setPreviewEmoji } : {})}
-              />
-            </div>
-            {previewEnabled ? (
-              <EmojiPreview
-                emoji={previewEmoji ?? emojiItems[0]}
-                skinTone={skinTone}
-              />
+              >
+                <LazyGifPanel
+                  {...sharedGridProps}
+                  provider={providers.gifs}
+                  query={tabQuery}
+                  analytics={analytics}
+                />
+              </Suspense>
+            ) : tab === "custom" ? (
+              <Suspense
+                fallback={
+                  <div className="mp-provider-state" role="status">
+                    Opening custom media…
+                  </div>
+                }
+              >
+                <LazyCustomPanel
+                  {...sharedGridProps}
+                  query={tabQuery}
+                  tabs={customTabs}
+                  analytics={analytics}
+                />
+              </Suspense>
             ) : null}
-            <CategoryNavigation
-              activeCategory={category}
-              categories={categories}
-              idPrefix={categoryTabPrefix}
-              onChange={(next) => {
-                setSelectedCategory(next);
-                setPreviewEmoji(undefined);
-                setQuery("");
-              }}
-              panelId={emojiPanelId}
-            />
-          </>
-        ) : activeTab === "stickers" && providers?.stickers !== undefined ? (
-          <Suspense
-            fallback={
-              <div className="mp-provider-state" role="status">
-                Opening stickers…
-              </div>
-            }
-          >
-            <LazyStickerPanel
-              {...sharedGridProps}
-              allowAnimated={capabilities?.animatedStickers !== false}
-              collectionItems={collectionItems}
-              collections={savedCollectionViews}
-              collectionView={collectionView}
-              onCollectionViewChange={(view) => {
-                setCollectionView(view);
-                setQuery("");
-              }}
-              provider={providers.stickers}
-              query={query}
-              analytics={analytics}
-            />
-          </Suspense>
-        ) : collectionView !== "browse" ? (
-          <MediaResultsGrid
-            {...sharedGridProps}
-            emptyMessage={`No ${collectionView} ${activeTab}.`}
-            items={collectionItems}
-            label={`${collectionView} ${activeTab}`}
-          />
-        ) : activeTab === "gif" && providers?.gifs !== undefined ? (
-          <Suspense
-            fallback={
-              <div className="mp-provider-state" role="status">
-                Opening GIFs…
-              </div>
-            }
-          >
-            <LazyGifPanel
-              {...sharedGridProps}
-              provider={providers.gifs}
-              query={query}
-              analytics={analytics}
-            />
-          </Suspense>
-        ) : activeTab === "custom" ? (
-          <Suspense
-            fallback={
-              <div className="mp-provider-state" role="status">
-                Opening custom media…
-              </div>
-            }
-          >
-            <LazyCustomPanel
-              {...sharedGridProps}
-              query={query}
-              tabs={customTabs}
-              analytics={analytics}
-            />
-          </Suspense>
-        ) : null}
-      </div>
+          </div>
+        );
+      })}
+      {resizeControls}
     </section>
   );
 }

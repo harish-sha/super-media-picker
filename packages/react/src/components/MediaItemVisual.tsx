@@ -56,6 +56,8 @@ export function MediaItemVisual({
   return (
     <StaticMediaVisual
       url={url}
+      {...(item.height === undefined ? {} : { height: item.height })}
+      {...(item.width === undefined ? {} : { width: item.width })}
       {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
     />
   );
@@ -63,19 +65,26 @@ export function MediaItemVisual({
 
 function StaticMediaVisual({
   url,
+  width,
+  height,
   mediaSecurity,
 }: {
   readonly url: string;
+  readonly width?: number;
+  readonly height?: number;
   readonly mediaSecurity?: MediaUrlPolicy;
 }) {
   const [failed, setFailed] = useState(false);
   return !failed && isSafeMediaUrl(url, mediaSecurity) ? (
     <img
       alt=""
+      decoding="async"
       draggable={false}
+      {...(height === undefined ? {} : { height })}
       loading="lazy"
       onError={() => setFailed(true)}
       src={url}
+      {...(width === undefined ? {} : { width })}
     />
   ) : (
     <span aria-hidden="true" data-media-fallback="">
