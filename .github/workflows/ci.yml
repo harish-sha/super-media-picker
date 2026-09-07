@@ -5,25 +5,58 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm size
-      - run: pnpm build-storybook
-      - run: pnpm package:check
-      - run: pnpm package:install-test
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit, component, and SSR tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Validate bundle sizes
+        run: pnpm size
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+
+      - name: Validate packages
+        run: pnpm package:check
+
+      - name: Validate clean package install
+        run: pnpm package:install-test
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: pnpm test:e2e
