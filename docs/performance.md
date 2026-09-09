@@ -37,12 +37,38 @@ Measured on 2026-09-06 from fresh production ESM builds using Node 23 on macOS A
 | Playground lazy emoji data                  | 461,302 B | 73,890 B gzip  |
 | Playground CSS                              | 30,000 B  | 5,897 B gzip   |
 
+### Standalone browser budgets
+
+`pnpm size` measures browser artifacts separately from the existing React SDK
+ceilings. Values below are raw / gzip / Brotli from the current candidate:
+
+| Browser artifact             | Raw       | gzip      | Brotli    |
+| ---------------------------- | --------- | --------- | --------- |
+| Browser ESM initial graph    | 258.99 kB | 82.34 kB  | 72.20 kB  |
+| Web Component initial graph  | 247.74 kB | 79.32 kB  | 69.52 kB  |
+| Global standalone JavaScript | 805.99 kB | 167.29 kB | 135.24 kB |
+| Browser Shadow DOM CSS       | 31.54 kB  | 5.40 kB   | 4.75 kB   |
+| Lazy presentation chunk      | 12.94 kB  | 4.32 kB   | 3.94 kB   |
+| Lazy Genie chunk             | 2.86 kB   | 1.33 kB   | 1.18 kB   |
+
+The initial ESM/Web Component graphs include the private React runtime and
+picker core required by a host with no React installation. Full emoji data,
+provider panels, advanced presentation, and Genie remain relative lazy chunks.
+The classic global artifact cannot split safely for a one-script deployment,
+so it contains the complete runtime and dataset and is correspondingly larger.
+React npm consumers continue to use the peer-dependent package root; none of
+the standalone runtime is added to that import path, and its existing budgets
+remain unchanged. The complete browser directory is also reported as a
+diagnostic but is not an initial-download claim because it contains alternative
+entries and the duplicated one-file global distribution.
+
 Actual `pnpm pack` archives are 29,499 B for core, 184,264 B for emoji, 5,238 B
-for GIF, 6,241 B for stickers, 2,676 B for themes, 132,992 B for React, and
-129,876 B for the self-contained public `super-media-picker` package. A direct
-final `npm pack --dry-run` reports 128.0 kB (702.2 kB unpacked, 28 files). The
-public archive bundles the workspace implementation and generated declarations,
-but retains the full picker, provider panels, and full emoji data as separate
+for GIF, 6,241 B for stickers, 2,676 B for themes, 134,636 B for React, and
+468,746 B for the self-contained public `super-media-picker` package. A direct
+final `npm pack --dry-run` reports 462,757 B packed (2,380,749 B unpacked, 50
+files). The public archive bundles the workspace implementation, generated
+declarations, and standalone browser distributions, while the ESM/Web Component
+paths retain the full picker, provider panels, and full emoji data as separate
 lazy chunks. It contains no source maps or internal package imports. `pnpm
 package:check` re-measures every archive and validates lazy-chunk references,
 public exports, production dependencies, and the absence of playground media,

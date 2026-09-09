@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import type { StickerPack } from "@super-media-picker/core";
+import { useMediaPickerPortalTarget } from "../portalTarget";
 
 const themeProperties = [
   "--mp-background",
@@ -68,6 +69,7 @@ export function StickerPackSelector({
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null,
   );
+  const preferredPortalTarget = useMediaPickerPortalTarget();
   const [menuStyle, setMenuStyle] = useState<MenuStyle | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -84,10 +86,10 @@ export function StickerPackSelector({
     const ownerDocument = triggerRef.current?.ownerDocument;
     if (ownerDocument === undefined) return;
     function handlePointerDown(event: PointerEvent): void {
-      const target = event.target as Node;
+      const path = event.composedPath();
       if (
-        !rootRef.current?.contains(target) &&
-        !menuRef.current?.contains(target)
+        !path.includes(rootRef.current as EventTarget) &&
+        !path.includes(menuRef.current as EventTarget)
       )
         setOpen(false);
     }
@@ -199,7 +201,9 @@ export function StickerPackSelector({
   }, [open]);
 
   function openAt(index: number): void {
-    setPortalContainer(triggerRef.current?.ownerDocument.body ?? null);
+    setPortalContainer(
+      preferredPortalTarget ?? triggerRef.current?.ownerDocument.body ?? null,
+    );
     setMenuStyle(null);
     setActiveIndex(index);
     setOpen(true);

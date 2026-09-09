@@ -17,7 +17,7 @@ const supportedMotionPresets = [
   "genie",
 ] as const satisfies readonly MediaPickerMotionPreset[];
 
-// @ts-expect-error -- morph was removed from the public beta.5 motion contract.
+// @ts-expect-error -- morph is not part of the public motion contract.
 const removedMorphPreset: MediaPickerMotionPreset = "morph";
 
 function pointer(

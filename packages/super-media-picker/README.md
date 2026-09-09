@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.5` of an accessible, provider-first React SDK for
+Public beta `0.1.0-beta.6` of an accessible, provider-first React and browser SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -22,6 +22,26 @@ in the application entry point:
 ```tsx
 import "super-media-picker/styles.css";
 ```
+
+## Browser SDK without React
+
+The same picker is available as an isolated standards-based custom element for
+plain HTML, vanilla JavaScript, Vue, Svelte, Angular, CMS, and server-rendered
+pages. The consumer does not install React:
+
+```html
+<super-media-picker
+  theme="dark"
+  mode="compact"
+  allow-expand
+></super-media-picker>
+<script src="https://cdn.jsdelivr.net/npm/super-media-picker@beta/dist/browser/super-media-picker.global.js"></script>
+```
+
+The browser distribution also provides a no-bundler ESM entry and an
+imperative `SuperMediaPicker.create({ target })` global API. See the repository
+[browser SDK guide](https://github.com/harish-sha/super-media-picker/blob/main/docs/browser-sdk.md) for events, properties,
+providers, self-hosting, Shadow DOM styling, persistence, and CSP.
 
 ## Complete picker
 

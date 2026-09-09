@@ -29,6 +29,13 @@ The browser calls only the application API and CDN. Provider credentials,
 signing keys, tenant authorization, moderation, and vendor-specific payloads
 remain behind the application API.
 
+This contract is backend-language-neutral. The planned hosted Super Media
+service will use Java and the Spring ecosystem as an initial modular monolith,
+but that implementation decision does not change the SDK protocol. Java,
+Spring, PHP, Python, Ruby, .NET, Node.js, and other backends can implement the
+same HTTP methods, JSON bodies, headers, status codes, request IDs, and opaque
+cursors. The browser SDK does not inspect or depend on the server language.
+
 ## Common behavior
 
 - Validate and cap `limit`; 18–50 items is a practical page size.

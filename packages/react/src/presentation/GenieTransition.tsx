@@ -6,6 +6,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useMediaPickerPortalTarget } from "../portalTarget";
+
 const sliceCount = 6;
 
 interface GenieTransitionProps {
@@ -46,6 +48,7 @@ export default function GenieTransition({
   surfaceRef,
 }: GenieTransitionProps) {
   const [geometry, setGeometry] = useState<GenieGeometry>();
+  const preferredPortalTarget = useMediaPickerPortalTarget();
 
   useLayoutEffect(() => {
     const positioner = positionerRef.current;
@@ -165,6 +168,8 @@ export default function GenieTransition({
 
   if (geometry === undefined || typeof document === "undefined") return null;
 
+  const portalTarget = preferredPortalTarget ?? document.body;
+
   return createPortal(
     <div
       aria-hidden="true"
@@ -185,6 +190,6 @@ export default function GenieTransition({
         ))}
       </div>
     </div>,
-    document.body,
+    portalTarget,
   );
 }

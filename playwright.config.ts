@@ -7,10 +7,17 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "on-first-retry",
   },
-  webServer: {
-    command: "pnpm --filter playground preview",
-    port: 4173,
-    reuseExistingServer: true,
-  },
+  webServer: [
+    {
+      command: "pnpm --filter playground preview",
+      port: 4173,
+      reuseExistingServer: true,
+    },
+    {
+      command: "node tooling/scripts/serve-browser-fixture.mjs",
+      port: 4174,
+      reuseExistingServer: true,
+    },
+  ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

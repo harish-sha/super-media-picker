@@ -6,6 +6,46 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-beta.6] - 2026-09-09
+
+### Added
+
+- Added a standalone browser SDK with typed ESM, auto-registering Web Component,
+  and classic global artifacts that bundle their private runtime and require no
+  React installation in the consuming site.
+- Added `<super-media-picker>`, the `create/open/close/update/destroy` lifecycle,
+  primitive attributes, typed complex properties, normalized composed events,
+  Shadow DOM parts, and no-bundler/nested-path integration coverage.
+- Added no-bundler HTML coverage, nested CDN-path and self-hosting validation,
+  browser-only packed installation without React, and external-consumer checks.
+- Added Shadow DOM style isolation, stable parts, instance-local application and
+  overlay roots, duplicate-registration safety, reconnect cleanup, and
+  intentional storage namespaces for multiple instances.
+- Added CSP and media-security guidance plus independent raw, gzip, and Brotli
+  budgets for browser ESM, Web Component, global, presentation, and Genie
+  artifacts without raising existing React SDK budgets.
+
+### Changed
+
+- Reused the existing React picker engine, providers, storage, presentation,
+  pointer interactions, accessibility, reduced motion, and lazy Genie rather
+  than introducing a second browser-specific picker implementation.
+- Routed menus, floating presentations, and Genie to an instance-local Shadow
+  DOM overlay while preserving the ordinary React document-body fallback.
+- Preserved normalized `MediaItem` and production HTTP provider contracts in
+  browser builds, including developer-backend URL security and server-side
+  vendor-secret boundaries.
+- Bundled an isolated private React runtime only into standalone browser builds;
+  normal React package entries retain their existing peer-dependency model.
+
+### Fixed
+
+- Fixed portaled tone and sticker-pack option clicks in Shadow DOM by checking
+  the pointer event's composed path instead of its retargeted document target.
+- Hardened package validation against missing relative chunks, external React
+  imports in standalone artifacts, runtime code evaluation, and leaked
+  development files.
+
 ## [0.1.0-beta.5] - 2026-09-07
 
 ### Added
@@ -185,7 +225,8 @@ All notable changes to this project are documented here. The format follows
 - Production media catalogs, demo assets, credentials, tests, Storybook output,
   and internal source files are excluded from the tarball.
 
-[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.5...HEAD
+[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.6...HEAD
+[0.1.0-beta.6]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.5...v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.4...v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...v0.1.0-beta.4
 [0.1.0-beta.3]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.2...v0.1.0-beta.3

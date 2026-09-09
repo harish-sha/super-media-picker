@@ -1,0 +1,37 @@
+:host {
+  display: inline-block;
+  max-width: 100%;
+  color-scheme: light dark;
+  font-family: var(--mp-font-family, system-ui, sans-serif);
+  line-height: normal;
+  text-align: initial;
+  isolation: isolate;
+}
+
+:host([hidden]) {
+  display: none !important;
+}
+
+[data-smp-mount],
+[data-smp-overlay] {
+  box-sizing: border-box;
+  font: inherit;
+  line-height: normal;
+  text-align: initial;
+}
+
+[data-smp-overlay]:empty {
+  display: none;
+}
+
+.mp-browser-error {
+  box-sizing: border-box;
+  padding: 0.75rem;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  font:
+    0.875rem/1.4 system-ui,
+    sans-serif;
+}

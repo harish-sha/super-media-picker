@@ -75,3 +75,21 @@ The picker does not require `unsafe-eval`, remote HTML, or injected provider
 markup. Structural styles ship as a static CSS file. Custom token values may be
 applied through React's style attribute, so a strict `style-src` policy may
 need the application's normal strategy for React inline styles.
+
+### Browser and Web Component distribution
+
+The Web Component appends an external `<link rel="stylesheet">` inside its
+ShadowRoot. Allow the origin serving `dist/browser/styles.css` in `style-src`;
+the same origin normally serves the ESM/global entry and lazy chunks allowed by
+`script-src`.
+
+The picker uses dynamic inline style attributes for token values, measured
+placement, dimensions, and compositor transforms. A strict CSP therefore needs
+`style-src-attr 'unsafe-inline'` (or the application's equivalent policy) for
+the picker today. This does not permit script execution, and the component does
+not inject runtime `<style>` blocks. This requirement is documented rather than
+silently weakening the host policy.
+
+Browser artifacts are production-checked for `eval`, `new Function`, external
+React imports, and missing relative chunks. Only the explicit global build
+creates `globalThis.SuperMediaPicker`; it does not create React globals.

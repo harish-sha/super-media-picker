@@ -10,6 +10,7 @@
     "node": ">=20.19"
   },
   "scripts": {
+    "browser:serve": "node tooling/scripts/serve-browser-fixture.mjs",
     "build": "pnpm -r --if-present build",
     "build:packages": "pnpm --filter './packages/**' -r --if-present build",
     "build-storybook": "pnpm build:packages && pnpm --filter playground build-storybook",
@@ -19,11 +20,12 @@
     "lint": "pnpm build:packages && eslint . --max-warnings 0",
     "media:fixtures": "node tooling/scripts/build-demo-media.mjs",
     "package:check": "node tooling/scripts/validate-packages.mjs",
-    "package:install-test": "node tooling/scripts/validate-public-install.mjs",
-    "size": "size-limit",
+    "package:install-test": "node tooling/scripts/validate-public-install.mjs && node tooling/scripts/validate-browser-install.mjs",
+    "size": "size-limit && node tooling/scripts/report-browser-sizes.mjs",
     "storybook": "pnpm build:packages && pnpm --filter playground storybook",
     "test": "pnpm build:packages && pnpm -r --if-present test",
     "test:e2e": "playwright test",
+    "test:e2e:browser": "playwright test tests/e2e/browser-sdk.spec.ts",
     "test:watch": "pnpm -r --parallel --if-present test:watch",
     "typecheck": "pnpm build:packages && pnpm -r --if-present typecheck"
   },

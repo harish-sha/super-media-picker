@@ -7,11 +7,16 @@ The picker has two intentional presentations: a lightweight compact reaction bar
 ## Architecture
 
 ```text
-application → super-media-picker (self-contained public ESM package)
-                                      ├─→ React peer dependency
-                                      ├─→ UI + headless state
-                                      ├─→ normalized media/provider contracts
-                                      └─→ generated Unicode emoji metadata
+application → super-media-picker
+                 ├─→ React SDK (package root; React remains a peer)
+                 └─→ Browser SDK
+                       ├─→ Web Component
+                       ├─→ browser ESM
+                       └─→ global JavaScript
+                              │
+                              └─→ isolated bundled runtime
+
+both surfaces → shared UI/state/providers/storage/media contracts
 ```
 
 Core has no framework dependency or module-time browser access. Compact emoji metadata is generated from CLDR-derived Emojibase data, so the development dataset is absent from published runtime dependencies.
@@ -32,7 +37,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.5`. React and React DOM
+The public beta version is `0.1.0-beta.6`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -40,7 +45,23 @@ The public tarball bundles the monorepo's internal implementation modules and
 does not depend on unpublished `@super-media-picker/*` packages. Publishing is
 a manual release action; nothing in this repository publishes automatically.
 
-## Quick start
+## Browser SDK (no React required)
+
+HTML, vanilla JavaScript, Vue, Svelte, Angular, server-rendered applications,
+CMS pages, and static sites can use the standards-based Web Component. The
+standalone artifact contains its own isolated runtime:
+
+```html
+<super-media-picker
+  theme="system"
+  mode="compact"
+  allow-expand
+></super-media-picker>
+<script src="https://cdn.jsdelivr.net/npm/super-media-picker@beta/dist/browser/super-media-picker.global.js"></script>
+```
+
+See the [browser SDK guide](docs/browser-sdk.md) for ESM, global API,
+self-hosting, events, properties, providers, styling, persistence, and CSP.
 
 ```tsx
 import {
@@ -597,7 +618,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.5` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.6` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

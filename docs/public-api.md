@@ -19,6 +19,13 @@ require a major version after 1.0.
 - Presentation geometry: `dimensions`, anchored `placement`, portal targeting,
   and the documented ordinary motion presets. `genie` remains experimental.
 - `super-media-picker/styles.css`.
+- Browser entry points: `super-media-picker/web` for explicit ESM control and
+  `super-media-picker/element` for safe custom-element registration. Standalone
+  CDN artifacts are deterministic files under `dist/browser/`.
+- Browser lifecycle: `create`, `open`, `close`, `update`, and `destroy`; the
+  `<super-media-picker>` element; normalized composed CustomEvents; primitive
+  attributes; and typed complex properties documented in the browser SDK
+  guide.
 
 Focused pickers are thin configurations of the same picker engine. They emit
 the same normalized `MediaItem` subtypes and share the configured storage
@@ -51,9 +58,13 @@ controlled position, and their lifecycle callbacks are advanced presentation
 APIs. Their configuration shapes are public and typed. The fixed-overlay,
 sliced-proxy `genie` motion preset is experimental during the beta. The former
 experimental `morph` preset was removed before beta.5 and is not a public
-configuration value.
-Internal geometry, observer, gesture-session, and long-press hooks are not
-exported.
+configuration value. Internal geometry, observer, gesture-session, and
+long-press hooks are not exported.
+
+The browser delivery surface is a beta API. The normalized media/provider
+contracts and picker behavior are shared with React, while the exact set of
+declarative attributes, stable `::part` names, and global convenience methods
+may be refined before 1.0 with prominent release notes.
 
 ## Internal implementation
 

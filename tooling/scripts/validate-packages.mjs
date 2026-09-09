@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, posix, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { validateBrowserPackage } from "./validate-browser-package.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 const outputDirectory = mkdtempSync(join(tmpdir(), "media-picker-pack-"));
@@ -89,7 +90,7 @@ try {
     }
 
     if (packResult.name === "super-media-picker") {
-      if (packedManifest.version !== "0.1.0-beta.5") {
+      if (packedManifest.version !== "0.1.0-beta.6") {
         throw new Error(
           `Public package has unexpected beta version ${packedManifest.version}`,
         );
@@ -139,6 +140,11 @@ try {
           `Public package contains source maps: ${leakedMaps.join(", ")}`,
         );
       }
+      validateBrowserPackage({
+        archiveFiles,
+        filename: packResult.filename,
+        readArchiveFile,
+      });
       for (const emittedFile of [...archiveFiles].filter(
         (path) =>
           path.endsWith(".js") ||
@@ -167,7 +173,7 @@ try {
     )) {
       const source = readArchiveFile(packResult.filename, javascriptFile);
       const relativeImportPattern =
-        /(?:from\s*|import\s*\()\s*["'](\.[^"']+)["']/g;
+        /(?:from\s*|import\s*(?:\(\s*)?)["'](\.[^"']+)["']/g;
       for (const match of source.matchAll(relativeImportPattern)) {
         const specifier = match[1];
         if (specifier === undefined) continue;

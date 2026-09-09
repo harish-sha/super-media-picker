@@ -13,6 +13,7 @@ import {
   getCompactEmoji,
   resolveEmojiVariant,
 } from "@super-media-picker/emoji/compact";
+import { useMediaPickerPortalTarget } from "../portalTarget";
 
 const toneOptions: readonly {
   readonly value: SkinTone;
@@ -95,6 +96,7 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const preferredPortalTarget = useMediaPickerPortalTarget();
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null,
@@ -116,10 +118,10 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
     const ownerDocument = buttonRef.current?.ownerDocument;
     if (ownerDocument === undefined) return;
     function handlePointerDown(event: PointerEvent): void {
-      const target = event.target as Node;
+      const path = event.composedPath();
       if (
-        !rootRef.current?.contains(target) &&
-        !menuRef.current?.contains(target)
+        !path.includes(rootRef.current as EventTarget) &&
+        !path.includes(menuRef.current as EventTarget)
       ) {
         setOpen(false);
       }
@@ -245,7 +247,9 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
   }, [open]);
 
   function openAt(index: number): void {
-    setPortalContainer(buttonRef.current?.ownerDocument.body ?? null);
+    setPortalContainer(
+      preferredPortalTarget ?? buttonRef.current?.ownerDocument.body ?? null,
+    );
     setMenuPosition(null);
     setActiveIndex(index);
     setOpen(true);

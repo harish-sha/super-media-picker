@@ -1,7 +1,7 @@
 {
   "name": "super-media-picker",
-  "version": "0.1.0-beta.5",
-  "description": "Accessible, provider-first React picker for emoji, GIFs, stickers, and custom media.",
+  "version": "0.1.0-beta.6",
+  "description": "Accessible, provider-first media picker for React and standards-based browser applications.",
   "keywords": [
     "emoji-picker",
     "gif-picker",
@@ -11,7 +11,10 @@
     "typescript",
     "headless",
     "reactions",
-    "animated-emoji"
+    "animated-emoji",
+    "web-component",
+    "vanilla-js",
+    "browser"
   ],
   "license": "MIT",
   "repository": {
@@ -28,7 +31,10 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": [
-    "./dist/styles.css"
+    "./dist/styles.css",
+    "./dist/browser/styles.css",
+    "./dist/browser/super-media-picker.element.js",
+    "./dist/browser/super-media-picker.global.js"
   ],
   "files": [
     "dist",
@@ -56,10 +62,20 @@
     },
     "./styles.css": {
       "default": "./dist/styles.css"
+    },
+    "./web": {
+      "types": "./dist/browser/super-media-picker.esm.d.ts",
+      "import": "./dist/browser/super-media-picker.esm.js",
+      "default": "./dist/browser/super-media-picker.esm.js"
+    },
+    "./element": {
+      "types": "./dist/browser/super-media-picker.element.d.ts",
+      "import": "./dist/browser/super-media-picker.element.js",
+      "default": "./dist/browser/super-media-picker.element.js"
     }
   },
   "scripts": {
-    "build": "tsup --config tsup.config.ts && node scripts/copy-styles.mjs",
+    "build": "tsup --config tsup.config.ts && tsup --config tsup.browser.config.ts && tsup --config tsup.global.config.ts && node scripts/copy-styles.mjs",
     "test": "node test/ssr-import.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
@@ -77,5 +93,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tsup": "^8.5.0"
-  }
+  },
+  "unpkg": "./dist/browser/super-media-picker.global.js",
+  "jsdelivr": "./dist/browser/super-media-picker.global.js"
 }
