@@ -85,6 +85,11 @@ describe("browser custom element", () => {
 
     await act(async () => {
       element.theme = "dark";
+      element.renderers = {
+        animatedMedia: {
+          lottie: { mount: () => ({ destroy: () => undefined }) },
+        },
+      };
       element.update({
         dimensions: { width: 420, height: 500, applyToCompact: true },
         interactions: { draggable: true },
@@ -93,9 +98,52 @@ describe("browser custom element", () => {
     });
     expect(element.shadowRoot?.querySelector("[data-smp-mount]")).toBe(mount);
     expect(surface()?.dataset.theme).toBe("dark");
+    expect(element.renderers?.animatedMedia?.lottie).toBeDefined();
     expect(surface()?.style.getPropertyValue("--mp-picker-width")).toBe(
       "420px",
     );
+  });
+
+  it("forwards animated renderer adapters into the React runtime", async () => {
+    const mount = vi.fn((target: HTMLElement) => {
+      const glyph = document.createElement("span");
+      glyph.dataset.testLottie = "true";
+      target.append(glyph);
+      return { destroy: () => glyph.remove() };
+    });
+    const element = await connect((picker) => {
+      picker.mode = "full";
+      picker.displayMode = "inline";
+      picker.features = { animatedEmoji: true };
+      picker.animatedMedia = { playback: "always" };
+      picker.emojiPacks = [
+        {
+          id: "browser-lottie-pack",
+          name: "Browser Lottie pack",
+          items: [
+            {
+              type: "emoji",
+              kind: "animated",
+              id: "browser-lottie-item",
+              name: "Browser Lottie item",
+              animationUrl: "/sparkle.json",
+              format: "lottie",
+              fallbackEmoji: "✨",
+            },
+          ],
+        },
+      ];
+    });
+
+    await act(async () => {
+      element.update({ renderers: { animatedMedia: { lottie: { mount } } } });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    expect(
+      element.shadowRoot?.querySelector("[data-test-lottie='true']"),
+    ).not.toBeNull();
   });
 
   it("emits one normalized MediaItem through a composed, bubbling event", async () => {

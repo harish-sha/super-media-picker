@@ -1,6 +1,6 @@
 {
   "name": "super-media-picker",
-  "version": "0.1.0-beta.6",
+  "version": "0.1.0-beta.7",
   "description": "Accessible, provider-first media picker for React and standards-based browser applications.",
   "keywords": [
     "emoji-picker",

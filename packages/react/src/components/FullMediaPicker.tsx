@@ -16,7 +16,9 @@ import {
 } from "react";
 
 import {
+  isAnimatedMedia,
   isUnicodeEmoji,
+  matchesMediaItemSearch,
   type AnimatedMediaConfig,
   type FavoriteItemRecord,
   type MediaCapabilities,
@@ -52,10 +54,12 @@ import { EmojiPreview } from "./EmojiPreview";
 import { MediaResultsGrid } from "./MediaResultsGrid";
 import { SearchInput } from "./SearchInput";
 import { SkinToneSelector } from "./SkinToneSelector";
+import { EmojiPackSelector, MediaPackIcon } from "./StickerPackSelector";
 import type * as ProviderPanelsModule from "./ProviderPanels";
 
 type PrimaryTab = "emoji" | "gif" | "stickers" | "custom";
 type CollectionView = "browse" | "recent" | "favorites";
+type EmojiKindFilter = "all" | "standard" | "animated";
 
 let providerPanelsModule: Promise<typeof ProviderPanelsModule> | undefined;
 
@@ -88,6 +92,7 @@ interface PrimaryTabDefinition {
 }
 
 const emptyMediaItems: readonly MediaItem[] = [];
+const allEmojiPacksId = "__super-media-picker-all-emoji-packs__";
 
 export interface FullMediaPickerProps {
   readonly animation: AnimatedMediaConfig;
@@ -285,6 +290,9 @@ export function FullMediaPicker({
   const [selectedCategory, setSelectedCategory] =
     useState<EmojiPickerCategory>(defaultCategory);
   const [previewEmoji, setPreviewEmoji] = useState<EmojiRecord>();
+  const [localEmojiPackId, setLocalEmojiPackId] = useState(allEmojiPacksId);
+  const [emojiKindFilter, setEmojiKindFilter] =
+    useState<EmojiKindFilter>("all");
   const instanceId = useId().replaceAll(":", "");
   const categoryTabPrefix = `${instanceId}-mp-category`;
   const emojiPanelId = `${instanceId}-mp-emoji-panel`;
@@ -327,7 +335,11 @@ export function FullMediaPicker({
     return getEmojiByCategory(category, { maxUnicodeVersion });
   }, [category, emojiQuery, favoriteRecords, maxUnicodeVersion, recentRecords]);
   const extensionEmoji = useMemo<readonly MediaItem[]>(() => {
-    const items = emojiPacks
+    const visiblePacks =
+      localEmojiPackId === allEmojiPacksId
+        ? emojiPacks
+        : emojiPacks.filter(({ id }) => id === localEmojiPackId);
+    const items = visiblePacks
       .flatMap((pack) => pack.items ?? [])
       .filter((item) => {
         if (item.kind === "animated")
@@ -336,7 +348,6 @@ export function FullMediaPicker({
           );
         return capabilities?.customEmoji !== false;
       });
-    const normalized = emojiQuery.trim().toLocaleLowerCase();
     if (category === "Recent")
       return recentRecords.flatMap(({ item }) =>
         item?.type === "emoji" && !isUnicodeEmoji(item) ? [item] : [],
@@ -345,11 +356,9 @@ export function FullMediaPicker({
       return favoriteRecords.flatMap(({ item }) =>
         item?.type === "emoji" && !isUnicodeEmoji(item) ? [item] : [],
       );
-    return normalized === ""
+    return emojiQuery.trim() === ""
       ? items
-      : items.filter((item) =>
-          item.name.toLocaleLowerCase().includes(normalized),
-        );
+      : items.filter((item) => matchesMediaItemSearch(item, emojiQuery));
   }, [
     capabilities,
     category,
@@ -357,8 +366,29 @@ export function FullMediaPicker({
     favoriteRecords,
     features.animatedEmoji,
     emojiQuery,
+    localEmojiPackId,
     recentRecords,
   ]);
+  const localEmojiPackOptions = useMemo(
+    () => [{ id: allEmojiPacksId, name: "All packs" }, ...emojiPacks],
+    [emojiPacks],
+  );
+  const hasEmojiKindChoices = useMemo(
+    () =>
+      emojiPacks.some((pack) => (pack.items?.length ?? 0) > 0) ||
+      (providers?.emoji?.length ?? 0) > 0,
+    [emojiPacks, providers?.emoji],
+  );
+  const visibleEmojiItems = emojiKindFilter === "animated" ? [] : emojiItems;
+  const visibleExtensionEmoji = useMemo(
+    () =>
+      emojiKindFilter === "standard"
+        ? []
+        : emojiKindFilter === "animated"
+          ? extensionEmoji.filter((item) => isAnimatedMedia(item))
+          : extensionEmoji,
+    [emojiKindFilter, extensionEmoji],
+  );
   const emojiFavoriteIds = useMemo(() => {
     const ids = new Set(favoriteIds);
     for (const record of favoriteRecords) {
@@ -375,14 +405,14 @@ export function FullMediaPicker({
     if (activeTab !== "emoji" || emojiQuery.trim() === "") return;
     analytics.track("search_completed", {
       mediaType: "emoji",
-      resultCount: emojiItems.length + extensionEmoji.length,
+      resultCount: visibleEmojiItems.length + visibleExtensionEmoji.length,
     });
   }, [
     activeTab,
     analytics,
-    emojiItems.length,
+    visibleEmojiItems.length,
     emojiQuery,
-    extensionEmoji.length,
+    visibleExtensionEmoji.length,
   ]);
 
   useEffect(() => {
@@ -575,15 +605,25 @@ export function FullMediaPicker({
     >
       <header className="mp-header">
         {presentationControls}
-        {onCollapse === undefined ? null : (
+        {onCollapse === undefined && onClose === undefined ? null : (
           <button
-            aria-label="Return to compact reactions"
+            aria-label={
+              onCollapse === undefined
+                ? "Close media picker"
+                : "Return to compact reactions"
+            }
             className="mp-collapse"
-            onClick={onCollapse}
-            title="Return to compact reactions"
+            onClick={onCollapse ?? onClose}
+            title={
+              onCollapse === undefined
+                ? "Close media picker"
+                : "Return to compact reactions"
+            }
             type="button"
           >
-            <span aria-hidden="true">‹</span>
+            <span aria-hidden="true">
+              {onCollapse === undefined ? "×" : "‹"}
+            </span>
           </button>
         )}
         <SearchInput
@@ -669,10 +709,58 @@ export function FullMediaPicker({
           >
             {tab === "emoji" ? (
               <>
+                {emojiPacks.length > 0 &&
+                category !== "Recent" &&
+                category !== "Favorites" ? (
+                  <div className="mp-context-toolbar">
+                    <EmojiPackSelector
+                      onSelect={setLocalEmojiPackId}
+                      packs={localEmojiPackOptions}
+                      renderIcon={(pack) => (
+                        <MediaPackIcon
+                          pack={pack}
+                          {...(mediaSecurity === undefined
+                            ? {}
+                            : { mediaSecurity })}
+                        />
+                      )}
+                      selectedId={localEmojiPackId}
+                    />
+                  </div>
+                ) : null}
+                {hasEmojiKindChoices ? (
+                  <div className="mp-emoji-kind-filter">
+                    <div aria-label="Emoji styles" role="group">
+                      {(
+                        [
+                          ["all", "All"],
+                          ["standard", "Standard"],
+                          ["animated", "Animated"],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          aria-label={`${label} emoji`}
+                          aria-pressed={emojiKindFilter === value}
+                          key={value}
+                          onClick={() => setEmojiKindFilter(value)}
+                          type="button"
+                        >
+                          {label}
+                          {value === "animated" ? (
+                            <svg aria-hidden="true" viewBox="0 0 16 16">
+                              <path d="m8 1 .9 3.1L12 5l-3.1.9L8 9l-.9-3.1L4 5l3.1-.9L8 1Zm4.4 7 .55 1.9 1.85.55-1.85.55-.55 1.9-.55-1.9-1.85-.55 1.85-.55.55-1.9Z" />
+                            </svg>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mp-section-title">
                   {tabQuery.trim() === "" ? category : "Search results"}
                   <span aria-live="polite" className="mp-result-count">
-                    {emojiItems.length + extensionEmoji.length} emoji
+                    {visibleEmojiItems.length + visibleExtensionEmoji.length}{" "}
+                    emoji
                   </span>
                 </div>
                 <div
@@ -682,11 +770,11 @@ export function FullMediaPicker({
                   role="tabpanel"
                   tabIndex={-1}
                 >
-                  {extensionEmoji.length > 0 ? (
+                  {visibleExtensionEmoji.length > 0 ? (
                     <MediaResultsGrid
                       {...sharedGridProps}
                       emptyMessage="No custom emoji."
-                      items={extensionEmoji}
+                      items={visibleExtensionEmoji}
                       label="Custom and animated emoji"
                     />
                   ) : null}
@@ -706,6 +794,7 @@ export function FullMediaPicker({
                           capabilities?.animatedEmoji !== false
                         }
                         allowCustom={capabilities?.customEmoji !== false}
+                        kindFilter={emojiKindFilter}
                         providers={providers.emoji}
                         query={tabQuery}
                         analytics={analytics}
@@ -714,13 +803,15 @@ export function FullMediaPicker({
                   ) : null}
                   <EmojiGrid
                     emptyMessage={
-                      extensionEmoji.length > 0
+                      visibleExtensionEmoji.length > 0
                         ? ""
-                        : emptyMessage(category, tabQuery)
+                        : emojiKindFilter === "animated"
+                          ? "No animated emoji found."
+                          : emptyMessage(category, tabQuery)
                     }
                     favoriteIds={emojiFavoriteIds}
                     favoritesEnabled={features.favorites}
-                    items={emojiItems}
+                    items={visibleEmojiItems}
                     label={
                       tabQuery.trim() === ""
                         ? `${category} emoji`
@@ -728,7 +819,7 @@ export function FullMediaPicker({
                     }
                     onFavoriteToggle={toggleEmojiFavorite}
                     onSelect={selectEmoji}
-                    resetKey={`${category}:${tabQuery}:${skinTone}`}
+                    resetKey={`${category}:${tabQuery}:${skinTone}:${emojiKindFilter}`}
                     skinTone={skinTone}
                     {...(previewEnabled ? { onPreview: setPreviewEmoji } : {})}
                   />

@@ -57,6 +57,13 @@ describe("HttpEmojiProvider", () => {
                   id: "reactions",
                   name: "Reactions",
                   iconUrl: "https://cdn.test/packs/reactions.webp",
+                  posterUrl: "https://cdn.test/packs/reactions-poster.webp",
+                  version: "2.0.0",
+                  revision: "tenant-42",
+                  searchable: true,
+                  paginated: true,
+                  locales: ["en", "hi"],
+                  capabilities: { animated: true, search: true },
                   itemCount: 80,
                   animated: true,
                 },
@@ -76,7 +83,13 @@ describe("HttpEmojiProvider", () => {
     });
 
     await expect(provider.packs()).resolves.toMatchObject([
-      { id: "reactions", itemCount: 80, animated: true },
+      {
+        id: "reactions",
+        itemCount: 80,
+        animated: true,
+        revision: "tenant-42",
+        capabilities: { animated: true, search: true },
+      },
     ]);
     await expect(
       provider.packItems("reactions", { cursor: "page-2", limit: 20 }),
@@ -94,6 +107,43 @@ describe("HttpEmojiProvider", () => {
       packs: true,
       pagination: true,
       animatedMedia: true,
+    });
+  });
+
+  it("forwards provider-neutral pack and locale filters to search", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ items: [animatedEmoji], hasMore: false }), {
+        status: 200,
+      }),
+    );
+    const provider = new HttpEmojiProvider({
+      endpoint: "/api/media/emoji",
+      fetch,
+    });
+    await provider.search?.("wave", {
+      packId: "team-reactions",
+      locale: "hi",
+    });
+    const request = fetch.mock.calls[0]?.[0];
+    if (request === undefined) throw new TypeError("Expected search request");
+    const url = requestUrl(request);
+    expect(url.searchParams.get("packId")).toBe("team-reactions");
+    expect(url.searchParams.get("locale")).toBe("hi");
+  });
+
+  it("enforces configured media formats for provider responses", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ items: [animatedEmoji], hasMore: false }), {
+        status: 200,
+      }),
+    );
+    const provider = new HttpEmojiProvider({
+      endpoint: "/api/media/emoji",
+      fetch,
+      mediaSecurity: { allowedFormats: ["gif", "webp"] },
+    });
+    await expect(provider.trending?.()).rejects.toMatchObject({
+      providerCode: "invalid_response",
     });
   });
 

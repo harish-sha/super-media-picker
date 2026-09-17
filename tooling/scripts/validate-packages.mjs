@@ -90,7 +90,7 @@ try {
     }
 
     if (packResult.name === "super-media-picker") {
-      if (packedManifest.version !== "0.1.0-beta.6") {
+      if (packedManifest.version !== "0.1.0-beta.7") {
         throw new Error(
           `Public package has unexpected beta version ${packedManifest.version}`,
         );

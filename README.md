@@ -29,6 +29,11 @@ Native font/version behavior is documented in [emoji compatibility](docs/emoji-c
 Layout and input integration are documented in [presentation, geometry, and
 motion](docs/presentation.md).
 
+**Super Media owns contracts. Providers, vendors, and renderers are replaceable
+adapters.** The normalized model contains no GIPHY-specific fields, the package
+has no production `lottie-web` dependency, and ordinary picker functionality
+does not require an external renderer.
+
 ## Installation
 
 ```sh
@@ -37,7 +42,7 @@ npm install super-media-picker@beta react react-dom
 # or: yarn add super-media-picker@beta react react-dom
 ```
 
-The public beta version is `0.1.0-beta.6`. React and React DOM
+The public beta version is `0.1.0-beta.7`. React and React DOM
 `>=18.3.0 <20.0.0` are peer dependencies, and the package is ESM-only with
 bundled TypeScript declarations.
 
@@ -299,14 +304,37 @@ const emojiPacks = [
 ];
 
 <MediaPicker
-  animatedMedia={{ autoplay: "hover", maxActiveAnimations: 3 }}
+  animatedMedia={{
+    playback: "on-intent",
+    playOnSelect: true,
+    maxActiveAnimations: 3,
+  }}
   emojiPacks={emojiPacks}
   features={{ animatedEmoji: true }}
   onSelect={handleSelect}
 />;
 ```
 
-WebM, animated WebP, and GIF use native browser rendering. Lottie is supported through the typed `renderers.lottie` adapter so consumers choose their compatible runtime. Hover/focus is the desktop default; `visible`, `always`, and `never` policies are available. Visibility observation, lazy assets, concurrency limits, pause/cleanup, and `prefers-reduced-motion` protection prevent grids from continuously animating every item.
+WebM, animated WebP, and GIF use native browser rendering. Lottie remains an
+optional host concern through the typed
+`renderers.animatedMedia.lottie` lifecycle adapter; the SDK does not bundle a
+Lottie runtime. Playback policies are `never`, `on-hover`, `on-focus`,
+`on-intent`, `once`, `loop-while-active`, and `always`. `on-intent` is the calm
+default and works with mouse, keyboard, and touch/pen pointer intent.
+
+The renderer selects poster/thumbnail assets while idle, loads animation only
+for relevant visible items, and falls back through poster candidates, Unicode,
+then accessible text. One priority-aware concurrency manager per picker bounds
+simultaneous media playback. Page visibility, viewport observation, cleanup,
+and reduced-motion handling prevent inactive grids from consuming animation
+resources. Role-based assets, aliases, locale keywords, pack identity, and
+fallback Unicode remain in the selected normalized `MediaItem`, ready for
+future rich-message entity serialization without adding an editor dependency.
+
+That model has been validated for future plain-text fallback, rich emoji
+entities, alias/autocomplete, and composer integration without a core-model
+change. Beta.7 does not expose the testing lab, a Composer API, or a Composer
+entity schema.
 
 ## Production providers
 
@@ -618,7 +646,7 @@ The playground imports through the built `super-media-picker` package and its pu
 ## Versioning and publishing
 
 Packages use Semantic Versioning, Changesets, and explicit `files` lists. The
-`0.1.0-beta.6` public package is self-contained; scoped workspace modules remain
+`0.1.0-beta.7` public package is self-contained; scoped workspace modules remain
 internal release inputs. Use `pnpm changeset` for a future public change.
 `pnpm package:check` validates tarball exports, dependencies, chunks, and
 contents. `pnpm package:install-test` installs the tarball into a clean external

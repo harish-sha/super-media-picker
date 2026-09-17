@@ -14,7 +14,12 @@ import {
 } from "super-media-picker";
 import { useGifSearch } from "super-media-picker/headless";
 
-import { createMockProviders, customTabs, emojiPacks } from "./mockMedia";
+import {
+  createMockProviders,
+  customTabs,
+  demoRenderers,
+  emojiPacks,
+} from "./mockMedia";
 
 const normalProviders = createMockProviders("normal");
 const slowProviders = createMockProviders("delay");
@@ -407,26 +412,122 @@ export const CompactToFull: Story = {
 
 export const AnimatedEmoji: Story = {
   args: {
-    animatedMedia: { autoplay: "visible", maxActiveAnimations: 2 },
+    animatedMedia: {
+      maxActiveAnimations: 2,
+      playback: "on-intent",
+      playOnSelect: true,
+    },
     emojiPacks,
     features: { emoji: true, animatedEmoji: true },
+    renderers: demoRenderers,
   },
 };
 
 export const AnimatedEmojiHover: Story = {
   args: {
-    animatedMedia: { autoplay: "hover" },
+    animatedMedia: { playback: "on-hover" },
     emojiPacks,
     features: { emoji: true, animatedEmoji: true },
+    renderers: demoRenderers,
   },
+};
+
+export const AnimatedEmojiPosterFirst: Story = {
+  args: {
+    animatedMedia: { playback: "on-intent" },
+    defaultSearchQuery: "celebration",
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+    renderers: demoRenderers,
+  },
+};
+
+export const AnimatedEmojiFallback: Story = {
+  args: {
+    animatedMedia: { playback: "always" },
+    defaultSearchQuery: "broken-wave",
+    emojiPacks,
+    features: { emoji: true, animatedEmoji: true },
+    renderers: demoRenderers,
+  },
+};
+
+function AnimatedEmojiPolicyGallery() {
+  const policies = [
+    "never",
+    "on-hover",
+    "on-focus",
+    "on-intent",
+    "once",
+    "loop-while-active",
+    "always",
+  ] as const;
+  return (
+    <div style={{ display: "grid", gap: "1rem" }}>
+      {policies.map((playback) => (
+        <section key={playback}>
+          <strong>{playback}</strong>
+          <ReactionPicker
+            animatedMedia={{ maxActiveAnimations: 1, playback }}
+            onSelect={fn()}
+            reactions={emojiPacks[0]?.items ?? []}
+            renderers={demoRenderers}
+            source="custom"
+          />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export const AnimatedEmojiPlaybackPolicies: Story = {
+  render: () => <AnimatedEmojiPolicyGallery />,
+};
+
+export const AnimatedEmojiReactions: Story = {
+  render: () => (
+    <ReactionPicker
+      animatedMedia={{
+        maxActiveAnimations: 2,
+        playback: "on-intent",
+        playOnSelect: true,
+      }}
+      onSelect={fn()}
+      reactions={emojiPacks[0]?.items ?? []}
+      renderers={demoRenderers}
+      source="custom"
+    />
+  ),
+};
+
+export const AnimatedEmojiMultipleInstances: Story = {
+  render: () => (
+    <div
+      style={{ display: "grid", gap: "1rem", gridTemplateColumns: "1fr 1fr" }}
+    >
+      {["Workspace A", "Workspace B"].map((label) => (
+        <section key={label}>
+          <strong>{label}</strong>
+          <MediaPicker
+            animatedMedia={{ maxActiveAnimations: 1, playback: "on-intent" }}
+            emojiPacks={emojiPacks}
+            features={{ animatedEmoji: true }}
+            onSelect={fn()}
+            renderers={demoRenderers}
+          />
+        </section>
+      ))}
+    </div>
+  ),
 };
 
 export const ReducedMotion: Story = {
   args: {
-    animatedMedia: { autoplay: "never" },
+    animatedMedia: { playback: "always", reducedMotion: "reduce" },
     emojiPacks,
     features: { emoji: true, animatedEmoji: true },
     motion: "spring",
+    renderers: demoRenderers,
   },
   parameters: { emulatedMedia: { reducedMotion: "reduce" } },
 };

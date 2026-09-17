@@ -1,6 +1,8 @@
 import type {
   AnimatedMediaConfig,
   AnimatedMediaFormat,
+  AnimatedMediaPlaybackPolicy,
+  AnimatedMediaState,
   CompactReactionSource,
   CustomMediaProvider,
   CustomMediaItem,
@@ -164,9 +166,33 @@ export interface AnimatedMediaRenderProps {
   readonly previewUrl?: string;
 }
 
+export interface AnimatedMediaRendererController {
+  readonly play?: () => void | Promise<void>;
+  readonly pause?: () => void;
+  readonly stop?: () => void;
+  readonly destroy: () => void;
+}
+
+export interface AnimatedMediaRendererAdapterProps extends AnimatedMediaRenderProps {
+  readonly playbackPolicy: AnimatedMediaPlaybackPolicy;
+  readonly reducedMotion: boolean;
+  readonly setState: (state: AnimatedMediaState) => void;
+}
+
+/** Imperative, host-owned renderer lifecycle for optional formats like Lottie. */
+export interface AnimatedMediaRendererAdapter {
+  mount(
+    target: HTMLElement,
+    props: AnimatedMediaRendererAdapterProps,
+  ): AnimatedMediaRendererController | void;
+}
+
 export interface MediaPickerRenderers {
   /** Lottie requires a host adapter; native WebM/WebP/GIF need no decoder. */
   readonly lottie?: (props: AnimatedMediaRenderProps) => ReactNode;
+  readonly animatedMedia?: Partial<
+    Record<AnimatedMediaFormat, AnimatedMediaRendererAdapter>
+  >;
   readonly custom?: (item: CustomMediaItem) => ReactNode;
 }
 

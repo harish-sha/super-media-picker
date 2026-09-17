@@ -143,6 +143,7 @@ describe("MediaPicker presentation", () => {
     vi.stubGlobal("innerWidth", 500);
     vi.stubGlobal("innerHeight", 400);
     const anchorRef = createRef<HTMLButtonElement>();
+    const onClose = vi.fn();
     const onPlacement = vi.fn();
     render(
       <div>
@@ -151,6 +152,8 @@ describe("MediaPicker presentation", () => {
           anchorRef={anchorRef}
           dimensions={{ height: 120, width: 200 }}
           displayMode="popover"
+          motion="none"
+          onClose={onClose}
           onResolvedPlacementChange={onPlacement}
           onSelect={() => undefined}
           placement="bottom-start"
@@ -172,6 +175,61 @@ describe("MediaPicker presentation", () => {
           .closest(".mp-positioner")?.parentElement,
       ).toBe(document.body),
     );
+
+    fireEvent.pointerDown(picker);
+    expect(onClose).not.toHaveBeenCalled();
+    const contextualMenu = document.createElement("div");
+    contextualMenu.dataset.contextualPopover = "tone";
+    document.body.append(contextualMenu);
+    fireEvent.pointerDown(contextualMenu);
+    expect(onClose).not.toHaveBeenCalled();
+    contextualMenu.remove();
+    fireEvent.pointerDown(document.body);
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("portals modal surfaces, owns the backdrop, and restores body scrolling", async () => {
+    const beforeOverflow = document.body.style.overflow;
+    const beforeOverscroll = document.body.style.overscrollBehavior;
+    const onClose = vi.fn();
+    const view = render(
+      <MediaPicker
+        displayMode="bottom-sheet"
+        motion="none"
+        onClose={onClose}
+        onSelect={() => undefined}
+      />,
+    );
+    const picker = await screen.findByRole("dialog", { name: "Media picker" });
+    const positioner = picker.closest<HTMLElement>(".mp-positioner")!;
+    await waitFor(() => expect(positioner.parentElement).toBe(document.body));
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.body.style.overscrollBehavior).toBe("none");
+
+    fireEvent.pointerDown(picker);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.pointerDown(positioner);
+    expect(onClose).toHaveBeenCalledOnce();
+
+    view.unmount();
+    expect(document.body.style.overflow).toBe(beforeOverflow);
+    expect(document.body.style.overscrollBehavior).toBe(beforeOverscroll);
+  });
+
+  it("dismisses an overlay with Escape even before focus enters its portal", async () => {
+    const onClose = vi.fn();
+    render(
+      <MediaPicker
+        displayMode="bottom-sheet"
+        motion="none"
+        onClose={onClose}
+        onSelect={() => undefined}
+      />,
+    );
+    await screen.findByRole("dialog", { name: "Media picker" });
+    document.body.focus();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("uses a drag dead zone, then commits a bounded position", async () => {

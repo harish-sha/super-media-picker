@@ -1,4 +1,9 @@
-import { isMediaItem, mediaItemKey, type MediaItem } from "./media";
+import {
+  isMediaItem,
+  mediaItemKey,
+  toPersistedMediaItem,
+  type MediaItem,
+} from "./media";
 import type { StorageAdapter } from "./storage";
 
 const millisecondsPerDay = 86_400_000;
@@ -61,7 +66,7 @@ export class RecentItemsManager {
       lastUsedAt: now,
       ...(typeof input === "string"
         ? {}
-        : { item: input, version: 1 as const }),
+        : { item: toPersistedMediaItem(input), version: 1 as const }),
     };
     const next = [updated, ...records.filter((record) => record.id !== id)];
     const ranked = this.#rank(next).slice(0, this.#limit);
@@ -152,7 +157,7 @@ export class FavoritesManager {
         id,
         ...(typeof input === "string"
           ? {}
-          : { item: input, version: 1 as const }),
+          : { item: toPersistedMediaItem(input), version: 1 as const }),
       },
       ...current.filter((favorite) => favorite.id !== id),
     ].slice(0, this.#limit);

@@ -4,6 +4,7 @@ import { extname, resolve, sep } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 const fixtureRoot = resolve(repositoryRoot, "tests/browser");
+const demoMediaRoot = resolve(repositoryRoot, "apps/playground/public/media");
 const browserDistribution = resolve(
   process.env.SMP_BROWSER_DIST ??
     resolve(repositoryRoot, "packages/super-media-picker/dist/browser"),
@@ -18,6 +19,7 @@ const contentTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml; charset=utf-8",
+  ".webm": "video/webm",
   ".webp": "image/webp",
 };
 
@@ -95,6 +97,13 @@ const server = createServer((request, response) => {
     serveFile(
       response,
       safeFile(fixtureRoot, url.pathname.slice("/fixture".length)),
+    );
+    return;
+  }
+  if (url.pathname.startsWith("/demo-media/")) {
+    serveFile(
+      response,
+      safeFile(demoMediaRoot, url.pathname.slice("/demo-media".length)),
     );
     return;
   }

@@ -204,6 +204,7 @@ export function ReactionPicker({
   reactions,
   maxVisibleItems,
   onSelect,
+  displayMode = "inline",
   ...props
 }: ReactionPickerProps) {
   return (
@@ -224,6 +225,7 @@ export function ReactionPicker({
         recents: true,
         favorites: source === "favorites",
       }}
+      displayMode={displayMode}
       mode="compact"
       onSelect={onSelect}
     />

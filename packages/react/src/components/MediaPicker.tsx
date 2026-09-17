@@ -28,6 +28,7 @@ import {
 import { useMediaPickerPersistence } from "../hooks/useMediaPickerPersistence";
 import { useResolvedDisplayMode } from "../hooks/useResolvedDisplayMode";
 import type { AdvancedPresentationState } from "../presentation/AdvancedPresentation";
+import type { GenieTransitionProps } from "../presentation/GenieTransition";
 import { useReducedMotion } from "../presentation/useReducedMotion";
 import { resolveProviderConfiguration } from "../providerConfig";
 import type {
@@ -58,14 +59,31 @@ const LazyAdvancedPresentation = lazy(() =>
     default: module.AdvancedPresentation,
   })),
 );
-const LazyGenieTransition = lazy(
-  () => import("../presentation/GenieTransition"),
-);
+let genieTransitionModule:
+  Promise<{ default: ComponentType<GenieTransitionProps> }> | undefined;
+let loadedGenieTransition: ComponentType<GenieTransitionProps> | undefined;
+
+function loadGenieTransition() {
+  return (genieTransitionModule ??=
+    import("../presentation/GenieTransition").then((module) => {
+      loadedGenieTransition = module.default;
+      return module;
+    }));
+}
 
 const defaultPresentation: AdvancedPresentationState = {
   activeGesture: "idle",
   resolvedPlacement: "bottom-start",
 };
+
+interface ScrollLockState {
+  count: number;
+  overflow: string;
+  paddingRight: string;
+  overscrollBehavior: string;
+}
+
+const scrollLocks = new WeakMap<Document, ScrollLockState>();
 
 export { mediaPickerStorageKeys } from "../hooks/useMediaPickerPersistence";
 export type { MediaPickerProps } from "../types";
@@ -198,6 +216,9 @@ export function MediaPicker({
   const resolvedTheme = resolveMediaPickerTheme(theme);
   const reducedMotion = useReducedMotion();
   const motionConfig = resolveMotion(motion, reducedMotion);
+  const [GenieTransitionComponent, setGenieTransitionComponent] = useState<
+    ComponentType<GenieTransitionProps> | undefined
+  >(() => loadedGenieTransition);
   const [motionState, setMotionState] = useState<
     "opening" | "open" | "closing"
   >("opening");
@@ -213,6 +234,9 @@ export function MediaPicker({
     resolvedDisplayMode === "modal" ||
     resolvedDisplayMode === "bottom-sheet" ||
     resolvedDisplayMode === "fullscreen";
+  const [visualViewportStyle, setVisualViewportStyle] =
+    useState<CSSProperties>();
+  const viewportSignature = useRef("");
   const state = useMediaPickerPersistence(storage, defaultSkinTone);
   const lifecycle = useRef({ mounted: false, opened: false, closed: false });
   const initialMode = useRef(resolvedMode);
@@ -248,6 +272,7 @@ export function MediaPicker({
     [customTabs, providers],
   );
   const advancedPresentationRequested =
+    overlay ||
     anchorRef !== undefined ||
     draggable !== undefined ||
     resizable !== undefined ||
@@ -255,6 +280,94 @@ export function MediaPicker({
     portal !== undefined ||
     onResolvedPlacementChange !== undefined ||
     onInteractionChange !== undefined;
+
+  useEffect(() => {
+    if (!overlay || typeof globalThis.window === "undefined") {
+      viewportSignature.current = "";
+      return;
+    }
+    const update = (): void => {
+      const viewport = globalThis.window.visualViewport;
+      const left = viewport?.offsetLeft ?? 0;
+      const top = viewport?.offsetTop ?? 0;
+      const viewportWidth = viewport?.width ?? globalThis.window.innerWidth;
+      const viewportHeight = viewport?.height ?? globalThis.window.innerHeight;
+      const signature = `${left}:${top}:${viewportWidth}:${viewportHeight}`;
+      if (signature === viewportSignature.current) return;
+      viewportSignature.current = signature;
+      setVisualViewportStyle({
+        "--mp-visible-viewport-height": `${viewportHeight}px`,
+        "--mp-visible-viewport-left": `${left}px`,
+        "--mp-visible-viewport-top": `${top}px`,
+        "--mp-visible-viewport-width": `${viewportWidth}px`,
+      } as CSSProperties);
+    };
+    update();
+    globalThis.window.addEventListener("resize", update);
+    globalThis.window.visualViewport?.addEventListener("resize", update);
+    globalThis.window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      globalThis.window.removeEventListener("resize", update);
+      globalThis.window.visualViewport?.removeEventListener("resize", update);
+      globalThis.window.visualViewport?.removeEventListener("scroll", update);
+    };
+  }, [overlay]);
+
+  useEffect(() => {
+    if (!overlay || typeof globalThis.document === "undefined") return;
+    const ownerDocument = globalThis.document;
+    const current = scrollLocks.get(ownerDocument);
+    if (current === undefined) {
+      const body = ownerDocument.body;
+      const layoutWidth = ownerDocument.documentElement.clientWidth;
+      const scrollbarWidth =
+        layoutWidth > 0
+          ? Math.max(0, globalThis.window.innerWidth - layoutWidth)
+          : 0;
+      const computedPadding = Number.parseFloat(
+        globalThis.getComputedStyle(body).paddingRight,
+      );
+      scrollLocks.set(ownerDocument, {
+        count: 1,
+        overflow: body.style.overflow,
+        overscrollBehavior: body.style.overscrollBehavior,
+        paddingRight: body.style.paddingRight,
+      });
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+      if (scrollbarWidth > 0)
+        body.style.paddingRight = `${
+          (Number.isFinite(computedPadding) ? computedPadding : 0) +
+          scrollbarWidth
+        }px`;
+    } else current.count += 1;
+    return () => {
+      const lock = scrollLocks.get(ownerDocument);
+      if (lock === undefined) return;
+      lock.count -= 1;
+      if (lock.count > 0) return;
+      ownerDocument.body.style.overflow = lock.overflow;
+      ownerDocument.body.style.overscrollBehavior = lock.overscrollBehavior;
+      ownerDocument.body.style.paddingRight = lock.paddingRight;
+      scrollLocks.delete(ownerDocument);
+    };
+  }, [overlay]);
+
+  useEffect(() => {
+    if (motionConfig.preset !== "genie") return;
+    let active = true;
+    void loadGenieTransition().then(
+      (module) => {
+        if (active) setGenieTransitionComponent(() => module.default);
+      },
+      () => {
+        if (active) setGenieTransitionComponent(() => undefined);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [motionConfig.preset]);
 
   useEffect(() => {
     const lifecycleState = lifecycle.current;
@@ -407,6 +520,7 @@ export function MediaPicker({
     );
     const positionerStyle = {
       ...presentation.positionerStyle,
+      ...visualViewportStyle,
       "--mp-motion-duration": `${motionConfig.duration}ms`,
       "--mp-motion-easing": motionConfig.easing,
     } as CSSProperties;
@@ -423,6 +537,7 @@ export function MediaPicker({
           onExpand={() => requestMode("full")}
           onExpandIntent={() => {
             void loadFullMediaPicker();
+            if (motionConfig.preset === "genie") void loadGenieTransition();
           }}
           onRecordRecent={(id) => {
             if (trackCompactRecents) void state.recordRecent(id);
@@ -527,6 +642,9 @@ export function MediaPicker({
         data-display-mode={displayMode}
         data-motion-preset={motionConfig.preset}
         data-motion-state={motionState}
+        data-genie-module-ready={
+          GenieTransitionComponent === undefined ? "false" : "true"
+        }
         data-mode={resolvedMode}
         data-reduced-motion={reducedMotion ? "true" : "false"}
         data-resolved-placement={presentation.resolvedPlacement}
@@ -543,23 +661,20 @@ export function MediaPicker({
           </div>
           {motionConfig.preset === "genie" &&
           motionState !== "open" &&
-          presentation.activeGesture === "idle" ? (
-            <Suspense fallback={null}>
-              <LazyGenieTransition
-                {...(anchorRef === undefined ? {} : { anchorRef })}
-                gestureLayerRef={gestureLayerRef}
-                {...(motionOrigin === undefined
-                  ? {}
-                  : { origin: motionOrigin })}
-                positionerRef={positionerRef}
-                surfaceRef={surfaceRef}
-                duration={motionConfig.duration}
-                {...(motionConfig.easing === undefined
-                  ? {}
-                  : { easing: motionConfig.easing })}
-                motionState={motionState}
-              />
-            </Suspense>
+          presentation.activeGesture === "idle" &&
+          GenieTransitionComponent !== undefined ? (
+            <GenieTransitionComponent
+              {...(anchorRef === undefined ? {} : { anchorRef })}
+              gestureLayerRef={gestureLayerRef}
+              {...(motionOrigin === undefined ? {} : { origin: motionOrigin })}
+              positionerRef={positionerRef}
+              surfaceRef={surfaceRef}
+              duration={motionConfig.duration}
+              {...(motionConfig.easing === undefined
+                ? {}
+                : { easing: motionConfig.easing })}
+              motionState={motionState}
+            />
           ) : null}
         </div>
       </div>

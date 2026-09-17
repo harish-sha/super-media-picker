@@ -1,6 +1,7 @@
 import { MediaProviderError } from "./errors";
 import {
   isMediaItem,
+  type MediaAssetFormat,
   type AnyEmojiMediaItem,
   type CustomMediaItem,
 } from "./media";
@@ -16,6 +17,7 @@ import type {
 } from "./provider";
 import {
   MediaRequestClient,
+  isSafeMediaAsset,
   isSafeMediaUrl,
   type MediaRequestClientOptions,
   type MediaRetryPolicy,
@@ -52,6 +54,7 @@ export interface HttpProviderRequest {
   readonly mode: "packs" | "pack" | "search" | "trending";
   readonly query?: string;
   readonly packId?: string;
+  readonly locale?: string;
   readonly cursor?: string;
   readonly limit?: number;
   readonly signal?: AbortSignal;
@@ -108,6 +111,8 @@ export class HttpProviderTransport {
     if (request.query !== undefined) url.searchParams.set("q", request.query);
     if (request.packId !== undefined)
       url.searchParams.set("packId", request.packId);
+    if (request.locale !== undefined)
+      url.searchParams.set("locale", request.locale);
     if (request.cursor !== undefined && request.cursor !== "")
       url.searchParams.set("cursor", request.cursor);
     if (
@@ -231,7 +236,11 @@ export class HttpEmojiProvider implements EmojiProvider {
   packs(options: ProviderOptions = {}): Promise<readonly EmojiPack[]> {
     return this.#transport
       .request(
-        { mode: "packs", ...withSignal(options.signal) },
+        {
+          mode: "packs",
+          ...withSignal(options.signal),
+          ...(options.locale === undefined ? {} : { locale: options.locale }),
+        },
         isEmojiPacks,
         "Emoji",
       )
@@ -412,6 +421,8 @@ function searchRequest(options: SearchOptions) {
     ...withSignal(options.signal),
     ...(options.cursor === undefined ? {} : { cursor: options.cursor }),
     ...(options.limit === undefined ? {} : { limit: options.limit }),
+    ...(options.packId === undefined ? {} : { packId: options.packId }),
+    ...(options.locale === undefined ? {} : { locale: options.locale }),
   };
 }
 
@@ -447,10 +458,18 @@ function isEmojiPack(value: unknown): value is EmojiPack {
     pack.name.trim().length > 0 &&
     optionalString(pack.description) &&
     optionalString(pack.iconUrl) &&
+    optionalString(pack.posterUrl) &&
     optionalString(pack.icon) &&
+    optionalString(pack.version) &&
+    optionalString(pack.revision) &&
     optionalString(pack.provider) &&
+    optionalAttribution(pack.attribution) &&
+    optionalBooleanRecord(pack.capabilities) &&
     optionalCount(pack.itemCount) &&
     (pack.animated === undefined || typeof pack.animated === "boolean") &&
+    (pack.searchable === undefined || typeof pack.searchable === "boolean") &&
+    (pack.paginated === undefined || typeof pack.paginated === "boolean") &&
+    optionalStringArray(pack.locales) &&
     pack.items === undefined
   );
 }
@@ -460,10 +479,27 @@ function sanitizeEmojiPacks(
   policy: MediaUrlPolicy,
 ): readonly EmojiPack[] {
   return packs.map((pack) => {
-    if (pack.iconUrl === undefined || isSafeMediaUrl(pack.iconUrl, policy))
-      return pack;
-    const { iconUrl, ...safePack } = pack;
-    void iconUrl;
+    const safePack = { ...pack };
+    if (
+      safePack.iconUrl !== undefined &&
+      !isSafeMediaUrl(safePack.iconUrl, policy)
+    )
+      delete (safePack as { iconUrl?: string }).iconUrl;
+    if (
+      safePack.posterUrl !== undefined &&
+      !isSafeMediaUrl(safePack.posterUrl, policy)
+    )
+      delete (safePack as { posterUrl?: string }).posterUrl;
+    if (safePack.attribution !== undefined) {
+      const { logoUrl, url, ...text } = safePack.attribution;
+      safePack.attribution = {
+        ...text,
+        ...(url !== undefined && isSafeMediaUrl(url, policy) ? { url } : {}),
+        ...(logoUrl !== undefined && isSafeMediaUrl(logoUrl, policy)
+          ? { logoUrl }
+          : {}),
+      };
+    }
     return safePack;
   });
 }
@@ -484,16 +520,41 @@ function isSafeEmoji(
 function safeItemUrls(
   item: {
     readonly url?: string;
+    readonly animationUrl?: string;
     readonly thumbnailUrl?: string;
+    readonly posterUrl?: string;
     readonly previewUrl?: string;
+    readonly originalUrl?: string;
+    readonly format?: MediaAssetFormat;
+    readonly assets?: readonly {
+      readonly url: string;
+      readonly format?: MediaAssetFormat;
+    }[];
+    readonly attribution?: ProviderAttribution;
   },
   policy: MediaUrlPolicy,
 ): boolean {
   return (
-    (item.url === undefined || isSafeMediaUrl(item.url, policy)) &&
+    (item.url === undefined ||
+      isSafeMediaAsset(item.url, item.format, policy)) &&
+    (item.animationUrl === undefined ||
+      isSafeMediaAsset(item.animationUrl, item.format, policy)) &&
     (item.thumbnailUrl === undefined ||
-      isSafeMediaUrl(item.thumbnailUrl, policy)) &&
-    (item.previewUrl === undefined || isSafeMediaUrl(item.previewUrl, policy))
+      isSafeMediaAsset(item.thumbnailUrl, undefined, policy)) &&
+    (item.posterUrl === undefined ||
+      isSafeMediaAsset(item.posterUrl, undefined, policy)) &&
+    (item.previewUrl === undefined ||
+      isSafeMediaAsset(item.previewUrl, undefined, policy)) &&
+    (item.originalUrl === undefined ||
+      isSafeMediaAsset(item.originalUrl, item.format, policy)) &&
+    (item.assets === undefined ||
+      item.assets.every((asset) =>
+        isSafeMediaAsset(asset.url, asset.format, policy),
+      )) &&
+    (item.attribution?.url === undefined ||
+      isSafeMediaUrl(item.attribution.url, policy)) &&
+    (item.attribution?.logoUrl === undefined ||
+      isSafeMediaUrl(item.attribution.logoUrl, policy))
   );
 }
 
@@ -505,5 +566,36 @@ function optionalCount(value: unknown): boolean {
   return (
     value === undefined ||
     (typeof value === "number" && Number.isInteger(value) && value >= 0)
+  );
+}
+
+function optionalStringArray(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.every((item) => typeof item === "string" && item.trim() !== ""))
+  );
+}
+
+function optionalBooleanRecord(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (typeof value === "object" &&
+      value !== null &&
+      Object.values(value).every((item) => typeof item === "boolean"))
+  );
+}
+
+function optionalAttribution(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (typeof value !== "object" || value === null) return false;
+  const attribution = value as Readonly<Record<string, unknown>>;
+  return (
+    typeof attribution.label === "string" &&
+    attribution.label.trim() !== "" &&
+    optionalString(attribution.url) &&
+    optionalString(attribution.logoUrl) &&
+    (attribution.required === undefined ||
+      typeof attribution.required === "boolean")
   );
 }

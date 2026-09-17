@@ -4,6 +4,9 @@ import { createRoot, type Root } from "react-dom/client";
 import {
   LocalStorageAdapter,
   type AnimatedMediaConfig,
+  type AnimatedMediaFormat,
+  type AnimatedMediaPlaybackPolicy,
+  type AnimatedMediaState,
   type EmojiPack,
   type MediaCapabilities,
   type MediaItem,
@@ -97,6 +100,38 @@ export interface SuperMediaPickerInteractions {
   readonly swipeToDismiss?: boolean | MediaPickerSwipeToDismissConfig;
 }
 
+export interface SuperMediaPickerAnimatedMediaRenderProps {
+  readonly active: boolean;
+  readonly animationUrl: string;
+  readonly format: AnimatedMediaFormat;
+  readonly label: string;
+  readonly previewUrl?: string;
+  readonly playbackPolicy: AnimatedMediaPlaybackPolicy;
+  readonly reducedMotion: boolean;
+  readonly setState: (state: AnimatedMediaState) => void;
+}
+
+export interface SuperMediaPickerAnimatedMediaRendererController {
+  readonly play?: () => void | Promise<void>;
+  readonly pause?: () => void;
+  readonly stop?: () => void;
+  readonly destroy: () => void;
+}
+
+/** React-free lifecycle adapter contract for optional browser formats. */
+export interface SuperMediaPickerAnimatedMediaRendererAdapter {
+  mount(
+    target: HTMLElement,
+    props: SuperMediaPickerAnimatedMediaRenderProps,
+  ): SuperMediaPickerAnimatedMediaRendererController | void;
+}
+
+export interface SuperMediaPickerRenderers {
+  readonly animatedMedia?: Partial<
+    Record<AnimatedMediaFormat, SuperMediaPickerAnimatedMediaRendererAdapter>
+  >;
+}
+
 export interface SuperMediaPickerPresentationDetail {
   readonly open: boolean;
   readonly mode: MediaPickerMode;
@@ -136,6 +171,7 @@ export interface SuperMediaPickerOptions {
   readonly mediaSecurity?: MediaUrlPolicy;
   readonly emojiPacks?: readonly EmojiPack[];
   readonly animatedMedia?: AnimatedMediaConfig;
+  readonly renderers?: SuperMediaPickerRenderers;
   readonly allowExpand?: boolean;
   readonly defaultCategory?: EmojiPickerCategory;
   readonly defaultMediaType?: "emoji" | "gif" | "stickers" | "custom";
@@ -177,6 +213,7 @@ interface RuntimeConfiguration {
   readonly mediaSecurity?: MediaUrlPolicy;
   readonly emojiPacks?: readonly EmojiPack[];
   readonly animatedMedia?: AnimatedMediaConfig;
+  readonly renderers?: SuperMediaPickerRenderers;
   readonly allowExpand: boolean;
   readonly defaultCategory?: EmojiPickerCategory;
   readonly defaultMediaType?: "emoji" | "gif" | "stickers" | "custom";
@@ -304,6 +341,9 @@ function BrowserPickerRuntime({
           {...(configuration.animatedMedia === undefined
             ? {}
             : { animatedMedia: configuration.animatedMedia })}
+          {...(configuration.renderers === undefined
+            ? {}
+            : { renderers: configuration.renderers })}
           {...(configuration.defaultCategory === undefined
             ? {}
             : { defaultCategory: configuration.defaultCategory })}
@@ -342,6 +382,7 @@ type ComplexPropertyName =
   | "mediaSecurity"
   | "emojiPacks"
   | "animatedMedia"
+  | "renderers"
   | "defaultCategory"
   | "defaultMediaType"
   | "defaultSearchQuery"
@@ -569,6 +610,14 @@ export class SuperMediaPickerElement extends HTMLElementBase {
     this.#setProperty("animatedMedia", value);
   }
 
+  get renderers(): SuperMediaPickerRenderers | undefined {
+    return this.#properties.renderers as SuperMediaPickerRenderers | undefined;
+  }
+
+  set renderers(value: SuperMediaPickerRenderers) {
+    this.#setProperty("renderers", value);
+  }
+
   get defaultCategory(): EmojiPickerCategory | undefined {
     return this.#properties.defaultCategory as EmojiPickerCategory | undefined;
   }
@@ -683,6 +732,7 @@ export class SuperMediaPickerElement extends HTMLElementBase {
     if ("mediaSecurity" in options) this.mediaSecurity = options.mediaSecurity;
     if ("emojiPacks" in options) this.emojiPacks = options.emojiPacks;
     if ("animatedMedia" in options) this.animatedMedia = options.animatedMedia;
+    if ("renderers" in options) this.renderers = options.renderers;
     if ("defaultCategory" in options)
       this.#setProperty("defaultCategory", options.defaultCategory);
     if ("defaultMediaType" in options)
@@ -748,6 +798,7 @@ export class SuperMediaPickerElement extends HTMLElementBase {
       ...(this.animatedMedia === undefined
         ? {}
         : { animatedMedia: this.animatedMedia }),
+      ...(this.renderers === undefined ? {} : { renderers: this.renderers }),
       ...(this.defaultCategory === undefined
         ? {}
         : { defaultCategory: this.defaultCategory }),

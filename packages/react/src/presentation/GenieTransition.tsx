@@ -10,7 +10,7 @@ import { useMediaPickerPortalTarget } from "../portalTarget";
 
 const sliceCount = 6;
 
-interface GenieTransitionProps {
+export interface GenieTransitionProps {
   readonly anchorRef?: RefObject<HTMLElement | null>;
   readonly duration: number;
   readonly easing?: string;
@@ -53,12 +53,11 @@ export default function GenieTransition({
   useLayoutEffect(() => {
     const positioner = positionerRef.current;
     const gestureLayer = gestureLayerRef.current;
-    const surface = surfaceRef.current;
     const source = origin ?? anchorRef?.current?.getBoundingClientRect();
     if (
       positioner === null ||
       gestureLayer === null ||
-      surface === null ||
+      surfaceRef.current === null ||
       source === undefined
     ) {
       positioner?.setAttribute("data-genie-ready", "false");
@@ -82,6 +81,10 @@ export default function GenieTransition({
       // Let popover collision positioning commit after a compact/full resize,
       // then read the destination exactly once on the following frame.
       measurementFrame = schedule(() => {
+        // A lazy full picker can replace its Suspense fallback between these
+        // frames. Resolve the ref now rather than measuring the detached node.
+        const surface = surfaceRef.current;
+        if (surface === null) return;
         const gestureBounds = gestureLayer.getBoundingClientRect();
         const needsSizeFallback =
           surface.offsetWidth === 0 || surface.offsetHeight === 0;

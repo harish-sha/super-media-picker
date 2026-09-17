@@ -1,7 +1,6 @@
 import {
   useEffect,
   useLayoutEffect,
-  useState,
   type CSSProperties,
   type ReactNode,
   type RefObject,
@@ -66,18 +65,63 @@ export function AdvancedPresentation({
   const shouldPortal =
     typeof portal === "object" ||
     portal === true ||
-    (portal !== false && displayMode === "popover" && anchorRef !== undefined);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement>();
+    (portal !== false &&
+      ((displayMode === "popover" && anchorRef !== undefined) ||
+        displayMode === "modal" ||
+        displayMode === "bottom-sheet" ||
+        displayMode === "fullscreen"));
+  const portalTarget =
+    shouldPortal && typeof document !== "undefined"
+      ? typeof portal === "object"
+        ? portal
+        : document.body
+      : undefined;
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!shouldPortal || typeof document === "undefined") {
-        setPortalTarget(undefined);
+    if (displayMode !== "popover") return;
+    const ownerDocument =
+      surfaceRef.current?.ownerDocument ??
+      anchorRef?.current?.ownerDocument ??
+      globalThis.document;
+    if (ownerDocument === undefined) return;
+    const handleOutsidePointer = (event: PointerEvent): void => {
+      const path = event.composedPath();
+      if (
+        (surfaceRef.current !== null && path.includes(surfaceRef.current)) ||
+        (anchorRef?.current !== null &&
+          anchorRef?.current !== undefined &&
+          path.includes(anchorRef.current)) ||
+        path.some(
+          (entry) =>
+            entry instanceof Element &&
+            entry.matches("[data-contextual-popover]"),
+        )
+      )
         return;
-      }
-      setPortalTarget(typeof portal === "object" ? portal : document.body);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [portal, shouldPortal]);
+      onDismiss();
+    };
+    ownerDocument.addEventListener("pointerdown", handleOutsidePointer, true);
+    return () =>
+      ownerDocument.removeEventListener(
+        "pointerdown",
+        handleOutsidePointer,
+        true,
+      );
+  }, [anchorRef, displayMode, onDismiss, surfaceRef]);
+  useEffect(() => {
+    if (displayMode === "inline") return;
+    const ownerDocument =
+      surfaceRef.current?.ownerDocument ??
+      anchorRef?.current?.ownerDocument ??
+      globalThis.document;
+    if (ownerDocument === undefined) return;
+    const handleEscape = (event: globalThis.KeyboardEvent): void => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      onDismiss();
+    };
+    ownerDocument.addEventListener("keydown", handleEscape);
+    return () => ownerDocument.removeEventListener("keydown", handleEscape);
+  }, [anchorRef, displayMode, onDismiss, surfaceRef]);
   const floating = useFloatingPosition({
     ...(anchorRef === undefined ? {} : { anchorRef }),
     enabled: displayMode === "popover" && anchorRef !== undefined,

@@ -25,7 +25,11 @@ import type { CustomMediaTab, MediaPickerRenderers } from "../types";
 import { useProviderSearchState } from "../hooks/useProviderSearchState";
 import type { AnimationConcurrencyManager } from "./AnimatedMediaRenderer";
 import { MediaResultsGrid } from "./MediaResultsGrid";
-import { StickerPackSelector } from "./StickerPackSelector";
+import {
+  EmojiPackSelector,
+  MediaPackIcon,
+  StickerPackSelector,
+} from "./StickerPackSelector";
 
 interface CollectionPanelProps {
   readonly analytics: MediaPickerAnalytics;
@@ -55,6 +59,7 @@ function useProviderResults<T extends MediaItem>(
   mediaType: MediaItem["type"],
   analytics: MediaPickerAnalytics,
   loadEmpty: (options: SearchOptions) => Promise<SearchResult<T>>,
+  requestOptions?: Pick<SearchOptions, "packId" | "locale">,
 ): ProviderResult<T> {
   const onCompleted = useCallback(
     (resultCount: number) =>
@@ -84,6 +89,12 @@ function useProviderResults<T extends MediaItem>(
     onCompleted,
     onError,
     onLoadMore,
+    ...(requestOptions?.packId === undefined
+      ? {}
+      : { packId: requestOptions.packId }),
+    ...(requestOptions?.locale === undefined
+      ? {}
+      : { locale: requestOptions.locale }),
   });
   return {
     ...result,
@@ -118,70 +129,6 @@ function Attribution({
         </a>
       )}
     </div>
-  );
-}
-
-function isLegacyPackIconUrl(value: string): boolean {
-  return /^(?:https?:|blob:|data:image\/|\/|\.\.?\/)/iu.test(value);
-}
-
-function StickerPackFallbackIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="mp-pack-icon__fallback"
-      data-pack-icon-fallback=""
-      focusable="false"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M6.5 3.5h7.8l4.2 4.2v9.8a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M14 3.8V8h4.2M8 14.2c1.1 1.4 2.3 2.1 3.8 2.1 1.3 0 2.4-.5 3.2-1.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.8"
-      />
-      <circle cx="8.2" cy="11" fill="currentColor" r="1" />
-      <circle cx="14.8" cy="11" fill="currentColor" r="1" />
-    </svg>
-  );
-}
-
-function StickerPackIcon({
-  pack,
-  mediaSecurity,
-}: {
-  readonly pack: StickerPack;
-  readonly mediaSecurity?: MediaUrlPolicy;
-}) {
-  const legacyUrl =
-    pack.icon !== undefined && isLegacyPackIconUrl(pack.icon)
-      ? pack.icon
-      : undefined;
-  const candidate = pack.iconUrl ?? legacyUrl;
-  const iconUrl =
-    candidate !== undefined && isSafeMediaUrl(candidate, mediaSecurity)
-      ? candidate
-      : undefined;
-  const [failedUrl, setFailedUrl] = useState<string>();
-  if (iconUrl === undefined || failedUrl === iconUrl)
-    return <StickerPackFallbackIcon />;
-  return (
-    <img
-      alt=""
-      className="mp-pack-icon__image"
-      onError={() => setFailedUrl(iconUrl)}
-      src={iconUrl}
-    />
   );
 }
 
@@ -311,10 +258,12 @@ function EmojiProviderPanel({
   provider,
   allowAnimated,
   allowCustom,
+  kindFilter,
   ...props
 }: CollectionPanelProps & {
   readonly allowAnimated: boolean;
   readonly allowCustom: boolean;
+  readonly kindFilter: "all" | "standard" | "animated";
   readonly provider: EmojiProvider;
 }) {
   const [packs, setPacks] = useState<readonly EmojiPack[]>([]);
@@ -355,32 +304,36 @@ function EmojiProviderPanel({
     "emoji",
     props.analytics,
     loadTrending,
+    { packId },
   );
   const visibleResult: ProviderResult<AnyEmojiMediaItem> = {
     ...result,
     items: result.items.filter(
       (item) =>
         (item.kind !== "animated" || allowAnimated) &&
-        (item.kind !== "custom" || allowCustom),
+        (item.kind !== "custom" || allowCustom) &&
+        (kindFilter === "all" ||
+          (kindFilter === "animated" && item.kind === "animated")),
     ),
   };
   return (
     <>
-      {props.query.trim() === "" && packs.length > 0 ? (
-        <nav aria-label={`${provider.id} emoji packs`} className="mp-pack-nav">
-          {packs.map((pack) => (
-            <button
-              aria-pressed={pack.id === packId}
-              key={pack.id}
-              onClick={() => setPackId(pack.id)}
-              title={pack.name}
-              type="button"
-            >
-              <span aria-hidden="true">{pack.icon ?? "✨"}</span>
-              <span>{pack.name}</span>
-            </button>
-          ))}
-        </nav>
+      {packs.length > 0 ? (
+        <div className="mp-context-toolbar">
+          <EmojiPackSelector
+            onSelect={setPackId}
+            packs={packs}
+            renderIcon={(pack) => (
+              <MediaPackIcon
+                pack={pack}
+                {...(props.mediaSecurity === undefined
+                  ? {}
+                  : { mediaSecurity: props.mediaSecurity })}
+              />
+            )}
+            selectedId={packId}
+          />
+        </div>
       ) : null}
       <ResultState
         {...props}
@@ -399,6 +352,7 @@ function EmojiProviderPanelsComponent({
 }: CollectionPanelProps & {
   readonly allowAnimated: boolean;
   readonly allowCustom: boolean;
+  readonly kindFilter: "all" | "standard" | "animated";
   readonly providers: readonly EmojiProvider[];
 }) {
   return providers.map((provider) => (
@@ -488,7 +442,7 @@ function StickerPanelComponent({
               }}
               packs={packs}
               renderIcon={(pack) => (
-                <StickerPackIcon
+                <MediaPackIcon
                   pack={pack}
                   {...(props.mediaSecurity === undefined
                     ? {}

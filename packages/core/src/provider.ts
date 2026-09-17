@@ -1,6 +1,7 @@
 import type {
   AnyEmojiMediaItem,
   CustomMediaItem,
+  MediaItemAttribution,
   MediaItem,
   StickerMediaItem,
 } from "./media";
@@ -8,10 +9,14 @@ import type {
 export interface SearchOptions {
   readonly cursor?: string;
   readonly limit?: number;
+  /** Optional provider-neutral pack filter. */
+  readonly packId?: string;
+  readonly locale?: string;
   readonly signal?: AbortSignal;
 }
 
 export interface ProviderOptions {
+  readonly locale?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -21,12 +26,17 @@ export interface SearchResult<T> {
   readonly hasMore: boolean;
 }
 
-export interface ProviderAttribution {
-  readonly label: string;
-  readonly url?: string;
-  readonly logoUrl?: string;
+export interface ProviderAttribution extends MediaItemAttribution {
   /** Whether the integration contract requires attribution to be displayed. */
   readonly required?: boolean;
+}
+
+export interface EmojiPackCapabilities {
+  readonly animated?: boolean;
+  readonly custom?: boolean;
+  readonly pagination?: boolean;
+  readonly search?: boolean;
+  readonly variants?: boolean;
 }
 
 export type ProviderMediaType = "emoji" | "gif" | "sticker" | "custom";
@@ -72,10 +82,18 @@ export interface EmojiPack {
   readonly name: string;
   readonly description?: string;
   readonly iconUrl?: string;
+  readonly posterUrl?: string;
   readonly icon?: string;
+  readonly version?: string;
+  readonly revision?: string;
   readonly provider?: string;
+  readonly attribution?: ProviderAttribution;
+  readonly capabilities?: EmojiPackCapabilities;
   readonly itemCount?: number;
   readonly animated?: boolean;
+  readonly searchable?: boolean;
+  readonly paginated?: boolean;
+  readonly locales?: readonly string[];
   /** Inline items are optional so remote providers can return metadata only. */
   readonly items?: readonly AnyEmojiMediaItem[];
 }

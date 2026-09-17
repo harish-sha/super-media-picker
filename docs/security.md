@@ -51,6 +51,20 @@ source and network inspection is visible to the end user.
 The SDK never executes provider HTML. Data images are limited to common raster
 formats; production applications should normally disable them entirely.
 
+### Animated asset policy
+
+`MediaUrlPolicy.allowedFormats` can restrict declared/detected `gif`, `webp`,
+`webm`, `lottie`, `png`, `jpeg`, and `avif` assets in addition to scheme,
+origin, credentials, relative URL, blob, and data-image checks. Every poster,
+thumbnail, preview, animation, original, and pack-icon URL is validated before
+use. A rejected asset follows the same deterministic poster → Unicode → text
+fallback and does not execute.
+
+Lottie JSON is inert media data passed to a host-supplied typed adapter. The SDK
+does not evaluate it, use `eval`/`new Function`, inject arbitrary markup, or
+download a renderer script. A host adapter is responsible for its own fetch
+policy and cleanup.
+
 ## Content Security Policy
 
 Adapt these directives to the application's actual origins:
@@ -64,7 +78,8 @@ media-src 'self' https://media.company.com blob:;
 connect-src 'self' https://api.company.com;
 ```
 
-- `img-src` covers static images, GIF and animated WebP.
+- `img-src` covers static images, posters, thumbnails, GIF, animated WebP, and
+  AVIF.
 - `media-src` covers WebM/video assets.
 - `connect-src` covers the application media API and any host-selected Lottie
   fetch path.

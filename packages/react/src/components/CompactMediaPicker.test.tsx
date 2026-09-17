@@ -22,7 +22,7 @@ describe("MediaPicker compact mode", () => {
     expect(
       within(toolbar).getByRole("button", { name: "red heart" }),
     ).not.toBeNull();
-    expect(within(toolbar).getAllByRole("button")).toHaveLength(6);
+    expect(toolbar.querySelectorAll(".mp-reaction")).toHaveLength(6);
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
@@ -37,7 +37,7 @@ describe("MediaPicker compact mode", () => {
       />,
     );
     const toolbar = screen.getByRole("toolbar", { name: "Quick reactions" });
-    expect(within(toolbar).getAllByRole("button")).toHaveLength(2);
+    expect(toolbar.querySelectorAll(".mp-reaction")).toHaveLength(2);
     await user.click(
       within(toolbar).getByRole("button", { name: "grinning face" }),
     );
@@ -135,9 +135,11 @@ describe("MediaPicker compact mode", () => {
       />,
     );
     await screen.findByRole("button", { name: "rocket" });
-    const buttons = within(
-      screen.getByRole("toolbar", { name: "Quick reactions" }),
-    ).getAllByRole("button");
+    const buttons = Array.from(
+      screen
+        .getByRole("toolbar", { name: "Quick reactions" })
+        .querySelectorAll<HTMLButtonElement>(".mp-reaction"),
+    );
     expect(buttons[0]?.getAttribute("aria-label")).toBe("rocket");
     expect(buttons[1]?.getAttribute("aria-label")).toBe("cat");
     expect(buttons).toHaveLength(3);
@@ -164,9 +166,9 @@ describe("MediaPicker compact mode", () => {
     });
     await screen.findByRole("button", { name: "thumbs up" });
     const labels = () =>
-      within(toolbar)
-        .getAllByRole("button")
-        .map((button) => button.getAttribute("aria-label"));
+      Array.from(
+        toolbar.querySelectorAll<HTMLButtonElement>(".mp-reaction"),
+      ).map((button) => button.getAttribute("aria-label"));
     const initialOrder = labels();
     const thumbsUp = screen.getByRole("button", { name: "thumbs up" });
     thumbsUp.focus();
@@ -196,8 +198,9 @@ describe("MediaPicker compact mode", () => {
     );
     await waitFor(() =>
       expect(
-        within(screen.getByRole("toolbar", { name: "Quick reactions" }))
-          .getAllByRole("button")[0]
+        screen
+          .getByRole("toolbar", { name: "Quick reactions" })
+          .querySelectorAll<HTMLButtonElement>(".mp-reaction")[0]
           ?.getAttribute("aria-label"),
       ).toBe("thumbs up"),
     );
@@ -229,9 +232,9 @@ describe("MediaPicker compact mode", () => {
     );
     await waitFor(() =>
       expect(
-        within(
-          screen.getByRole("toolbar", { name: "Quick reactions" }),
-        ).getAllByRole("button"),
+        screen
+          .getByRole("toolbar", { name: "Quick reactions" })
+          .querySelectorAll(".mp-reaction"),
       ).toHaveLength(2),
     );
     expect(screen.getByRole("button", { name: "thumbs up" })).not.toBeNull();
@@ -433,6 +436,21 @@ describe("MediaPicker compact mode", () => {
     });
     expect(scroller).not.toBeNull();
     expect(scroller?.contains(expand)).toBe(false);
+  });
+
+  it("defaults standalone reactions to inline presentation on compact viewports", () => {
+    const view = render(
+      <ReactionPicker
+        maxVisibleItems={9}
+        onSelect={() => undefined}
+        reactions={["👍", "❤️", "😀", "😢", "🙏", "👎", "😡", "😂", "😮"]}
+      />,
+    );
+    expect(
+      view.container
+        .querySelector(".mp-positioner")
+        ?.getAttribute("data-resolved-display-mode"),
+    ).toBe("inline");
   });
 
   it("supports Escape without trapping compact toolbar focus", async () => {

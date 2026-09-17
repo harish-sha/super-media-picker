@@ -133,7 +133,11 @@ describe("multi-media picker", () => {
       />,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Provider logo" }),
+      await screen.findByRole(
+        "button",
+        { name: "Provider logo" },
+        { timeout: 2_000 },
+      ),
     );
     expect(onSelect).toHaveBeenCalledWith(providerCustomEmoji);
     expect(screen.queryByRole("button", { name: "Provider party" })).toBeNull();
@@ -202,17 +206,87 @@ describe("multi-media picker", () => {
         providers={{ emoji: [provider] }}
       />,
     );
-    expect(
-      await screen.findByRole("navigation", {
-        name: "workspace emoji packs",
-      }),
-    ).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Team" }));
+    const trigger = await screen.findByRole("button", {
+      name: "Choose emoji pack, current Team",
+    });
+    expect(trigger.querySelector("[data-pack-icon-fallback]")).not.toBeNull();
+    await user.click(trigger);
+    await user.click(screen.getByRole("option", { name: "Team" }));
     expect(
       await screen.findByRole("button", { name: "Provider party" }),
     ).not.toBeNull();
     expect(packs).toHaveBeenCalledOnce();
     expect(packItems).toHaveBeenCalled();
+  });
+
+  it("scopes remote emoji search to the selected pack", async () => {
+    const user = userEvent.setup();
+    const search = vi.fn<NonNullable<EmojiProvider["search"]>>(async () => ({
+      items: [providerAnimatedEmoji],
+      hasMore: false,
+    }));
+    const provider: EmojiProvider = {
+      id: "workspace-search",
+      packs: async () => [{ id: "team", name: "Team" }],
+      packItems: async () => ({ items: [], hasMore: false }),
+      search,
+    };
+    render(
+      <MediaPicker
+        features={{ animatedEmoji: true }}
+        onSelect={() => undefined}
+        providers={{ animatedEmoji: provider }}
+      />,
+    );
+    await screen.findByRole("button", {
+      name: "Choose emoji pack, current Team",
+    });
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search emoji" }),
+      "party",
+    );
+    await waitFor(() => expect(search).toHaveBeenCalled(), { timeout: 2_000 });
+    expect(search.mock.calls.at(-1)?.[1]).toMatchObject({ packId: "team" });
+  });
+
+  it("searches local animated packs by aliases and keywords and filters packs", async () => {
+    const user = userEvent.setup();
+    const second = {
+      ...providerAnimatedEmoji,
+      id: "salute",
+      name: "Tenant greeting",
+      aliases: ["salute"],
+      keywords: ["welcome"],
+      packId: "team-b",
+    } as const;
+    render(
+      <MediaPicker
+        emojiPacks={[
+          { id: "team-a", name: "Team A", items: [providerAnimatedEmoji] },
+          { id: "team-b", name: "Team B", items: [second] },
+        ]}
+        features={{ animatedEmoji: true }}
+        onSelect={() => undefined}
+      />,
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search emoji" }),
+      "welcome",
+    );
+    expect(
+      await screen.findByRole("button", { name: "Tenant greeting" }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Provider party" })).toBeNull();
+    await user.clear(screen.getByRole("searchbox"));
+    const trigger = screen.getByRole("button", {
+      name: "Choose emoji pack, current All packs",
+    });
+    await user.click(trigger);
+    await user.click(screen.getByRole("option", { name: "Team B" }));
+    expect(
+      screen.getByRole("button", { name: "Tenant greeting" }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Provider party" })).toBeNull();
   });
 
   it("loads, searches, selects, favorites, and restores normalized GIFs", async () => {
@@ -519,6 +593,92 @@ describe("animated media", () => {
     format: "gif",
   };
 
+  it("makes extension emoji discoverable without adding a primary media tab", async () => {
+    const user = userEvent.setup();
+    const view = render(
+      <MediaPicker
+        emojiPacks={[{ id: "animated", name: "Animated", items: [animated] }]}
+        features={{ animatedEmoji: true }}
+        onSelect={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByRole("tab", { name: "Animated" })).toBeNull();
+    const filter = screen.getByRole("group", { name: "Emoji styles" });
+    expect(
+      view.container.querySelector('[data-media-kind="animated-emoji"]'),
+    ).not.toBeNull();
+
+    await user.click(
+      within(filter).getByRole("button", { name: "Standard emoji" }),
+    );
+    expect(screen.queryByRole("button", { name: "Animated party" })).toBeNull();
+    expect(
+      screen.getByRole("grid", { name: "Smileys & Emotion emoji" }),
+    ).not.toBeNull();
+
+    await user.click(
+      within(filter).getByRole("button", { name: "Animated emoji" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Animated party" }),
+    ).not.toBeNull();
+    expect(
+      screen.queryByRole("grid", { name: "Smileys & Emotion emoji" }),
+    ).toBeNull();
+    expect(
+      view.container.querySelector(
+        ".mp-media-kind-indicator[aria-hidden='true']",
+      ),
+    ).not.toBeNull();
+  });
+
+  it("keeps favorite and select actions isolated in one stable media cell", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn<(item: MediaItem) => void>();
+    const view = render(
+      <MediaPicker
+        emojiPacks={[{ id: "animated", name: "Animated", items: [animated] }]}
+        features={{ animatedEmoji: true, favorites: true }}
+        onSelect={onSelect}
+        storage={new MemoryStorageAdapter()}
+      />,
+    );
+    const select = await screen.findByRole("button", {
+      name: "Animated party",
+    });
+    const cell = select.closest<HTMLElement>(".mp-media-cell")!;
+    const favorite = screen.getByRole("button", {
+      name: "Add Animated party to favorites",
+    });
+    const visual = cell.querySelector(".mp-media-item__visual");
+
+    const stableKey = cell.getAttribute("data-media-key");
+    expect(stableKey).toContain("party");
+    expect(visual).not.toBeNull();
+    await user.click(favorite);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(select.closest(".mp-media-cell")).toBe(cell);
+    expect(cell.querySelector(".mp-media-item__visual")).toBe(visual);
+    const filledFavorite = screen.getByRole("button", {
+      name: "Remove Animated party from favorites",
+    });
+    expect(filledFavorite).toBe(favorite);
+    expect(filledFavorite.getAttribute("aria-pressed")).toBe("true");
+
+    await user.click(select);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(filledFavorite.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      view.container.querySelectorAll(`[data-media-key="${stableKey}"]`),
+    ).toHaveLength(1);
+  });
+
+  it("hides the emoji style filter when no extension emoji source exists", () => {
+    render(<MediaPicker onSelect={() => undefined} />);
+    expect(screen.queryByRole("group", { name: "Emoji styles" })).toBeNull();
+  });
+
   it("plays on hover/focus and returns to preview on leave", async () => {
     render(
       <MediaPicker
@@ -567,13 +727,17 @@ describe("animated media", () => {
     );
     button.focus();
     await waitFor(() =>
-      expect(button.querySelector("img")?.getAttribute("src")).toBe(
-        optimizedGif.previewUrl,
-      ),
+      expect(
+        button
+          .querySelector(".mp-animated-media__animation img")
+          ?.getAttribute("src"),
+      ).toBe(optimizedGif.previewUrl),
     );
-    expect(button.querySelector("img")?.getAttribute("src")).not.toBe(
-      optimizedGif.url,
-    );
+    expect(
+      button
+        .querySelector(".mp-animated-media__animation img")
+        ?.getAttribute("src"),
+    ).not.toBe(optimizedGif.url);
     button.blur();
     await waitFor(() =>
       expect(visual.getAttribute("data-active")).toBe("false"),
@@ -613,7 +777,11 @@ describe("animated media", () => {
     );
     button.focus();
     await waitFor(() =>
-      expect(button.querySelector("img")?.getAttribute("src")).toBe(custom.url),
+      expect(
+        button
+          .querySelector(".mp-animated-media__animation img")
+          ?.getAttribute("src"),
+      ).toBe(custom.url),
     );
     button.blur();
     await waitFor(() =>
@@ -663,7 +831,9 @@ describe("animated media", () => {
     await waitFor(() =>
       expect(animatedVisual.getAttribute("data-active")).toBe("true"),
     );
-    fireEvent.error(animatedVisual.querySelector("img")!);
+    fireEvent.error(
+      animatedVisual.querySelector(".mp-animated-media__animation img")!,
+    );
     await waitFor(() =>
       expect(animatedVisual.getAttribute("data-active")).toBe("false"),
     );
@@ -679,7 +849,7 @@ describe("animated media", () => {
     expect(manager.activeCount).toBe(2);
   });
 
-  it("respects reduced motion until explicit activation", async () => {
+  it("keeps animated media static under reduced motion, including pointer intent", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({
@@ -699,9 +869,8 @@ describe("animated media", () => {
     const visual = await screen.findByRole("img", { name: "Animated party" });
     expect(visual.getAttribute("data-active")).toBe("false");
     fireEvent.pointerDown(visual);
-    await waitFor(() =>
-      expect(visual.getAttribute("data-active")).toBe("true"),
-    );
+    expect(visual.getAttribute("data-active")).toBe("false");
+    expect(visual.getAttribute("data-reduced-motion")).toBe("true");
   });
 
   it("releases an animated sticker slot when unmounted", async () => {

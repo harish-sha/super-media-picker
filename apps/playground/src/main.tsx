@@ -8,7 +8,7 @@ import {
   ReactionPicker,
   StickerPicker,
   type CompactReactionSource,
-  type AnimationAutoplay,
+  type AnimatedMediaPlaybackPolicy,
   type MediaCapabilities,
   type MediaItem,
   type MediaPickerFeatures,
@@ -29,6 +29,7 @@ import "super-media-picker/styles.css";
 import {
   createMockProviders,
   customTabs,
+  demoRenderers,
   emojiPacks,
   type MockScenario,
 } from "./mockMedia";
@@ -40,20 +41,30 @@ type SdkSurface =
 
 interface FluidityDiagnostics {
   readonly activeAnimatedMedia: number;
+  readonly animatedItems: number;
   readonly activePanel: string;
   readonly lastTabSwitch: string;
   readonly lazyPanels: string;
   readonly longTasks: number;
   readonly mediaNodes: number;
+  readonly pausedAnimatedMedia: number;
+  readonly queuedAnimatedMedia: number;
+  readonly rendererTypes: string;
+  readonly fallbackItems: number;
 }
 
 const initialFluidity: FluidityDiagnostics = {
   activeAnimatedMedia: 0,
+  animatedItems: 0,
   activePanel: "compact",
   lastTabSwitch: "not measured",
   lazyPanels: "none",
   longTasks: 0,
   mediaNodes: 0,
+  pausedAnimatedMedia: 0,
+  queuedAnimatedMedia: 0,
+  rendererTypes: "none",
+  fallbackItems: 0,
 };
 
 const initialFeatures: MediaPickerFeatures = {
@@ -105,7 +116,8 @@ function Playground() {
   const [capabilityPreset, setCapabilityPreset] =
     useState<CapabilityPreset>("all");
   const [scenario, setScenario] = useState<MockScenario>("normal");
-  const [autoplay, setAutoplay] = useState<AnimationAutoplay>("hover");
+  const [playback, setPlayback] =
+    useState<AnimatedMediaPlaybackPolicy>("on-intent");
   const [surface, setSurface] = useState<SdkSurface>("media");
   const [pickerWidth, setPickerWidth] = useState(420);
   const [pickerHeight, setPickerHeight] = useState(560);
@@ -172,6 +184,8 @@ function Playground() {
         activeAnimatedMedia:
           activeRoot?.querySelectorAll('.mp-animated-media[data-active="true"]')
             .length ?? 0,
+        animatedItems:
+          activeRoot?.querySelectorAll(".mp-animated-media").length ?? 0,
         activePanel,
         lastTabSwitch,
         lazyPanels: picker?.dataset.loadedMediaTypes ?? "none",
@@ -179,6 +193,25 @@ function Playground() {
         mediaNodes:
           activeRoot?.querySelectorAll(".mp-emoji-cell, .mp-media-cell")
             .length ?? 0,
+        pausedAnimatedMedia:
+          activeRoot?.querySelectorAll(
+            '.mp-animated-media[data-media-state="paused"]',
+          ).length ?? 0,
+        queuedAnimatedMedia:
+          activeRoot?.querySelectorAll('.mp-animated-media[data-queued="true"]')
+            .length ?? 0,
+        rendererTypes:
+          [
+            ...new Set(
+              [...(activeRoot?.querySelectorAll(".mp-animated-media") ?? [])]
+                .map((element) => element.getAttribute("data-format"))
+                .filter((value): value is string => value !== null),
+            ),
+          ].join(", ") || "none",
+        fallbackItems:
+          activeRoot?.querySelectorAll(
+            '.mp-animated-media:not([data-fallback="none"])',
+          ).length ?? 0,
       });
     };
     const schedule = () => {
@@ -553,15 +586,20 @@ function Playground() {
           </select>
         </label>
         <label>
-          Animation
+          Playback policy
           <select
             onChange={(event) =>
-              setAutoplay(event.currentTarget.value as AnimationAutoplay)
+              setPlayback(
+                event.currentTarget.value as AnimatedMediaPlaybackPolicy,
+              )
             }
-            value={autoplay}
+            value={playback}
           >
-            <option value="hover">Hover/focus</option>
-            <option value="visible">Visible</option>
+            <option value="on-intent">Intent (default)</option>
+            <option value="on-hover">Hover</option>
+            <option value="on-focus">Focus</option>
+            <option value="once">Once on intent</option>
+            <option value="loop-while-active">Loop while active</option>
             <option value="always">Always</option>
             <option value="never">Never</option>
           </select>
@@ -665,7 +703,12 @@ function Playground() {
             <MediaPicker
               key={`media-${motionReplayKey}`}
               {...presentationProps}
-              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              animatedMedia={{
+                playback,
+                maxActiveAnimations: 3,
+                playOnSelect: true,
+                reducedMotion: simulateReducedMotion ? "reduce" : "system",
+              }}
               capabilities={capabilityPresets[capabilityPreset]}
               compact={{
                 allowCollapse: true,
@@ -684,6 +727,7 @@ function Playground() {
               onSelect={setSelection}
               preview={{ enabled: true }}
               providers={providers}
+              renderers={demoRenderers}
               size={size}
               theme={theme}
             />
@@ -691,7 +735,12 @@ function Playground() {
             <EmojiPicker
               key={`emoji-${motionReplayKey}`}
               {...presentationProps}
-              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              animatedMedia={{
+                playback,
+                maxActiveAnimations: 3,
+                playOnSelect: true,
+                reducedMotion: simulateReducedMotion ? "reduce" : "system",
+              }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
               emojiPacks={emojiPacks}
@@ -701,6 +750,7 @@ function Playground() {
                 recents: features.recents,
               }}
               onSelect={setSelection}
+              renderers={demoRenderers}
               size={size}
               theme={theme}
             />
@@ -708,7 +758,7 @@ function Playground() {
             <GifPicker
               key={`gif-${motionReplayKey}`}
               {...presentationProps}
-              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              animatedMedia={{ playback, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
               onSelect={setSelection}
@@ -720,7 +770,7 @@ function Playground() {
             <StickerPicker
               key={`sticker-${motionReplayKey}`}
               {...presentationProps}
-              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              animatedMedia={{ playback, maxActiveAnimations: 3 }}
               capabilities={capabilityPresets[capabilityPreset]}
               displayMode={displayMode}
               onSelect={setSelection}
@@ -732,7 +782,13 @@ function Playground() {
             <ReactionPicker
               key={`reaction-${motionReplayKey}`}
               {...presentationProps}
-              animatedMedia={{ autoplay, maxActiveAnimations: 3 }}
+              animatedMedia={{
+                playback,
+                maxActiveAnimations: 3,
+                playOnSelect: true,
+                reducedMotion: simulateReducedMotion ? "reduce" : "system",
+              }}
+              renderers={demoRenderers}
               displayMode={displayMode}
               onSelect={setSelection}
               {...(compactSource === "custom"
@@ -805,6 +861,32 @@ function Playground() {
             <div>
               <dt>Active animation</dt>
               <dd>{fluidity.activeAnimatedMedia}</dd>
+            </div>
+            <div>
+              <dt>Animated items</dt>
+              <dd>{fluidity.animatedItems}</dd>
+            </div>
+            <div>
+              <dt>Queued / paused</dt>
+              <dd>
+                {fluidity.queuedAnimatedMedia} / {fluidity.pausedAnimatedMedia}
+              </dd>
+            </div>
+            <div>
+              <dt>Renderer types</dt>
+              <dd>{fluidity.rendererTypes}</dd>
+            </div>
+            <div>
+              <dt>Fallback items</dt>
+              <dd>{fluidity.fallbackItems}</dd>
+            </div>
+            <div>
+              <dt>Selected animated item</dt>
+              <dd>
+                {selection?.type === "emoji" && selection.kind === "animated"
+                  ? selection.id
+                  : "none"}
+              </dd>
             </div>
             <div>
               <dt>Long tasks</dt>

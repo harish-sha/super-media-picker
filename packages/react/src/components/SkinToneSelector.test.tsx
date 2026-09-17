@@ -64,4 +64,24 @@ describe("SkinToneSelector overlay", () => {
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
+
+  it("identifies the selected option and closes on outside pointer or Escape", async () => {
+    const user = userEvent.setup();
+    render(<SkinToneSelector onChange={() => undefined} value="medium" />);
+    const trigger = screen.getByRole("button", {
+      name: "Emoji skin tone: Medium",
+    });
+
+    await user.click(trigger);
+    const selected = screen.getByRole("option", { name: "Medium" });
+    expect(selected.getAttribute("aria-selected")).toBe("true");
+    expect(selected.getAttribute("data-selected")).toBe("true");
+    await user.pointer({ keys: "[MouseLeft]", target: document.body });
+    expect(screen.queryByRole("listbox")).toBeNull();
+
+    await user.click(trigger);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
 });

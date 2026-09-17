@@ -39,6 +39,10 @@ export function CompactReactionBar({
   const rootRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedKey, setSelectedKey] = useState<string>();
+  const [selectionReplay, setSelectionReplay] = useState<{
+    readonly key: string;
+    readonly token: number;
+  }>();
   const controlCount = items.length + (allowExpand ? 1 : 0);
   const resolvedActiveIndex = Math.min(
     activeIndex,
@@ -80,8 +84,14 @@ export function CompactReactionBar({
   }
 
   function handleSelect(item: MediaItem): void {
-    setSelectedKey(compactItemKey(item));
+    const key = compactItemKey(item);
+    setSelectedKey(key);
     onSelect(item);
+    if (animation.playOnSelect === true)
+      setSelectionReplay((current) => ({
+        key,
+        token: (current?.token ?? 0) + 1,
+      }));
   }
 
   return (
@@ -102,6 +112,9 @@ export function CompactReactionBar({
             active={index === resolvedActiveIndex}
             animation={animation}
             animationManager={animationManager}
+            {...(selectionReplay?.key === compactItemKey(item)
+              ? { activationToken: selectionReplay.token }
+              : {})}
             item={item}
             {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
             key={compactItemKey(item)}

@@ -16,6 +16,10 @@ require a major version after 1.0.
   `useStickerSearch`, `useRecents`, and `useFavorites`.
 - Normalized media item, provider, capabilities, persistence, animation,
   rendering, analytics, and configuration types documented in the README.
+- Additive animated-media primitives: `MediaAsset`, `MediaAssetRole`,
+  `MediaAssetFormat`, `MediaItemVariant`, explicit playback/loop/state types,
+  `resolveMediaItemAssets`, `detectMediaAssetFormat`,
+  `matchesMediaItemSearch`, and `isSafeMediaAsset`.
 - Presentation geometry: `dimensions`, anchored `placement`, portal targeting,
   and the documented ordinary motion presets. `genie` remains experimental.
 - `super-media-picker/styles.css`.
@@ -37,6 +41,11 @@ core types needed to build a custom interface. It does not import picker CSS.
 The `super-media-picker/providers` subpath is a convenient production adapter
 entry point for `HttpGifProvider`, `HttpStickerProvider`, request runtime, and
 provider types.
+
+There is intentionally no separate `animated-emoji` subpath. Animated emoji
+reuse the normalized media model, renderer, provider, and reaction pipeline;
+the optional Lottie adapter and animation metadata remain tree-shakeable from
+Unicode-only consumer bundles without introducing a second public engine.
 
 Beta.4's `providers.animatedEmoji`, `providers.custom`, `HttpEmojiProvider`,
 `HttpCustomMediaProvider`, shared HTTP retry/error metadata, and normalized
@@ -60,6 +69,13 @@ sliced-proxy `genie` motion preset is experimental during the beta. The former
 experimental `morph` preset was removed before beta.5 and is not a public
 configuration value. Internal geometry, observer, gesture-session, and
 long-press hooks are not exported.
+
+The typed `renderers.animatedMedia` adapter map is advanced API. Its Lottie
+adapter owns mount/play/pause/stop/destroy cleanup and receives validated asset
+metadata; the SDK works without an adapter. The beta.6 `renderers.lottie`
+callback remains compatible but is deprecated in favor of the lifecycle
+adapter. Scheduler queue internals, observer state, native element refs, and
+per-item lifecycle reducers are internal and not exported.
 
 The browser delivery surface is a beta API. The normalized media/provider
 contracts and picker behavior are shared with React, while the exact set of

@@ -5,7 +5,6 @@
   font-family: var(--mp-font-family, system-ui, sans-serif);
   line-height: normal;
   text-align: initial;
-  isolation: isolate;
 }
 
 :host([hidden]) {

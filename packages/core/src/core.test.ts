@@ -7,8 +7,12 @@ import {
   MemoryCache,
   MemoryStorageAdapter,
   createMediaPickerConfig,
+  detectMediaAssetFormat,
   isMediaItem,
+  isSafeMediaAsset,
   isSafeMediaUrl,
+  matchesMediaItemSearch,
+  resolveMediaItemAssets,
 } from "./index";
 
 describe("createMediaPickerConfig", () => {
@@ -225,6 +229,86 @@ describe("normalized media validation", () => {
     expect(isMediaItem(valid)).toBe(true);
     expect(isMediaItem({ ...valid, width: 0 })).toBe(false);
     expect(isMediaItem({ ...valid, height: Number.NaN })).toBe(false);
+  });
+
+  it("models animated emoji asset roles, search metadata, and fallbacks", () => {
+    const item = {
+      type: "emoji",
+      kind: "animated",
+      id: "workspace-wave",
+      name: "Workspace wave",
+      fallbackEmoji: "👋",
+      animationUrl: "https://cdn.test/legacy.gif",
+      format: "gif",
+      aliases: ["wave"],
+      keywords: ["hello", "greeting"],
+      localeKeywords: { hi: ["namaste"] },
+      assets: [
+        {
+          role: "poster",
+          url: "https://cdn.test/wave-poster.avif",
+          format: "avif",
+        },
+        {
+          role: "animation",
+          url: "https://cdn.test/wave.webm",
+          format: "webm",
+        },
+        {
+          role: "original",
+          url: "https://cdn.test/wave-original.webm",
+          format: "webm",
+        },
+      ],
+    } as const;
+    expect(isMediaItem(item)).toBe(true);
+    expect(resolveMediaItemAssets(item)).toEqual({
+      animationUrl: "https://cdn.test/wave.webm",
+      fallbackText: "👋",
+      format: "webm",
+      originalUrl: "https://cdn.test/wave-original.webm",
+      posterUrls: ["https://cdn.test/wave-poster.avif"],
+    });
+    expect(matchesMediaItemSearch(item, "wave hello")).toBe(true);
+    expect(matchesMediaItemSearch(item, "namaste", "hi")).toBe(true);
+    expect(matchesMediaItemSearch(item, "unknown")).toBe(false);
+  });
+
+  it("detects supported native and adapter formats and enforces format policy", () => {
+    expect(detectMediaAssetFormat("/emoji/wave.webp?revision=2")).toBe("webp");
+    expect(
+      detectMediaAssetFormat("/emoji/wave", "video/webm; codecs=vp9"),
+    ).toBe("webm");
+    expect(detectMediaAssetFormat("/emoji/wave.json")).toBe("lottie");
+    expect(
+      isSafeMediaAsset("https://cdn.test/wave.webm", "webm", {
+        allowedFormats: ["webm", "webp"],
+      }),
+    ).toBe(true);
+    expect(
+      isSafeMediaAsset("https://cdn.test/wave.gif", "gif", {
+        allowedFormats: ["webm", "webp"],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects malformed animated metadata", () => {
+    const item = {
+      type: "emoji",
+      kind: "animated",
+      id: "wave",
+      name: "Wave",
+      animationUrl: "https://cdn.test/wave.webm",
+      format: "webm",
+    } as const;
+    expect(isMediaItem({ ...item, playbackPolicy: "sometimes" })).toBe(false);
+    expect(isMediaItem({ ...item, animationDurationMs: 0 })).toBe(false);
+    expect(
+      isMediaItem({
+        ...item,
+        assets: [{ role: "executable", url: "https://cdn.test/x" }],
+      }),
+    ).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type HTMLAttributes } from "react";
+import { useCallback, useEffect, useRef, type HTMLAttributes } from "react";
 
 export interface LongPressOptions {
   readonly delay?: number;
@@ -16,40 +16,91 @@ export function useLongPress({
   onLongPress,
 }: LongPressOptions): Pick<
   HTMLAttributes<HTMLElement>,
-  "onPointerCancel" | "onPointerDown" | "onPointerMove" | "onPointerUp"
+  | "onLostPointerCapture"
+  | "onPointerCancel"
+  | "onPointerDown"
+  | "onPointerMove"
+  | "onPointerUp"
 > {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const origin = useRef<{ x: number; y: number } | undefined>(undefined);
+  const session = useRef<
+    | {
+        committed: boolean;
+        pointerId: number;
+        target: HTMLElement;
+        x: number;
+        y: number;
+      }
+    | undefined
+  >(undefined);
   const callback = useRef(onLongPress);
   useEffect(() => {
     callback.current = onLongPress;
   }, [onLongPress]);
-  const cancel = () => {
+  const cancel = useCallback(() => {
     if (timer.current !== undefined) clearTimeout(timer.current);
     timer.current = undefined;
-    origin.current = undefined;
-  };
-  useEffect(() => cancel, []);
+    const active = session.current;
+    session.current = undefined;
+    if (
+      active?.committed &&
+      active.target.hasPointerCapture?.(active.pointerId)
+    )
+      active.target.releasePointerCapture(active.pointerId);
+  }, []);
+  useEffect(() => {
+    const ownerWindow = globalThis.window;
+    ownerWindow?.addEventListener("blur", cancel);
+    return () => {
+      ownerWindow?.removeEventListener("blur", cancel);
+      cancel();
+    };
+  }, [cancel]);
   return {
     onPointerDown: (event) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 || !event.isPrimary) {
+        if (session.current !== undefined) cancel();
+        return;
+      }
       cancel();
-      origin.current = { x: event.clientX, y: event.clientY };
+      session.current = {
+        committed: false,
+        pointerId: event.pointerId,
+        target: event.currentTarget,
+        x: event.clientX,
+        y: event.clientY,
+      };
       timer.current = setTimeout(() => {
+        const active = session.current;
+        if (active === undefined) return;
         timer.current = undefined;
+        active.committed = true;
+        try {
+          active.target.setPointerCapture?.(active.pointerId);
+        } catch {
+          // A disconnected target or ended native pointer is a safe no-capture.
+        }
         callback.current();
       }, delay);
     },
     onPointerMove: (event) => {
-      const start = origin.current;
+      const start = session.current;
       if (
         start !== undefined &&
+        start.pointerId === event.pointerId &&
         Math.hypot(event.clientX - start.x, event.clientY - start.y) >
           movementTolerance
       )
         cancel();
     },
-    onPointerUp: cancel,
-    onPointerCancel: cancel,
+    onPointerUp: (event) => {
+      if (session.current?.pointerId === event.pointerId) cancel();
+    },
+    onPointerCancel: (event) => {
+      if (session.current?.pointerId === event.pointerId) cancel();
+    },
+    onLostPointerCapture: (event) => {
+      if (session.current?.pointerId === event.pointerId) cancel();
+    },
   };
 }

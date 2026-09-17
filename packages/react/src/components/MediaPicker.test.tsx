@@ -520,8 +520,8 @@ describe("MediaPicker", () => {
           );
           expect(picker.getAttribute("data-theme")).toBe(theme);
           expect(
-            view.container
-              .querySelector(".mp-positioner")
+            picker
+              .closest(".mp-positioner")
               ?.getAttribute("data-resolved-display-mode"),
           ).toBe(displayMode);
           await user.click(
@@ -570,20 +570,32 @@ describe("MediaPicker", () => {
       <MediaPicker displayMode="auto" onSelect={() => undefined} />,
     );
     expect(
-      view.container.querySelector("[data-resolved-display-mode='popover']"),
+      document.querySelector("[data-resolved-display-mode='popover']"),
     ).not.toBeNull();
     act(() => {
       matches = true;
       viewportListener?.({ matches: true } as MediaQueryListEvent);
     });
-    expect(
-      view.container.querySelector(
-        "[data-resolved-display-mode='bottom-sheet']",
-      ),
-    ).not.toBeNull();
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-resolved-display-mode='bottom-sheet']"),
+      ).not.toBeNull(),
+    );
     expect(
       await screen.findByRole("dialog", { name: "Media picker" }),
     ).not.toBeNull();
+
+    vi.stubGlobal("innerHeight", 400);
+    act(() => {
+      matches = false;
+      viewportListener?.({ matches: false } as MediaQueryListEvent);
+      window.dispatchEvent(new Event("resize"));
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-resolved-display-mode='fullscreen']"),
+      ).not.toBeNull(),
+    );
     expect(addEventListener).toHaveBeenCalledWith(
       "change",
       expect.any(Function),
@@ -593,6 +605,60 @@ describe("MediaPicker", () => {
       "change",
       expect.any(Function),
     );
+    vi.unstubAllGlobals();
+  });
+
+  it("uses the visual viewport for phone and keyboard-constrained auto presentation", async () => {
+    const listeners = new Map<string, () => void>();
+    const viewport = {
+      addEventListener: vi.fn((type: string, listener: () => void) =>
+        listeners.set(type, listener),
+      ),
+      height: 700,
+      offsetLeft: 0,
+      offsetTop: 0,
+      removeEventListener: vi.fn(),
+      width: 390,
+    };
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: viewport,
+    });
+
+    const view = render(
+      <MediaPicker displayMode="auto" onSelect={() => undefined} />,
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-resolved-display-mode='bottom-sheet']"),
+      ).not.toBeNull(),
+    );
+
+    viewport.height = 390;
+    act(() => listeners.get("resize")?.());
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-resolved-display-mode='fullscreen']"),
+      ).not.toBeNull(),
+    );
+    view.unmount();
+    expect(viewport.removeEventListener).toHaveBeenCalledWith(
+      "resize",
+      expect.any(Function),
+    );
+    expect(viewport.removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function),
+    );
+    Reflect.deleteProperty(window, "visualViewport");
     vi.unstubAllGlobals();
   });
 

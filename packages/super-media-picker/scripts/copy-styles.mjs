@@ -21,11 +21,32 @@ const combinedCss = `${tokens.trim()}\n\n${css
   )
   .replace(/\n?\/\*# sourceMappingURL=.*?\*\/\s*$/u, "\n")}`;
 
+// `rem` inside a shadow tree still resolves against the host document root.
+// Compile the browser-only defaults to pixels so hostile page typography cannot
+// inflate or clip an otherwise isolated custom element. Browser zoom and
+// consumer-provided CSS custom-property overrides continue to work normally.
+function isolateRootRelativeUnits(value) {
+  return value.replace(/(-?(?:\d+\.?\d*|\.\d+))rem\b/gu, (_, amount) => {
+    const pixels = Number(amount) * 16;
+    return `${Number(pixels.toFixed(4))}px`;
+  });
+}
+
+function compactBrowserCss(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 await writeFile(destination, combinedCss, "utf8");
 await mkdir(new URL("../dist/browser/", import.meta.url), { recursive: true });
 await writeFile(
   browserDestination,
-  `${browserCss.trim()}\n\n${combinedCss}`,
+  compactBrowserCss(
+    isolateRootRelativeUnits(`${browserCss.trim()}\n\n${combinedCss}`),
+  ),
   "utf8",
 );
 

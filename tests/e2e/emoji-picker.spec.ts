@@ -85,13 +85,32 @@ test("portals the tone menu beyond clipped compact content and flips in a bottom
   await expect(menu).toHaveCSS("position", "fixed");
   await expect(menu).toHaveCSS("z-index", "1100");
   await expect(menu).toHaveCSS("background-color", "rgb(25, 27, 31)");
-  await expect(
-    menu.getByRole("option", { name: "Default", exact: true }),
-  ).toBeFocused();
+  await expect(menu).toHaveCSS("filter", "none");
+  await expect(menu).toHaveCSS("backdrop-filter", "none");
+  await expect(menu).toHaveCSS("opacity", "1");
+  const selectedTone = menu.getByRole("option", {
+    name: "Default",
+    exact: true,
+  });
+  await expect(selectedTone).toBeFocused();
+  await expect(selectedTone).toHaveAttribute("aria-selected", "true");
+  await expect(selectedTone).toHaveAttribute("data-selected", "true");
+  expect(
+    await selectedTone.evaluate(
+      (element) => getComputedStyle(element).boxShadow,
+    ),
+  ).not.toBe("none");
+  const selectedBox = await selectedTone.boundingBox();
+  await selectedTone.evaluate((element) => {
+    (element as HTMLElement).blur();
+    (element as HTMLElement).focus();
+  });
+  expect(await selectedTone.boundingBox()).toEqual(selectedBox);
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(trigger).toBeFocused();
 
+  await page.setViewportSize({ width: 375, height: 667 });
   await page.getByRole("button", { name: "Mobile", exact: true }).click();
   trigger = page.getByRole("button", {
     name: "Emoji skin tone: Default",
@@ -106,6 +125,11 @@ test("portals the tone menu beyond clipped compact content and flips in a bottom
   ]);
   expect(bottomSheetBoxes[0]).not.toBeNull();
   expect(bottomSheetBoxes[1]).not.toBeNull();
+  expect(bottomSheetBoxes[1]!.x).toBeGreaterThanOrEqual(8);
+  expect(
+    bottomSheetBoxes[1]!.x + bottomSheetBoxes[1]!.width,
+  ).toBeLessThanOrEqual(367);
+  expect(bottomSheetBoxes[1]!.y).toBeGreaterThanOrEqual(8);
   expect(bottomSheetBoxes[1]!.y + bottomSheetBoxes[1]!.height).toBeLessThan(
     bottomSheetBoxes[0]!.y,
   );
@@ -239,30 +263,27 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
     name: "Animated party",
     exact: true,
   });
-  await expect(animatedEmoji.locator("img")).toHaveAttribute(
-    "src",
-    "/media/animated-emoji/party.webp",
-  );
+  await expect(
+    animatedEmoji.locator(".mp-animated-media__poster img"),
+  ).toHaveAttribute("src", "/media/animated-emoji/party.webp");
   await animatedEmoji.hover();
-  await expect(animatedEmoji.locator("img")).toHaveAttribute(
-    "src",
-    "/media/animated-emoji/party.gif",
-  );
+  await expect(
+    animatedEmoji.locator(".mp-animated-media__animation img"),
+  ).toHaveAttribute("src", "/media/animated-emoji/party.gif");
 
   await page.getByRole("tab", { name: "GIF" }).click();
   const party = page
     .getByRole("button", { name: "Colorful party animation" })
     .first();
   await expect(party).toBeVisible();
-  await expect(party.locator("img")).toHaveAttribute(
+  await expect(party.locator(".mp-animated-media__poster img")).toHaveAttribute(
     "src",
     "/media/gifs/celebration-poster.webp",
   );
   await party.hover();
-  await expect(party.locator("img")).toHaveAttribute(
-    "src",
-    "/media/gifs/celebration.gif",
-  );
+  await expect(
+    party.locator(".mp-animated-media__animation img"),
+  ).toHaveAttribute("src", "/media/gifs/celebration.gif");
   await party.click();
   await expect(page.getByTestId("selection-output")).toContainText(
     '"type": "gif"',
@@ -276,15 +297,13 @@ test("navigates GIF, sticker, custom, capability, and provider-error flows", asy
     name: "Bear sticker 1",
     exact: true,
   });
-  await expect(animatedSticker.locator("img")).toHaveAttribute(
-    "src",
-    "/media/stickers/bear.webp",
-  );
+  await expect(
+    animatedSticker.locator(".mp-animated-media__poster img"),
+  ).toHaveAttribute("src", "/media/stickers/bear.webp");
   await animatedSticker.hover();
-  await expect(animatedSticker.locator("img")).toHaveAttribute(
-    "src",
-    "/media/stickers/bear-wave.gif",
-  );
+  await expect(
+    animatedSticker.locator(".mp-animated-media__animation img"),
+  ).toHaveAttribute("src", "/media/stickers/bear-wave.gif");
   await page
     .getByRole("button", { name: "Choose sticker pack, current Bears" })
     .click();

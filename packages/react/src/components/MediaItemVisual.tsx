@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   isAnimatedMedia,
-  isSafeMediaUrl,
+  isSafeMediaAsset,
   isUnicodeEmoji,
+  resolveMediaItemAssets,
   type AnimatedMediaConfig,
   type MediaItem,
   type MediaUrlPolicy,
@@ -26,6 +27,7 @@ export function mediaItemLabel(item: MediaItem): string {
 export interface MediaItemVisualProps {
   readonly item: MediaItem;
   readonly animation: AnimatedMediaConfig;
+  readonly activationToken?: number;
   readonly manager: AnimationConcurrencyManager;
   readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
@@ -34,6 +36,7 @@ export interface MediaItemVisualProps {
 export function MediaItemVisual({
   item,
   animation,
+  activationToken,
   manager,
   mediaSecurity,
   renderers,
@@ -45,6 +48,7 @@ export function MediaItemVisual({
         config={animation}
         item={item}
         manager={manager}
+        {...(activationToken === undefined ? {} : { activationToken })}
         {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
         {...(renderers === undefined ? {} : { renderers })}
       />
@@ -52,43 +56,49 @@ export function MediaItemVisual({
   }
   if (item.type === "custom" && renderers?.custom !== undefined)
     return renderers.custom(item);
-  const url = item.thumbnailUrl ?? item.previewUrl ?? item.url;
   return (
     <StaticMediaVisual
-      url={url}
-      {...(item.height === undefined ? {} : { height: item.height })}
-      {...(item.width === undefined ? {} : { width: item.width })}
+      item={item}
       {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
     />
   );
 }
 
 function StaticMediaVisual({
-  url,
-  width,
-  height,
+  item,
   mediaSecurity,
 }: {
-  readonly url: string;
-  readonly width?: number;
-  readonly height?: number;
+  readonly item: MediaItem;
   readonly mediaSecurity?: MediaUrlPolicy;
 }) {
-  const [failed, setFailed] = useState(false);
-  return !failed && isSafeMediaUrl(url, mediaSecurity) ? (
+  const assets = useMemo(() => resolveMediaItemAssets(item), [item]);
+  const urls = useMemo(
+    () =>
+      [...assets.posterUrls, assets.originalUrl].filter(
+        (url): url is string =>
+          url !== undefined && isSafeMediaAsset(url, undefined, mediaSecurity),
+      ),
+    [assets.originalUrl, assets.posterUrls, mediaSecurity],
+  );
+  const [index, setIndex] = useState(0);
+  const url = urls[index];
+  const dimensions = "width" in item ? item : undefined;
+  return url !== undefined ? (
     <img
       alt=""
       decoding="async"
       draggable={false}
-      {...(height === undefined ? {} : { height })}
+      {...(dimensions?.height === undefined
+        ? {}
+        : { height: dimensions.height })}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setIndex((current) => current + 1)}
       src={url}
-      {...(width === undefined ? {} : { width })}
+      {...(dimensions?.width === undefined ? {} : { width: dimensions.width })}
     />
   ) : (
-    <span aria-hidden="true" data-media-fallback="">
-      ◌
+    <span aria-hidden="true" data-media-fallback="text">
+      {assets.fallbackText}
     </span>
   );
 }

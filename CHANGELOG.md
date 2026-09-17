@@ -6,6 +6,73 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-beta.7] - 2026-09-12
+
+### Added
+
+- Added a first-class animated-emoji metadata model with role-based assets,
+  Unicode/text fallbacks, aliases, locale keywords, generic variants, loop and
+  playback policies, provider attribution, capabilities, and richer pack
+  metadata without introducing a second media-item type hierarchy.
+- Added explicit `never`, `on-hover`, `on-focus`, `on-intent`, `once`,
+  `loop-while-active`, and `always` playback policies; selection-triggered
+  replay; lifecycle diagnostics; document/viewport visibility suspension; and
+  priority-aware bounded animation scheduling.
+- Added a typed, dependency-free Lottie adapter lifecycle, native silent inline
+  WebM support, poster-first GIF/WebP rendering, AVIF/static asset modelling,
+  pack/locale provider filters, and format-aware media URL policy.
+- Added self-owned GIF, WebM, poster, mocked Lottie, variant, and broken-asset
+  fixtures plus component, provider, browser, Web Component, Storybook, and
+  Playwright coverage.
+- Added a capability-aware `All` / `Standard` / `Animated` contextual filter
+  and a quiet, non-interactive item marker so animated/custom emoji remain
+  discoverable without introducing another primary media tab.
+
+### Changed
+
+- Reused the shared animated-media renderer for animated emoji, GIFs, animated
+  stickers, and animated custom emoji, including React, browser ESM, Web
+  Component, global JavaScript, and Shadow DOM delivery.
+- Made poster-first `on-intent` playback the calm default. Reduced motion now
+  keeps animated media static even after pointer/focus intent, while selection
+  and normalized fallback metadata remain fully usable.
+- Persisted compact reconstructable recents/favorites snapshots instead of
+  copying pack search catalogs, role manifests, attribution, capabilities, or
+  variants into local storage.
+- Validated the provider-neutral animated-emoji model for future composer
+  integration: plain-text fallback, rich emoji entities, alias/autocomplete,
+  and caret-safe insertion require no core model changes. No Composer protocol,
+  entity schema, or public Composer API is included in this release.
+- Formalized the portability rule: Super Media owns contracts;
+  providers, vendors, and renderers remain replaceable adapters.
+
+### Fixed
+
+- Added deterministic animation → poster candidates → Unicode → accessible
+  text fallback, including host Lottie adapter failures and disallowed URLs.
+- Ensured hidden/offscreen/unmounted video and adapter instances release
+  playback slots, media resources, observers, timers, and adapter lifecycle
+  state under normal mounting and React StrictMode.
+- Hardened the internal pointer-neutral long-press primitive for touch slop,
+  primary-pointer ownership, pointer cancellation/loss, window blur, capture
+  release, unmount, and StrictMode cleanup without publishing a reaction API.
+- Kept experimental Genie loading conditional while prewarming it when selected,
+  and made destination measurement follow lazy full-picker replacement so cold
+  Web Component transitions cannot race their Suspense fallback.
+- Certified the picker in a realistic local messaging host with a single
+  transient-surface owner, message-anchored reaction rail, capture-phase
+  outside dismissal, atomic reaction-to-picker handoff, stable focus return,
+  narrow-viewport bounds, IME-safe suggestions, and deterministic country/flag
+  lookup including `india` → 🇮🇳. These host behaviors remain test fixtures,
+  not public Composer Intelligence or ReactionController APIs.
+- Kept standalone compact `ReactionPicker` surfaces inline by default on narrow
+  viewports so embedding a reaction rail cannot create an unintended modal
+  scrim or intercept adjacent host actions; explicit display modes remain
+  supported.
+- Stabilized compact reaction hit areas and Unicode/static/animated visual
+  centering, and strengthened the crisp contextual skin-tone palette with a
+  layout-neutral selected/focus treatment and capture-phase outside dismissal.
+
 ## [0.1.0-beta.6] - 2026-09-09
 
 ### Added
@@ -225,7 +292,8 @@ All notable changes to this project are documented here. The format follows
 - Production media catalogs, demo assets, credentials, tests, Storybook output,
   and internal source files are excluded from the tarball.
 
-[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.6...HEAD
+[Unreleased]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.7...HEAD
+[0.1.0-beta.7]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.6...v0.1.0-beta.7
 [0.1.0-beta.6]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.5...v0.1.0-beta.6
 [0.1.0-beta.5]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.4...v0.1.0-beta.5
 [0.1.0-beta.4]: https://github.com/harish-sha/super-media-picker/compare/v0.1.0-beta.3...v0.1.0-beta.4

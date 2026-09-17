@@ -10,10 +10,96 @@ const gifProvider = new globalThis.SuperMediaPicker.HttpGifProvider({
 });
 
 declarative.features = {
+  animatedEmoji: true,
   favorites: true,
   gifs: true,
   recents: true,
 };
+declarative.animatedMedia = {
+  maxActiveAnimations: 1,
+  playback: "on-intent",
+  playOnSelect: true,
+};
+declarative.renderers = {
+  animatedMedia: {
+    lottie: {
+      mount(target, { setState }) {
+        const glyph = document.createElement("span");
+        glyph.dataset.browserLottie = "true";
+        glyph.textContent = "✨";
+        target.append(glyph);
+        return {
+          play() {
+            setState("playing");
+          },
+          pause() {
+            setState("paused");
+          },
+          destroy() {
+            glyph.remove();
+          },
+        };
+      },
+    },
+  },
+};
+const animatedEmojiPacks = [
+  {
+    id: "browser-animated",
+    name: "Browser animated",
+    description: "Self-owned browser parity fixtures",
+    iconUrl: "/fixture/media/demo.svg",
+    itemCount: 3,
+    animated: true,
+    searchable: true,
+    paginated: false,
+    locales: ["en"],
+    items: [
+      {
+        type: "emoji",
+        kind: "animated",
+        id: "browser-lottie-sparkle",
+        name: "Browser Lottie sparkle",
+        fallbackEmoji: "✨",
+        aliases: ["sparkle-browser"],
+        keywords: ["shine"],
+        packId: "browser-animated",
+        posterUrl: "/fixture/media/demo.svg",
+        animationUrl: "/fixture/media/sparkle.lottie.json",
+        format: "lottie",
+      },
+      {
+        type: "emoji",
+        kind: "animated",
+        id: "browser-animated-wave",
+        name: "Browser animated wave",
+        fallbackEmoji: "👋",
+        aliases: ["wave-browser"],
+        keywords: ["hello", "browser"],
+        packId: "browser-animated",
+        posterUrl: "/fixture/media/demo.svg",
+        animationUrl: "/demo-media/animated-emoji/party.webm",
+        format: "webm",
+        width: 160,
+        height: 160,
+      },
+      {
+        type: "emoji",
+        kind: "animated",
+        id: "browser-broken-wave",
+        name: "Browser broken wave",
+        fallbackEmoji: "👋",
+        aliases: ["broken-browser"],
+        keywords: ["fallback"],
+        packId: "browser-animated",
+        posterUrl: "/fixture/media/missing.webp",
+        animationUrl: "/fixture/media/missing.webm",
+        format: "webm",
+      },
+    ],
+  },
+];
+declarative.emojiPacks = animatedEmojiPacks;
 declarative.providers = { gifs: gifProvider };
 
 for (const eventName of [
@@ -24,7 +110,8 @@ for (const eventName of [
   "error",
 ]) {
   document.addEventListener(eventName, (event) => {
-    eventLog.textContent = `${eventName}:${JSON.stringify(event.detail)}`;
+    eventLog.textContent =
+      `${eventLog.textContent}\n${eventName}:${JSON.stringify(event.detail)}`.trim();
   });
 }
 
@@ -55,6 +142,7 @@ let globalController = globalThis.SuperMediaPicker.create({
 });
 
 globalThis.browserFixture = {
+  animatedEmojiPacks,
   browserModule,
   declarative,
   gifProvider,

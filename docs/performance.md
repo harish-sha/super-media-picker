@@ -1,41 +1,44 @@
 # Performance measurements
 
-Measured on 2026-09-06 from fresh production ESM builds using Node 23 on macOS ARM. Raw byte counts use the emitted files, gzip uses Node's `zlib.gzipSync`, package values come from the actual `pnpm pack` archives, and Brotli values come from `size-limit`.
+Measured on 2026-09-13 from fresh production ESM builds on macOS ARM. Raw byte
+counts use the emitted files, gzip uses Node's `zlib.gzipSync`, package values
+come from the actual `pnpm pack` archives, and Brotli values come from
+`size-limit`.
 
 | Artifact                                    | Raw       | Compressed     |
 | ------------------------------------------- | --------- | -------------- |
-| `@super-media-picker/core` JavaScript       | 29,745 B  | 6.07 kB Brotli |
-| React public entry shim                     | 1,400 B   | 407 B Brotli   |
-| React focused-picker entry shim             | 303 B     | 144 B Brotli   |
-| React headless entry shim                   | 349 B     | 155 B Brotli   |
-| React shared picker/focused component chunk | 33,987 B  | 8,025 B gzip   |
+| `@super-media-picker/core` JavaScript       | 40,326 B  | 7.84 kB Brotli |
+| React public entry shim                     | 1,750 B   | 471 B Brotli   |
+| React focused-picker entry shim             | 333 B     | 167 B Brotli   |
+| React headless entry shim                   | 349 B     | 157 B Brotli   |
+| React shared picker/focused component chunk | 34,419 B  | 8,115 B gzip   |
 | React persistence state chunk               | 6,527 B   | 1,757 B gzip   |
-| React compact/tone reaction chunk           | 10,978 B  | 2,863 B gzip   |
-| React animated-media/visual chunk           | 8,315 B   | 2,318 B gzip   |
+| React compact/tone reaction chunk           | 11,146 B  | 2,930 B gzip   |
+| React animated-media/visual chunk           | 18,634 B  | 4,727 B gzip   |
 | React headless controller/search chunk      | 10,819 B  | 2,715 B gzip   |
-| React headless provider-state chunk         | 3,759 B   | 1,230 B gzip   |
-| React lazy full-picker chunk                | 33,118 B  | 7,550 B gzip   |
-| React lazy provider-panel chunk             | 25,249 B  | 5,997 B gzip   |
-| React lazy presentation chunk               | 25,854 B  | 5,751 B gzip   |
-| React lazy genie chunk                      | 5,960 B   | 1,847 B gzip   |
-| React picker CSS                            | 29,199 B  | 4,953 B gzip   |
+| React headless provider-state chunk         | 3,983 B   | 1,283 B gzip   |
+| React lazy full-picker chunk                | 34,292 B  | 7,757 B gzip   |
+| React lazy provider-panel chunk             | 13,726 B  | 3,229 B gzip   |
+| React lazy presentation chunk               | 25,854 B  | 5,718 B gzip   |
+| React lazy genie chunk                      | 6,206 B   | 1,930 B gzip   |
+| React picker CSS                            | 31,677 B  | 5,291 B gzip   |
 | `@super-media-picker/gif`                   | 4,181 B   | 1.22 kB Brotli |
 | `@super-media-picker/stickers`              | 6,229 B   | 1.52 kB Brotli |
 | Compact emoji data entry                    | 5,962 B   | 1.24 kB Brotli |
-| Self-contained public root entry            | 17,463 B  | 5.77 kB Brotli |
+| Self-contained public root entry            | 18,159 B  | 6.01 kB Brotli |
 | Lazy advanced presentation engine           | 12,792 B  | 3.89 kB Brotli |
-| Lazy public genie implementation            | 2,725 B   | 1,290 B gzip   |
-| Public headless entry                       | 5,072 B   | 1.84 kB Brotli |
-| Public providers entry                      | 436 B     | 228 B Brotli   |
-| Public stylesheet with theme tokens         | 30,889 B  | 5,279 B gzip   |
+| Lazy public genie implementation            | 2,823 B   | 1,337 B gzip   |
+| Public headless entry                       | 5,072 B   | 1.85 kB Brotli |
+| Public providers entry                      | 436 B     | 212 B Brotli   |
+| Public stylesheet with theme tokens         | 33,383 B  | 5,611 B gzip   |
 | Full emoji JavaScript/data                  | 599,802 B | 77,128 B gzip  |
-| Playground initial JavaScript               | 260,824 B | 80,767 B gzip  |
-| Playground lazy presentation engine         | 13,867 B  | 4,620 B gzip   |
-| Playground lazy genie                       | 2,774 B   | 1,312 B gzip   |
-| Playground lazy full UI                     | 16,652 B  | 5,890 B gzip   |
-| Playground lazy provider UI                 | 12,862 B  | 4,650 B gzip   |
-| Playground lazy emoji data                  | 461,302 B | 73,890 B gzip  |
-| Playground CSS                              | 30,000 B  | 5,897 B gzip   |
+| Playground initial JavaScript               | 276,972 B | 85,533 B gzip  |
+| Playground lazy presentation engine         | 13,867 B  | 4,618 B gzip   |
+| Playground lazy genie                       | 2,839 B   | 1,342 B gzip   |
+| Playground lazy full UI                     | 24,518 B  | 8,573 B gzip   |
+| Playground lazy provider UI                 | 7,449 B   | 2,685 B gzip   |
+| Playground lazy emoji data                  | 461,296 B | 73,895 B gzip  |
+| Playground CSS                              | 32,160 B  | 6,225 B gzip   |
 
 ### Standalone browser budgets
 
@@ -44,12 +47,12 @@ ceilings. Values below are raw / gzip / Brotli from the current candidate:
 
 | Browser artifact             | Raw       | gzip      | Brotli    |
 | ---------------------------- | --------- | --------- | --------- |
-| Browser ESM initial graph    | 258.99 kB | 82.34 kB  | 72.20 kB  |
-| Web Component initial graph  | 247.74 kB | 79.32 kB  | 69.52 kB  |
-| Global standalone JavaScript | 805.99 kB | 167.29 kB | 135.24 kB |
-| Browser Shadow DOM CSS       | 31.54 kB  | 5.40 kB   | 4.75 kB   |
+| Browser ESM initial graph    | 269.84 kB | 85.61 kB  | 75.28 kB  |
+| Web Component initial graph  | 257.18 kB | 82.24 kB  | 72.29 kB  |
+| Global standalone JavaScript | 819.25 kB | 171.14 kB | 138.62 kB |
+| Browser Shadow DOM CSS       | 33.53 kB  | 5.71 kB   | 4.99 kB   |
 | Lazy presentation chunk      | 12.94 kB  | 4.32 kB   | 3.94 kB   |
-| Lazy Genie chunk             | 2.86 kB   | 1.33 kB   | 1.18 kB   |
+| Lazy Genie chunk             | 2.89 kB   | 1.34 kB   | 1.18 kB   |
 
 The initial ESM/Web Component graphs include the private React runtime and
 picker core required by a host with no React installation. Full emoji data,
@@ -62,11 +65,11 @@ remain unchanged. The complete browser directory is also reported as a
 diagnostic but is not an initial-download claim because it contains alternative
 entries and the duplicated one-file global distribution.
 
-Actual `pnpm pack` archives are 29,499 B for core, 184,264 B for emoji, 5,238 B
-for GIF, 6,241 B for stickers, 2,676 B for themes, 134,636 B for React, and
-468,746 B for the self-contained public `super-media-picker` package. A direct
-final `npm pack --dry-run` reports 462,757 B packed (2,380,749 B unpacked, 50
-files). The public archive bundles the workspace implementation, generated
+Actual package-validator archives are 37,830 B for core, 184,264 B for emoji,
+5,238 B for GIF, 6,241 B for stickers, 2,676 B for themes, 146,661 B for React,
+and 490,482 B for the self-contained public `super-media-picker` package. A
+direct final `npm pack --dry-run` reports 484,356 B packed (2,438,691 B
+unpacked, 50 files). The public archive bundles the workspace implementation, generated
 declarations, and standalone browser distributions, while the ESM/Web Component
 paths retain the full picker, provider panels, and full emoji data as separate
 lazy chunks. It contains no source maps or internal package imports. `pnpm
@@ -109,8 +112,9 @@ Storybook output, tests, environment files, and internal source.
   `ReactionPicker`. Production minification leaves the root at 5.75 kB Brotli
   within its unchanged 7.5 kB ceiling; the optional engine remains under its
   separate 6 kB ceiling rather than being hidden in the root allowance. The
-  experimental Genie implementation is a separate 2,725-byte raw chunk and is
-  requested only for `motion="genie"`.
+  experimental Genie implementation is a separate 2,823-byte raw chunk and is
+  requested only for `motion="genie"`. Selecting Genie prewarms only that lazy
+  chunk; once loaded, the component renders without a Suspense scheduling race.
 - Genie reads its source/destination rectangles once, then animates six slices
   in a body-level fixed, viewport-clipped proxy using only transform and
   opacity. A Chromium run covering open, close, repeated open, and a scrolled
@@ -142,12 +146,29 @@ Storybook output, tests, environment files, and internal source.
   so npm consumers do not depend on unpublished workspace packages; production
   tree shaking can still remove unused provider classes.
 - Remote results arrive in bounded pages. An `IntersectionObserver` sentinel advances cursor pagination near the viewport, while its accessible Load more button remains the keyboard/no-observer fallback. The shared grid incrementally windows inline collections to 60 items and uses native `content-visibility` containment for offscreen cells, avoiding a runtime virtualization dependency. Provider pagination remains the primary large-collection boundary.
-- The playground's initial JavaScript is 260,824 B and the full emoji data remains a separate 461,296 B chunk. The comparison includes the SDK surface demos, provider mocks, Presentation Lab, and React runtime, so it demonstrates delivery behavior rather than a standalone library-size claim.
-- The complete served demo fixture set is 569,378 B across 11 media
+- The playground's initial JavaScript is 276,972 B and the full emoji data remains a separate 461,296 B chunk. The comparison includes the SDK surface demos, provider mocks, Presentation Lab, and React runtime, so it demonstrates delivery behavior rather than a standalone library-size claim.
+- The complete served demo fixture set is 1,032,524 B across 44 media
   files. It belongs only to the playground and Storybook and is rejected by
   package tarball validation.
 
 The incremental grid intentionally keeps the active 60-item window in normal document flow so screen-reader and roving-focus semantics remain predictable. For unbounded providers, cursor pagination prevents the DOM from receiving the complete remote collection. A fixed-row absolute-position virtualizer was rejected because GIF/sticker aspect ratios are adaptive and it would materially complicate keyboard position and dynamic-height accessibility.
+
+## Animated emoji foundation
+
+Animated emoji reuse the existing shared renderer rather than adding a second
+engine or catalog. Idle cells render light poster/thumbnail assets; the
+animation URL enters the DOM only after visibility plus the configured intent
+policy. A priority queue caps simultaneous playback (three by default), and
+document/viewport visibility releases slots. Native images/videos animate in
+the browser compositor/decoder without an animation-frame React state loop.
+Lottie remains host-supplied.
+
+The richer lifecycle/scheduler/adapter implementation adds 10,319 raw bytes
+(2,409 gzip bytes) to the shared React animated-media chunk. The public root
+remains within its unchanged 7.5 kB Brotli budget at 6.01 kB. Browser ESM adds
+10.85 kB raw / 3.08 kB Brotli over beta.6; the one-file global adds 13.26 kB raw
+/ 3.38 kB Brotli. No budget was raised. The demo WebM and Lottie JSON are
+playground/test fixtures and package validation rejects them from npm tarballs.
 
 Reproduce the principal checks with:
 

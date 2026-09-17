@@ -23,6 +23,8 @@ interface ProviderSearchStateOptions<T extends MediaItem> {
   readonly query: string;
   readonly pageSize?: number;
   readonly debounceMs?: number;
+  readonly packId?: string;
+  readonly locale?: string;
   readonly loadEmpty: (options: SearchOptions) => Promise<SearchResult<T>>;
   readonly onCompleted?: (count: number) => void;
   readonly onError?: (error: Error) => void;
@@ -35,6 +37,8 @@ export function useProviderSearchState<T extends MediaItem>({
   query,
   pageSize = 18,
   debounceMs = 250,
+  packId,
+  locale,
   loadEmpty,
   onCompleted,
   onError,
@@ -68,6 +72,8 @@ export function useProviderSearchState<T extends MediaItem>({
         const options: SearchOptions = {
           limit: Math.max(1, pageSize),
           signal,
+          ...(packId === undefined || packId === "" ? {} : { packId }),
+          ...(locale === undefined || locale === "" ? {} : { locale }),
           ...(nextCursor === undefined ? {} : { cursor: nextCursor }),
         };
         const result =
@@ -96,7 +102,16 @@ export function useProviderSearchState<T extends MediaItem>({
         onError?.(nextError);
       }
     },
-    [loadEmpty, normalized, onCompleted, onError, pageSize, provider],
+    [
+      loadEmpty,
+      locale,
+      normalized,
+      onCompleted,
+      onError,
+      packId,
+      pageSize,
+      provider,
+    ],
   );
 
   useEffect(() => {

@@ -9,7 +9,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import type { StickerPack } from "@super-media-picker/core";
+import {
+  isSafeMediaUrl,
+  type EmojiPack,
+  type MediaUrlPolicy,
+  type StickerPack,
+} from "@super-media-picker/core";
 import { useMediaPickerPortalTarget } from "../portalTarget";
 
 const themeProperties = [
@@ -29,6 +34,75 @@ const themeProperties = [
 
 type MenuStyle = CSSProperties & Record<string, string | number | undefined>;
 
+type VisualPack = Pick<EmojiPack | StickerPack, "icon" | "iconUrl" | "name"> & {
+  readonly posterUrl?: string;
+};
+
+function isLegacyPackIconUrl(value: string): boolean {
+  return /^(?:https?:|blob:|data:image\/|\/|\.\.?\/)/iu.test(value);
+}
+
+function PackFallbackIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="mp-pack-icon__fallback"
+      data-pack-icon-fallback=""
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M6.5 3.5h7.8l4.2 4.2v9.8a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M14 3.8V8h4.2M8 14.2c1.1 1.4 2.3 2.1 3.8 2.1 1.3 0 2.4-.5 3.2-1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <circle cx="8.2" cy="11" fill="currentColor" r="1" />
+      <circle cx="14.8" cy="11" fill="currentColor" r="1" />
+    </svg>
+  );
+}
+
+/** Safe pack artwork with a platform-independent SVG fallback. */
+export function MediaPackIcon({
+  pack,
+  mediaSecurity,
+}: {
+  readonly pack: VisualPack;
+  readonly mediaSecurity?: MediaUrlPolicy;
+}) {
+  const legacyUrl =
+    pack.icon !== undefined && isLegacyPackIconUrl(pack.icon)
+      ? pack.icon
+      : undefined;
+  const candidate = pack.iconUrl ?? pack.posterUrl ?? legacyUrl;
+  const iconUrl =
+    candidate !== undefined && isSafeMediaUrl(candidate, mediaSecurity)
+      ? candidate
+      : undefined;
+  const [failedUrl, setFailedUrl] = useState<string>();
+  if (iconUrl === undefined || failedUrl === iconUrl)
+    return <PackFallbackIcon />;
+  return (
+    <img
+      alt=""
+      className="mp-pack-icon__image"
+      onError={() => setFailedUrl(iconUrl)}
+      src={iconUrl}
+    />
+  );
+}
+
 function inheritedThemeValue(
   element: HTMLElement,
   computedStyle: CSSStyleDeclaration,
@@ -45,20 +119,27 @@ function inheritedThemeValue(
   return "";
 }
 
-export interface StickerPackSelectorProps {
-  readonly packs: readonly StickerPack[];
+interface PackDescriptor {
+  readonly id: string;
+  readonly name: string;
+}
+
+export interface MediaPackSelectorProps<T extends PackDescriptor> {
+  readonly packs: readonly T[];
   readonly selectedId: string;
-  readonly renderIcon: (pack: StickerPack) => ReactNode;
+  readonly renderIcon: (pack: T) => ReactNode;
   readonly onSelect: (id: string) => void;
+  readonly mediaLabel?: string;
 }
 
 /** Portal-backed pack listbox that stays usable with large pack catalogs. */
-export function StickerPackSelector({
+export function MediaPackSelector<T extends PackDescriptor>({
   packs,
   selectedId,
   renderIcon,
   onSelect,
-}: StickerPackSelectorProps) {
+  mediaLabel = "media",
+}: MediaPackSelectorProps<T>) {
   const selectedIndex = Math.max(
     0,
     packs.findIndex(({ id }) => id === selectedId),
@@ -75,7 +156,7 @@ export function StickerPackSelector({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const listboxId = `${useId().replaceAll(":", "")}-mp-sticker-packs`;
+  const listboxId = `${useId().replaceAll(":", "")}-mp-${mediaLabel}-packs`;
 
   useEffect(() => {
     if (open && menuStyle !== null) optionRefs.current[activeIndex]?.focus();
@@ -272,7 +353,7 @@ export function StickerPackSelector({
         aria-controls={open ? listboxId : undefined}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`Choose sticker pack, current ${selectedPack.name}`}
+        aria-label={`Choose ${mediaLabel} pack, current ${selectedPack.name}`}
         className="mp-pack-trigger"
         onClick={() => (open ? closeAndFocusTrigger() : openAt(selectedIndex))}
         onKeyDown={handleTriggerKeyDown}
@@ -290,8 +371,9 @@ export function StickerPackSelector({
       {open && portalContainer !== null
         ? createPortal(
             <div
-              aria-label="Sticker packs"
+              aria-label={`${mediaLabel[0]?.toLocaleUpperCase()}${mediaLabel.slice(1)} packs`}
               className="mp-pack-menu"
+              data-contextual-popover="pack"
               id={listboxId}
               ref={menuRef}
               role="listbox"
@@ -337,4 +419,16 @@ export function StickerPackSelector({
         : null}
     </div>
   );
+}
+
+export type StickerPackSelectorProps = MediaPackSelectorProps<StickerPack>;
+
+export function StickerPackSelector(props: StickerPackSelectorProps) {
+  return <MediaPackSelector {...props} mediaLabel="sticker" />;
+}
+
+export type EmojiPackSelectorProps = MediaPackSelectorProps<EmojiPack>;
+
+export function EmojiPackSelector(props: EmojiPackSelectorProps) {
+  return <MediaPackSelector {...props} mediaLabel="emoji" />;
 }

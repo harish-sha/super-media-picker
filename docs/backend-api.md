@@ -326,3 +326,52 @@ searches and tenant media private. The SDK adds only a short, configurable
 in-memory TTL, in-flight request deduplication, and bounded retry policy; it is
 not the authoritative cache. `X-Request-Id` is preserved on normalized errors
 for diagnostics, but response bodies and upstream credentials are not exposed.
+
+## Animated emoji extensions
+
+Pack, pack-item, search, and trending responses use the same strict
+`SearchResult<MediaItem>` envelope and opaque cursors as other media. Emoji
+search may receive provider-neutral `packId` and `locale` query parameters.
+Pack objects may add `posterUrl`, `version`, `revision`, `provider`,
+`attribution`, `capabilities`, `itemCount`, `searchable`, `paginated`, and
+`locales`.
+
+An animated emoji result can include a compact legacy URL form and/or explicit
+asset roles:
+
+```json
+{
+  "type": "emoji",
+  "kind": "animated",
+  "id": "wave_01",
+  "name": "Workspace wave",
+  "provider": "workspace-media",
+  "packId": "greetings",
+  "fallbackEmoji": "👋",
+  "aliases": ["wave"],
+  "keywords": ["hello", "goodbye"],
+  "posterUrl": "https://media.company.com/emoji/wave.webp",
+  "animationUrl": "https://media.company.com/emoji/wave.webm",
+  "originalUrl": "https://media.company.com/emoji/wave.webm",
+  "format": "webm",
+  "loopPolicy": "loop",
+  "width": 160,
+  "height": 160,
+  "assets": [
+    {
+      "role": "poster",
+      "url": "https://media.company.com/emoji/wave.webp",
+      "format": "webp"
+    },
+    {
+      "role": "animation",
+      "url": "https://media.company.com/emoji/wave.webm",
+      "format": "webm"
+    }
+  ]
+}
+```
+
+The browser still calls the developer backend; only that backend stores vendor
+credentials. Managed Super Media Cloud remains a future provider source and
+does not change this contract.

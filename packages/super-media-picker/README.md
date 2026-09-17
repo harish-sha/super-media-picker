@@ -1,6 +1,6 @@
 # super-media-picker
 
-Public beta `0.1.0-beta.6` of an accessible, provider-first React and browser SDK for
+Public beta `0.1.0-beta.7` of an accessible, provider-first React and browser SDK for
 Unicode emoji, animated/custom emoji, GIFs, stickers, custom media, reactions,
 recents, and favorites.
 
@@ -119,6 +119,44 @@ experimental beta API. Motion uses separate geometry, direct-manipulation, and
 transform/opacity layers and resolves to `none` for
 `prefers-reduced-motion`. The optional drag/resize/swipe controller and genie
 renderer are lazy chunks; ordinary compact pickers do not initialize them.
+
+## Animated emoji
+
+Animated emoji use the normalized `MediaItem` and shared animated-media engine;
+there is no browser-only or vendor-specific model. Hosts can supply local
+`emojiPacks` or `providers.animatedEmoji`, with poster, preview, animation, and
+original asset roles plus a Unicode/text fallback. The default `on-intent`
+policy is poster-first and bounded by a per-picker concurrency manager.
+
+**Super Media owns contracts. Providers, vendors, and renderers are replaceable
+adapters.** There are no vendor-specific `MediaItem` fields, no GIPHY-specific
+domain model, no production `lottie-web` dependency, and no external renderer
+is required for normal picker functionality.
+
+```tsx
+<MediaPicker
+  animatedMedia={{
+    playback: "on-intent",
+    playOnSelect: true,
+    maxActiveAnimations: 3,
+  }}
+  emojiPacks={[workspacePack]}
+  features={{ animatedEmoji: true }}
+  onSelect={handleSelect}
+/>
+```
+
+Native GIF/animated WebP images and silent inline WebM video are supported.
+Lottie requires an optional typed host renderer at
+`renderers.animatedMedia.lottie`; no Lottie dependency or executable remote
+script is bundled. Supported policies are `never`, `on-hover`, `on-focus`,
+`on-intent`, `once`, `loop-while-active`, and `always`. Reduced motion retains
+the poster or semantic Unicode/text fallback and suppresses decorative
+playback.
+
+The model has been validated for future plain-text fallback, rich emoji
+entities, alias/autocomplete, and composer integration without core changes.
+Beta.7 does not publish a Composer API, protocol, or entity schema.
 
 ## Headless UI
 

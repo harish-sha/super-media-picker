@@ -126,9 +126,9 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
         setOpen(false);
       }
     }
-    ownerDocument.addEventListener("pointerdown", handlePointerDown);
+    ownerDocument.addEventListener("pointerdown", handlePointerDown, true);
     return () =>
-      ownerDocument.removeEventListener("pointerdown", handlePointerDown);
+      ownerDocument.removeEventListener("pointerdown", handlePointerDown, true);
   }, [open]);
 
   useEffect(() => {
@@ -331,7 +331,9 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
         ? createPortal(
             <div
               aria-label="Emoji skin tone"
+              aria-orientation="vertical"
               className="mp-tone-menu mp-tone-menu--portal"
+              data-contextual-popover="tone"
               data-placement={menuPosition?.placement}
               id={listboxId}
               ref={menuRef}
@@ -351,6 +353,8 @@ export function SkinToneSelector({ value, onChange }: SkinToneSelectorProps) {
                   <button
                     aria-selected={selectedOption}
                     className="mp-tone-menu__option"
+                    data-selected={selectedOption ? "true" : undefined}
+                    data-tone={option.value}
                     key={option.value}
                     onClick={() => selectTone(option.value)}
                     onFocus={() => setActiveIndex(index)}

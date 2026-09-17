@@ -11,6 +11,20 @@ backends and CDNs. The SDK supports three integration strategies:
 Hosted Super Media mode is design-only in this release. There is no
 `superMode` prop and no project-key network path yet.
 
+## Animated emoji packs
+
+`EmojiProvider` is provider-neutral and serves Unicode/custom/animated pack
+items through `packs`, `packItems`, optional `search`, and optional `trending`.
+`SearchOptions` can include opaque `cursor`, bounded `limit`, `packId`, and
+`locale`; providers must not leak vendor-specific pagination into React.
+
+Pack metadata may include icon/poster, description, version/revision,
+provider/source, attribution, capabilities, item count, search/pagination
+flags, and supported locales. Items may expose role-based poster, thumbnail,
+preview, animation, and original assets alongside legacy beta.6 URL fields.
+Production pack contents remain in the host backend/CDN and are loaded only
+when selected; npm includes no production animation catalog.
+
 ## Recommended BYO configuration
 
 ```tsx

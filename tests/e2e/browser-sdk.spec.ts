@@ -3,7 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 const fixtureUrl = "http://127.0.0.1:4174/";
 
 interface BrowserPickerElement extends HTMLElement {
+  animatedMedia: {
+    maxActiveAnimations?: number;
+    playback?: string;
+  };
   dimensions: { width: number; height: number; applyToCompact?: boolean };
+  displayMode: string;
+  emojiPacks: readonly unknown[];
+  features: { animatedEmoji?: boolean };
+  mode: string;
   motion: string;
   theme: string;
 }
@@ -191,6 +199,114 @@ test("uses provider contracts and preserves lifecycle cleanup", async ({
   });
 });
 
+test("renders animated emoji equivalently inside the Web Component Shadow DOM", async ({
+  page,
+}) => {
+  await waitForFixture(page);
+  const picker = page.locator("#declarative-picker");
+  await picker.getByRole("button", { name: "Open full media picker" }).click();
+
+  const animated = picker.getByRole("button", {
+    name: "Browser animated wave",
+    exact: true,
+  });
+  await expect(
+    animated.locator(".mp-animated-media__poster img"),
+  ).toHaveAttribute("src", "/fixture/media/demo.svg");
+  const before = await animated.boundingBox();
+  await animated.hover();
+  const video = animated.locator("video");
+  await expect(video).toBeVisible();
+  expect(
+    await video.evaluate((element: HTMLVideoElement) => ({
+      controls: element.controls,
+      muted: element.muted,
+      playsInline: element.playsInline,
+    })),
+  ).toEqual({ controls: false, muted: true, playsInline: true });
+  const after = await animated.boundingBox();
+  expect(after?.width).toBe(before?.width);
+  expect(after?.height).toBe(before?.height);
+  expect(
+    await animated.evaluate(
+      (element) =>
+        element.getRootNode() instanceof ShadowRoot &&
+        element.closest("super-media-picker") === null,
+    ),
+  ).toBe(true);
+
+  const lottie = picker.getByRole("button", {
+    name: "Browser Lottie sparkle",
+    exact: true,
+  });
+  await lottie.focus();
+  await expect(lottie.locator("[data-browser-lottie='true']")).toHaveText("✨");
+
+  await animated.click();
+  await expect(page.locator("#event-log")).toContainText(
+    '"id":"browser-animated-wave"',
+  );
+  await expect(page.locator("#event-log")).toContainText(
+    '"fallbackEmoji":"👋"',
+  );
+
+  const broken = picker.getByRole("button", {
+    name: "Browser broken wave",
+    exact: true,
+  });
+  await broken.hover();
+  await expect(broken.locator("[data-media-fallback='unicode']")).toHaveText(
+    "👋",
+  );
+  expect(await page.locator("body > .mp-animated-media").count()).toBe(0);
+});
+
+test("keeps animated emoji state isolated across multiple browser SDK instances", async ({
+  page,
+}) => {
+  await waitForFixture(page);
+  await page.evaluate(() => {
+    for (const id of ["animated-instance-a", "animated-instance-b"]) {
+      const element = document.createElement(
+        "super-media-picker",
+      ) as BrowserPickerElement;
+      element.id = id;
+      element.mode = "full";
+      element.displayMode = "inline";
+      element.features = { animatedEmoji: true };
+      element.animatedMedia = {
+        maxActiveAnimations: 1,
+        playback: "on-intent",
+      };
+      element.emojiPacks = window.browserFixture.animatedEmojiPacks;
+      document.body.append(element);
+    }
+  });
+
+  const first = page
+    .locator("#animated-instance-a")
+    .getByRole("button", { name: "Browser animated wave", exact: true });
+  const second = page
+    .locator("#animated-instance-b")
+    .getByRole("button", { name: "Browser animated wave", exact: true });
+  await expect(first.locator(".mp-animated-media__poster img")).toBeVisible();
+  await expect(second.locator(".mp-animated-media__poster img")).toBeVisible();
+
+  await first.hover();
+  await expect(first.locator("video")).toBeVisible();
+  await expect(second.locator("video")).toHaveCount(0);
+
+  await second.hover();
+  await expect(second.locator("video")).toBeVisible();
+  await expect(first.locator("video")).toHaveCount(0);
+
+  await page.evaluate(() => {
+    document.querySelector("#animated-instance-a")?.remove();
+    document.querySelector("#animated-instance-b")?.remove();
+  });
+  expect(await page.locator("body > .mp-animated-media").count()).toBe(0);
+});
+
 test("keeps Genie inside the ShadowRoot overlay and respects reduced motion", async ({
   page,
 }) => {
@@ -198,21 +314,43 @@ test("keeps Genie inside the ShadowRoot overlay and respects reduced motion", as
   const picker = page.locator("#declarative-picker");
   await picker.evaluate((element) => {
     (element as BrowserPickerElement).motion = "genie";
+    const overlay = element.shadowRoot?.querySelector("[data-smp-overlay]");
+    if (overlay === null || overlay === undefined) return;
+    element.dataset.genieMountCount = "0";
+    new MutationObserver((records) => {
+      for (const node of records.flatMap((record) => [...record.addedNodes])) {
+        if (!(node instanceof Element)) continue;
+        const proxy = node.matches(".mp-genie-proxy")
+          ? node
+          : node.querySelector(".mp-genie-proxy");
+        if (proxy === null) continue;
+        element.dataset.genieMountCount = String(
+          Number(element.dataset.genieMountCount ?? 0) + 1,
+        );
+        element.dataset.genieInsideOverlay = String(
+          proxy.parentElement === overlay,
+        );
+      }
+    }).observe(overlay, { childList: true, subtree: true });
   });
+  await expect(picker.locator(".mp-positioner")).toHaveAttribute(
+    "data-motion-preset",
+    "genie",
+  );
+  await expect(picker.locator(".mp-positioner")).toHaveAttribute(
+    "data-genie-module-ready",
+    "true",
+  );
   await picker.getByRole("button", { name: "Open full media picker" }).click();
-  const proxy = picker.getByTestId("genie-transition-proxy");
+  await expect(picker).toHaveAttribute("data-genie-mount-count", "1");
+  await expect(picker).toHaveAttribute("data-genie-inside-overlay", "true");
   await picker
     .getByRole("button", { name: "Return to compact reactions" })
     .click();
 
-  await expect(proxy).toHaveCount(1);
-  expect(
-    await proxy.evaluate((element) =>
-      element.parentElement?.hasAttribute("data-smp-overlay"),
-    ),
-  ).toBe(true);
+  await expect(picker).toHaveAttribute("data-genie-mount-count", "2");
   expect(await page.locator("body > .mp-genie-proxy").count()).toBe(0);
-  await expect(proxy).toHaveCount(0);
+  await expect(picker.getByTestId("genie-transition-proxy")).toHaveCount(0);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await picker.getByRole("button", { name: "Open full media picker" }).click();
@@ -229,6 +367,7 @@ declare global {
       create: (options?: unknown) => unknown;
     };
     browserFixture: {
+      animatedEmojiPacks: readonly unknown[];
       declarative: HTMLElement;
       globalController: {
         element: HTMLElement & { isOpen: boolean };

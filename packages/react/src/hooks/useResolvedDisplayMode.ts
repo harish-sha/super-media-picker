@@ -5,23 +5,54 @@ import type { PickerDisplayMode } from "@super-media-picker/core";
 type ResolvedDisplayMode = Exclude<PickerDisplayMode, "auto">;
 
 const mobilePickerQuery = "(max-width: 30rem), (max-height: 36rem)";
+const fullscreenViewportHeight = 26 * 16;
 
-function isCompactViewport(): boolean {
-  return (
+function resolveAutoDisplayMode(): ResolvedDisplayMode {
+  if (typeof globalThis.window === "undefined") return "popover";
+  const viewport = globalThis.window.visualViewport;
+  const width = viewport?.width ?? globalThis.window.innerWidth;
+  const height = viewport?.height ?? globalThis.window.innerHeight;
+  const compactQuery =
     typeof globalThis.matchMedia === "function" &&
-    globalThis.matchMedia(mobilePickerQuery).matches
-  );
+    globalThis.matchMedia(mobilePickerQuery).matches;
+  if (
+    Number.isFinite(height) &&
+    height > 0 &&
+    height <= fullscreenViewportHeight
+  )
+    return "fullscreen";
+  if (
+    compactQuery ||
+    (Number.isFinite(width) && width > 0 && width <= 30 * 16) ||
+    (Number.isFinite(height) && height > 0 && height <= 36 * 16)
+  )
+    return "bottom-sheet";
+  return "popover";
 }
 
-function getServerSnapshot(): boolean {
-  return false;
+function getServerSnapshot(): ResolvedDisplayMode {
+  return "popover";
 }
 
 function subscribeToViewport(onStoreChange: () => void): () => void {
-  if (typeof globalThis.matchMedia !== "function") return () => undefined;
-  const query = globalThis.matchMedia(mobilePickerQuery);
-  query.addEventListener("change", onStoreChange);
-  return () => query.removeEventListener("change", onStoreChange);
+  if (typeof globalThis.window === "undefined") return () => undefined;
+  const query = globalThis.matchMedia?.(mobilePickerQuery);
+  query?.addEventListener("change", onStoreChange);
+  globalThis.window.addEventListener("resize", onStoreChange);
+  globalThis.window.visualViewport?.addEventListener("resize", onStoreChange);
+  globalThis.window.visualViewport?.addEventListener("scroll", onStoreChange);
+  return () => {
+    query?.removeEventListener("change", onStoreChange);
+    globalThis.window.removeEventListener("resize", onStoreChange);
+    globalThis.window.visualViewport?.removeEventListener(
+      "resize",
+      onStoreChange,
+    );
+    globalThis.window.visualViewport?.removeEventListener(
+      "scroll",
+      onStoreChange,
+    );
+  };
 }
 
 function doNotSubscribe(): () => void {
@@ -33,11 +64,11 @@ export function useResolvedDisplayMode(
   mode: PickerDisplayMode,
 ): ResolvedDisplayMode {
   const auto = mode === "auto";
-  const compact = useSyncExternalStore(
+  const resolved = useSyncExternalStore(
     auto ? subscribeToViewport : doNotSubscribe,
-    auto ? isCompactViewport : getServerSnapshot,
+    auto ? resolveAutoDisplayMode : getServerSnapshot,
     getServerSnapshot,
   );
 
-  return auto ? (compact ? "bottom-sheet" : "popover") : mode;
+  return auto ? resolved : mode;
 }

@@ -1,11 +1,16 @@
 import type {
   AnimatedEmojiMediaItem,
+  AnimatedMediaConfig,
+  AnimatedMediaRendererAdapter,
+  AnimatedMediaPlaybackPolicy,
+  MediaAsset,
   CustomMediaTab,
   CustomMediaProvider,
   GifProvider,
   CompactReactionSource,
   MediaCapabilities,
   MediaItem,
+  MediaItemVariant,
   MediaPickerFeatures,
   MediaPickerMode,
   MediaPickerProps,
@@ -59,6 +64,11 @@ export interface PublicApiContract {
   readonly capabilities: MediaCapabilities;
   readonly storage: StorageAdapter;
   readonly animatedEmoji: AnimatedEmojiMediaItem;
+  readonly animatedMedia: AnimatedMediaConfig;
+  readonly animatedMediaPlayback: AnimatedMediaPlaybackPolicy;
+  readonly animatedMediaRenderer: AnimatedMediaRendererAdapter;
+  readonly mediaAsset: MediaAsset;
+  readonly mediaItemVariant: MediaItemVariant;
   readonly gifProvider: GifProvider;
   readonly stickerProvider: StickerProvider;
   readonly customTab: CustomMediaTab;

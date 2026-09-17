@@ -18,6 +18,7 @@ export interface ReactionItemProps {
   readonly active: boolean;
   readonly item: MediaItem;
   readonly animation: AnimatedMediaConfig;
+  readonly activationToken?: number;
   readonly animationManager: AnimationConcurrencyManager;
   readonly mediaSecurity?: MediaUrlPolicy;
   readonly renderers?: MediaPickerRenderers;
@@ -33,6 +34,7 @@ export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
     {
       active,
       animation,
+      activationToken,
       animationManager,
       item,
       mediaSecurity,
@@ -62,6 +64,7 @@ export const ReactionItem = forwardRef<HTMLButtonElement, ReactionItemProps>(
       >
         <MediaItemVisual
           animation={animation}
+          {...(activationToken === undefined ? {} : { activationToken })}
           item={item}
           manager={animationManager}
           {...(mediaSecurity === undefined ? {} : { mediaSecurity })}

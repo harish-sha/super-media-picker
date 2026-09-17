@@ -1,6 +1,8 @@
 import { memo, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
+  isAnimatedMedia,
+  isUnicodeEmoji,
   mediaItemKey,
   type AnimatedMediaConfig,
   type MediaItem,
@@ -41,6 +43,10 @@ export const MediaResultsGrid = memo(function MediaResultsGrid({
 }: MediaResultsGridProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [windowSize, setWindowSize] = useState(60);
+  const [selectionReplay, setSelectionReplay] = useState<{
+    readonly key: string;
+    readonly token: number;
+  }>();
   const gridRef = useRef<HTMLDivElement>(null);
   const visibleItems = useMemo(
     () => items.slice(0, windowSize),
@@ -101,26 +107,65 @@ export const MediaResultsGrid = memo(function MediaResultsGrid({
           const key = mediaItemKey(item);
           const favorite = favoriteIds.has(key);
           const itemLabel = mediaItemLabel(item);
+          const itemKind =
+            item.type === "emoji" && isAnimatedMedia(item)
+              ? "animated-emoji"
+              : item.type === "emoji" && !isUnicodeEmoji(item)
+                ? "custom-emoji"
+                : undefined;
           return (
-            <div className="mp-media-cell" key={key} role="gridcell">
+            <div
+              className="mp-media-cell"
+              data-media-key={key}
+              key={key}
+              role="gridcell"
+            >
               <button
                 aria-label={itemLabel}
                 className="mp-media-item"
+                {...(itemKind === undefined
+                  ? {}
+                  : { "data-media-kind": itemKind })}
                 data-media-select=""
-                onClick={() => onSelect(item)}
+                onClick={() => {
+                  onSelect(item);
+                  if (animation.playOnSelect === true)
+                    setSelectionReplay((current) => ({
+                      key,
+                      token: (current?.token ?? 0) + 1,
+                    }));
+                }}
                 onFocus={() => setActiveIndex(index)}
                 onKeyDown={(event) => handleKeyDown(event, index)}
                 tabIndex={index === resolvedActive ? 0 : -1}
                 title={itemLabel}
                 type="button"
               >
-                <MediaItemVisual
-                  animation={animation}
-                  item={item}
-                  manager={animationManager}
-                  {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
-                  {...(renderers === undefined ? {} : { renderers })}
-                />
+                <span className="mp-media-item__visual">
+                  <MediaItemVisual
+                    animation={animation}
+                    {...(selectionReplay?.key === key
+                      ? { activationToken: selectionReplay.token }
+                      : {})}
+                    item={item}
+                    manager={animationManager}
+                    {...(mediaSecurity === undefined ? {} : { mediaSecurity })}
+                    {...(renderers === undefined ? {} : { renderers })}
+                  />
+                </span>
+                {itemKind === undefined ? null : (
+                  <span aria-hidden="true" className="mp-media-kind-indicator">
+                    {itemKind === "animated-emoji" ? (
+                      <svg viewBox="0 0 16 16">
+                        <path d="m8 1 .9 3.1L12 5l-3.1.9L8 9l-.9-3.1L4 5l3.1-.9L8 1Zm4.4 7 .55 1.9 1.85.55-1.85.55-.55 1.9-.55-1.9-1.85-.55 1.85-.55.55-1.9Z" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 16 16">
+                        <path d="M3 2.5h10A1.5 1.5 0 0 1 14.5 4v6A1.5 1.5 0 0 1 13 11.5H8.2L5 14v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5Z" />
+                      </svg>
+                    )}
+                  </span>
+                )}
               </button>
               {favoritesEnabled ? (
                 <button
@@ -128,7 +173,8 @@ export const MediaResultsGrid = memo(function MediaResultsGrid({
                   aria-pressed={favorite}
                   className="mp-favorite-toggle mp-media-favorite"
                   onClick={() => onFavoriteToggle(item)}
-                  tabIndex={-1}
+                  onFocus={() => setActiveIndex(index)}
+                  tabIndex={index === resolvedActive ? 0 : -1}
                   type="button"
                 >
                   <span aria-hidden="true">{favorite ? "★" : "☆"}</span>

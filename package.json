@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "lint": "pnpm build:packages && eslint . --max-warnings 0",
     "media:fixtures": "node tooling/scripts/build-demo-media.mjs",
+    "media:fixtures:webm": "node tooling/scripts/build-demo-webm.mjs",
     "package:check": "node tooling/scripts/validate-packages.mjs",
     "package:install-test": "node tooling/scripts/validate-public-install.mjs && node tooling/scripts/validate-browser-install.mjs",
     "size": "size-limit && node tooling/scripts/report-browser-sizes.mjs",

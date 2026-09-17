@@ -1,5 +1,6 @@
 import { MemoryCache, type CacheAdapter } from "./cache";
 import { MediaProviderError } from "./errors";
+import { detectMediaAssetFormat, type MediaAssetFormat } from "./media";
 
 export interface MediaRequestOptions {
   readonly signal?: AbortSignal;
@@ -31,11 +32,27 @@ interface InflightRequest<T> {
 
 /** Small URL policy shared by providers and renderers. */
 export interface MediaUrlPolicy {
+  readonly allowedFormats?: readonly MediaAssetFormat[];
   readonly allowedOrigins?: readonly string[];
   readonly allowBlob?: boolean;
   readonly allowDataImages?: boolean;
   readonly allowHttp?: boolean;
   readonly allowRelative?: boolean;
+}
+
+/** Applies URL and declared/detected format policy to a renderable asset. */
+export function isSafeMediaAsset(
+  value: string,
+  format: MediaAssetFormat | undefined,
+  policy: MediaUrlPolicy = {},
+): boolean {
+  if (!isSafeMediaUrl(value, policy)) return false;
+  if (policy.allowedFormats === undefined) return true;
+  const resolvedFormat = format ?? detectMediaAssetFormat(value);
+  return (
+    resolvedFormat !== undefined &&
+    policy.allowedFormats.includes(resolvedFormat)
+  );
 }
 
 /**

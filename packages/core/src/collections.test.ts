@@ -115,6 +115,37 @@ describe("cross-media recents", () => {
       expect.objectContaining({ item: sticker, version: 1 }),
     ]);
   });
+
+  it("does not persist discovery catalogs with animated emoji history", async () => {
+    const storage = new MemoryStorageAdapter();
+    const manager = new RecentItemsManager(storage);
+    await manager.record({
+      type: "emoji",
+      kind: "animated",
+      id: "wave",
+      name: "Wave",
+      fallbackEmoji: "👋",
+      animationUrl: "https://cdn.test/wave.webm",
+      format: "webm",
+      aliases: ["hello"],
+      keywords: ["greeting"],
+      localeKeywords: { hi: ["namaste"] },
+      attribution: { label: "Tenant pack" },
+      capabilities: { animated: true },
+      assets: [{ role: "animation", url: "https://cdn.test/wave.webm" }],
+    });
+    const [record] = await manager.getRecents();
+    expect(record?.item).toMatchObject({
+      id: "wave",
+      fallbackEmoji: "👋",
+      animationUrl: "https://cdn.test/wave.webm",
+    });
+    expect(record?.item).not.toHaveProperty("aliases");
+    expect(record?.item).not.toHaveProperty("keywords");
+    expect(record?.item).not.toHaveProperty("localeKeywords");
+    expect(record?.item).not.toHaveProperty("assets");
+    expect(record?.item).not.toHaveProperty("attribution");
+  });
 });
 
 describe("PersistentPreference", () => {

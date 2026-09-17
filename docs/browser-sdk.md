@@ -286,5 +286,17 @@ Disconnecting unmounts the root and cleans observers/listeners. Reconnecting
 reuses the ShadowRoot and creates one fresh root. Multiple elements do not share
 React roots or overlay nodes.
 
+Animated emoji have the same behavior in React, browser ESM, the Web Component,
+and the classic global build. Configure `emojiPacks`,
+`providers.animatedEmoji`, `animatedMedia`, and the optional `renderers`
+complex property through JavaScript. Native GIF/WebP and silent inline WebM use
+the shared poster-first renderer. A Lottie lifecycle adapter is optional and is
+never loaded by the SDK itself.
+
+Animation media, pack menus, and their fallbacks remain within the instance's
+Shadow DOM/application overlay. Multiple elements own separate playback
+schedulers and state. Nested CDN paths resolve only SDK chunks/styles relative
+to the entry; production media URLs remain provider/host controlled.
+
 See [media security and CSP](security.md), [backend API](backend-api.md), and
 [provider integration](providers.md) for production deployment details.
